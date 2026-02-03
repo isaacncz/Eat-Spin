@@ -23,6 +23,33 @@ export interface Restaurant {
   distance?: number;
 }
 
+// Type for JSON restaurant data (without ID fields)
+export interface JsonRestaurant {
+  name: string;
+  category: FoodCategory[];
+  address: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+  hours: {
+    [key: string]: {
+      open: string;
+      close: string;
+      closed?: boolean;
+    };
+  };
+  rating: number;
+  priceRange: string;
+  phone?: string;
+  description: string;
+}
+
+export type JsonRestaurantArray = JsonRestaurant[];
+
+// Type for restaurant with generated ID
+export type RestaurantWithId = JsonRestaurant & { id: string };
+
 export type FoodCategory = 
   | 'soup'
   | 'rice'

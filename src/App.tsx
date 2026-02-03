@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from '@/hooks/useLocation';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
-import { penangRestaurants, filterRestaurants, getCurrentMealTime } from '@/data/restaurants';
+import { penangRestaurants } from '@/data/restaurants';
+import { enhancedFilterRestaurants } from '@/lib/restaurantUtils';
+import { getCurrentMealTime } from '@/lib/utils';
 import { FoodCategorySelector } from '@/components/FoodCategorySelector';
 import { RouletteWheel } from '@/components/RouletteWheel';
 import { LocationPermission } from '@/components/LocationPermission';
@@ -24,6 +26,7 @@ function App() {
   // State management
   const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
   const [filteredRestaurants, setFilteredRestaurants] = useState<Restaurant[]>([]);
+  const [radiusKm, setRadiusKm] = useState<number>(10);
   const [isSpinning, setIsSpinning] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
   const [showSpinLimitWarning, setShowSpinLimitWarning] = useState(false);
@@ -49,16 +52,16 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Filter restaurants when location or categories change
+  // Filter restaurants when location, categories, or radius change
   useEffect(() => {
-    const filtered = filterRestaurants(
+    const filtered = enhancedFilterRestaurants(
       penangRestaurants,
       location,
       selectedCategories,
-      10 // 2km radius
+      radiusKm
     );
     setFilteredRestaurants(filtered);
-  }, [location, selectedCategories]);
+  }, [location, selectedCategories, radiusKm]);
 
   // Handle spin complete
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
@@ -153,6 +156,28 @@ function App() {
             </div>
           )}
 
+          {/* Radius Selector */}
+          {location && (
+            <div className="mb-6 max-w-md mx-auto">
+              <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
+                Search Radius: <span className="text-brand-orange font-bold">{radiusKm} km</span>
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="50"
+                value={radiusKm}
+                onChange={(e) => setRadiusKm(Number(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-orange"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>1 km</span>
+                <span>25 km</span>
+                <span>50 km</span>
+              </div>
+            </div>
+          )}
+
           {/* Meal Time Indicator */}
           <div className="mb-6 flex justify-center">
             <MealTimeIndicator />
@@ -172,8 +197,8 @@ function App() {
             <div className="text-center mb-6">
               <p className="text-sm text-eatspin-gray-1">
                 <span className="font-semibold text-brand-orange">{filteredRestaurants.length}</span>{' '}
-                restaurants match your preferences
-                {selectedCategories.length > 0 && ' and are currently open'}
+                restaurants within {radiusKm} km
+                {selectedCategories.length > 0 && ' match your preferences'}
               </p>
             </div>
           )}
@@ -258,7 +283,7 @@ function App() {
                 Spin the Wheel!
               </h2>
               <p className="text-eatspin-gray-1">
-                {filteredRestaurants.length} restaurants ready to be discovered
+                {filteredRestaurants.length} restaurants within {radiusKm} km ready to be discovered
               </p>
             </div>
 

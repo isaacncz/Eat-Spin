@@ -102,14 +102,11 @@ export function Testimonials() {
       <div className="max-w-4xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <span className="inline-block px-4 py-1.5 bg-eatspin-peach text-eatspin-orange text-sm font-medium rounded-full mb-4">
-            User Love
-          </span>
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-brand-black mb-4">
+          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-brand-black mb-3">
             What Our Users Say
           </h2>
-          <p className="text-eatspin-gray-1 max-w-lg mx-auto">
-            Don't just take our word for it - hear from our happy food explorers!
+          <p className="text-lg text-eatspin-gray-1 max-w-lg mx-auto leading-relaxed">
+            Don't just take our word for it — hear from our happy food explorers
           </p>
         </div>
 

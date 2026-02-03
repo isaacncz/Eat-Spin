@@ -31,6 +31,7 @@ function App() {
   const [isPremium, setIsPremium] = useState(false);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
   const [showWheelSection, setShowWheelSection] = useState(false);
+  const [wheelRestaurants, setWheelRestaurants] = useState<Restaurant[]>([]);
 
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
@@ -54,7 +55,7 @@ function App() {
       penangRestaurants,
       location,
       selectedCategories,
-      2 // 2km radius
+      10 // 2km radius
     );
     setFilteredRestaurants(filtered);
   }, [location, selectedCategories]);
@@ -87,6 +88,12 @@ function App() {
     setShowSpinLimitWarning(false);
   };
 
+  // Shuffle wheel restaurants
+  const shuffleWheel = () => {
+    const shuffled = [...filteredRestaurants].sort(() => Math.random() - 0.5);
+    setWheelRestaurants(shuffled.slice(0, 12));
+  };
+
   // Main App Content
   return (
     <div className="min-h-screen bg-brand-linen">
@@ -97,7 +104,10 @@ function App() {
       />
 
       {/* Hero Section */}
-      <Hero onGetStarted={() => setShowWheelSection(true)} />
+       <Hero onGetStarted={() => {
+         const appSection = document.getElementById('app');
+         appSection?.scrollIntoView({ behavior: 'smooth' });
+       }} />
 
       {/* How It Works Section */}
       <HowItWorks />
@@ -182,15 +192,21 @@ function App() {
           {/* Action Buttons */}
           {location && filteredRestaurants.length > 0 && (
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-              <Button
-                onClick={() => {
-                  if (handleSpinAttempt()) {
-                    setShowWheelSection(true);
-                  }
-                }}
-                disabled={isSpinning || filteredRestaurants.length === 0}
-                className="bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-lg font-bold px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-70"
-              >
+               <Button
+                  onClick={() => {
+                    if (handleSpinAttempt()) {
+                      shuffleWheel();
+                      setShowWheelSection(true);
+                      // Navigate to wheel section
+                      setTimeout(() => {
+                        const wheelSection = document.getElementById('wheel');
+                        wheelSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }, 100);
+                    }
+                  }}
+                 disabled={isSpinning || filteredRestaurants.length === 0}
+                 className="bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-lg font-bold px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-70"
+               >
                 <Utensils size={20} className="mr-2" />
                 Spin for {currentMealTime !== 'none' ? currentMealTime : 'Food'}
               </Button>
@@ -233,9 +249,9 @@ function App() {
         </div>
       </section>
 
-      {/* Roulette Wheel Section */}
-      {showWheelSection && location && filteredRestaurants.length > 0 && (
-        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-brand-linen">
+       {/* Roulette Wheel Section */}
+       {showWheelSection && location && filteredRestaurants.length > 0 && (
+         <section id="wheel" className="py-16 px-4 sm:px-6 lg:px-8 bg-brand-linen">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="font-heading text-2xl sm:text-3xl font-bold text-brand-black mb-2">
@@ -247,10 +263,12 @@ function App() {
             </div>
 
             <RouletteWheel
-              restaurants={filteredRestaurants}
+              restaurants={wheelRestaurants}
+              totalCount={filteredRestaurants.length}
               onSpinComplete={handleSpinComplete}
               isSpinning={isSpinning}
               setIsSpinning={setIsSpinning}
+              onShuffle={shuffleWheel}
             />
           </div>
         </section>

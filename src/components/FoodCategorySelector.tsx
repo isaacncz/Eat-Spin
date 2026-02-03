@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { FoodCategory } from '@/types';
 import { foodCategories } from '@/data/restaurants';
 import { Check } from 'lucide-react';
@@ -14,8 +13,6 @@ export function FoodCategorySelector({
   onCategoryChange,
   maxSelection = 3,
 }: FoodCategorySelectorProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   const handleCategoryToggle = (categoryId: FoodCategory) => {
     const isSelected = selectedCategories.includes(categoryId);
     
@@ -70,7 +67,7 @@ export function FoodCategorySelector({
       )}
 
       {/* Category Grid */}
-      <div className={`grid grid-cols-4 sm:grid-cols-6 gap-3 transition-all duration-300 ${isExpanded ? '' : 'max-h-32 overflow-hidden'}`}>
+      <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
         {foodCategories.map((category) => {
           const isSelected = selectedCategories.includes(category.id);
           const isDisabled = !isSelected && selectedCategories.length >= maxSelection;
@@ -105,13 +102,6 @@ export function FoodCategorySelector({
         })}
       </div>
 
-      {/* Expand/Collapse Button */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="mt-3 text-sm text-eatspin-orange font-medium hover:underline"
-      >
-        {isExpanded ? 'Show less' : 'Show all categories'}
-      </button>
     </div>
   );
 }

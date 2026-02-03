@@ -44,25 +44,25 @@ export function CTA() {
       ref={sectionRef}
       className="py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
     >
-      {/* Background gradient - now much darker for contrast */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#2E2E2E] via-[#1a1a1a] to-[#3a1a00]" />
+      {/* Background gradient - Brand Orange to Peach as per design spec */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#F54703] via-[#FF8E53] to-[#FEE4C7]" />
       
       {/* Decorative shapes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
-          className="absolute -top-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl"
+          className="absolute -top-20 -right-20 w-80 h-80 bg-white/60 rounded-full blur-3xl"
         />
         <div
-          className="absolute -bottom-20 -left-20 w-96 h-96 bg-orange-300/20 rounded-full blur-3xl"
+          className="absolute -bottom-20 -left-20 w-96 h-96 bg-[#FEE4C7]/80 rounded-full blur-3xl"
         />
         {/* Floating circles */}
-        <div className="absolute top-1/4 left-10 w-4 h-4 bg-white/30 rounded-full animate-float" />
+        <div className="absolute top-1/4 left-10 w-4 h-4 bg-[#2E2E2E]/30 rounded-full animate-float" />
         <div
-          className="absolute top-1/3 right-20 w-6 h-6 bg-white/20 rounded-full animate-float"
+          className="absolute top-1/3 right-20 w-6 h-6 bg-[#2E2E2E]/20 rounded-full animate-float"
           style={{ animationDelay: '1s' }}
         />
         <div
-          className="absolute bottom-1/4 left-1/4 w-3 h-3 bg-white/40 rounded-full animate-float"
+          className="absolute bottom-1/4 left-1/4 w-3 h-3 bg-[#2E2E2E]/40 rounded-full animate-float"
           style={{ animationDelay: '2s' }}
         />
       </div>
@@ -73,17 +73,17 @@ export function CTA() {
           className="text-center"
         >
           {/* Icon */}
-          <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse-ring">
-            <Sparkles size={40} className="text-white" />
+          <div className="w-20 h-20 bg-white/80 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse-ring">
+            <Sparkles size={40} className="text-[#F54703]" />
           </div>
 
           {/* Heading */}
-          <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
+          <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-bold text-[#2E2E2E] mb-6">
             Ready to Spin?
           </h2>
 
           {/* Subtext */}
-          <p className="text-lg text-white/90 mb-8 max-w-xl mx-auto">
+          <p className="text-lg text-[#4A4A4A] mb-8 max-w-xl mx-auto">
             Join thousands of food lovers in Penang who have already discovered their new favorite restaurants with EatSpin.
           </p>
 
@@ -92,7 +92,7 @@ export function CTA() {
             <Button
               onClick={scrollToApp}
               size="lg"
-              className="bg-white text-brand-orange hover:bg-white/90 font-heading text-lg font-bold px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+              className="bg-[#2E2E2E] text-white hover:bg-[#1a1a1a] font-heading text-lg font-bold px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
             >
               Start Spinning Now
               <ArrowRight
@@ -104,24 +104,21 @@ export function CTA() {
             <Button
               variant="outline"
               size="lg"
-              className="border-2 border-white text-white bg-[#232323] hover:bg-[#333] font-medium px-8 py-6 rounded-full shadow-lg"
+              className="border-2 border-[#2E2E2E] text-[#2E2E2E] bg-white/80 hover:bg-white font-medium px-8 py-6 rounded-full shadow-lg"
             >
               Download App
             </Button>
           </div>
 
           {/* Trust indicators */}
-          <div className="flex items-center justify-center gap-6 mt-10 text-white/80 text-sm">
-            <span className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-white rounded-full" />
+          <div className="flex items-center justify-center gap-4 mt-10">
+            <span className="px-4 py-2 bg-[#2E2E2E]/10 text-[#2E2E2E] text-sm font-medium rounded-full border border-[#2E2E2E]/20">
               Free to use
             </span>
-            <span className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-white rounded-full" />
+            <span className="px-4 py-2 bg-[#2E2E2E]/10 text-[#2E2E2E] text-sm font-medium rounded-full border border-[#2E2E2E]/20">
               No ads
             </span>
-            <span className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-white rounded-full" />
+            <span className="px-4 py-2 bg-[#2E2E2E]/10 text-[#2E2E2E] text-sm font-medium rounded-full border border-[#2E2E2E]/20">
               Penang focused
             </span>
           </div>

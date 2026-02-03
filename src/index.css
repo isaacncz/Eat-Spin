@@ -81,34 +81,38 @@
     background-color: var(--eatspin-linen);
   }
   
-  .bg-brand-peach {
-    background-color: var(--eatspin-peach);
-  }
-  
-  .text-brand-black {
-    color: var(--eatspin-black);
-  }
-  
-  /* Animation utilities */
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
-  
-  .animate-pulse-ring {
-    animation: pulse-ring 3s ease-out infinite;
-  }
-  
-  .animate-shine {
-    animation: shine 4s linear infinite;
-  }
-  
-  .animate-spin-slow {
-    animation: spin 20s linear infinite;
-  }
-  
-  .animate-bounce-subtle {
-    animation: bounce-subtle 2s ease-in-out infinite;
-  }
+   .bg-brand-peach {
+     background-color: var(--eatspin-peach);
+   }
+   
+   .text-brand-black {
+     color: var(--eatspin-black);
+   }
+   
+   /* Animation utilities */
+   .animate-float {
+     animation: float 6s ease-in-out infinite;
+   }
+   
+   .animate-pulse-ring {
+     animation: pulse-ring 3s ease-out infinite;
+   }
+   
+   .animate-shine {
+     animation: shine 4s linear infinite;
+   }
+   
+   .animate-spin-slow {
+     animation: spin 20s linear infinite;
+   }
+   
+   .animate-bounce-subtle {
+     animation: bounce-subtle 2s ease-in-out infinite;
+   }
+   
+   .bg-gradient-orange-peach {
+     background: linear-gradient(90deg, var(--eatspin-orange) 0%, var(--eatspin-peach) 100%);
+   }
 }
 
 @keyframes float {

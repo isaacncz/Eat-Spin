@@ -688,7 +688,7 @@ export const penangRestaurants: Restaurant[] = [
     name: 'Restoran Ju Heng',
     category: ['noodles', 'soup', 'thai'],
     address: 'Jalan Raja Uda, Taman Bunga Raya, Butterworth, Penang',
-    coordinates: { lat: 5.4378, lng: '100.3067' },
+    coordinates: { lat: 5.4378, lng: 100.3067 },
     hours: {
       monday: { open: '06:30', close: '15:00' },
       tuesday: { open: '00:00', close: '00:00', closed: true },
@@ -781,7 +781,7 @@ export const penangRestaurants: Restaurant[] = [
   {
     id: '41',
     name: 'Lao San Dong Bah Kut Teh',
-    category: ['soup', 'chinese', 'pork'],
+    category: ['soup', 'chinese', 'rice'],
     address: '1 Lorong Perniagaan Melur, Jalan Raja Uda, Butterworth, Penang',
     coordinates: { lat: 5.4334, lng: 100.3156 },
     hours: {

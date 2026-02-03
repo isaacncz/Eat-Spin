@@ -11,9 +11,10 @@ interface SpinTrackerState {
 }
 
 const SPIN_STORAGE_KEY = 'eatspin_spins';
-const FREE_SPINS_PER_MEAL = 1;
+// const FREE_SPINS_PER_MEAL = 1;
 
-export function useSpinTracker(isPremium: boolean = false): SpinTrackerState {
+// export function useSpinTracker(isPremium: boolean = false): SpinTrackerState {
+export function useSpinTracker(): SpinTrackerState {
   const [spins, setSpins] = useState<SpinResult[]>([]);
 
   // Load spins from localStorage on mount

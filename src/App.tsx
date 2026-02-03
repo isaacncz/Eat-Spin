@@ -35,7 +35,7 @@ function App() {
 
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
-  const { canSpin, recordSpin } = useSpinTracker(isPremium);
+  const { canSpin, recordSpin } = useSpinTracker();
 
   // Update current meal time
   useEffect(() => {

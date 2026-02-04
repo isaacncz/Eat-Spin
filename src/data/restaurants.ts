@@ -29,7 +29,8 @@ const foodCategoryIds = [
 const priceRangeSchema = z.enum(['RM', 'RMR', 'RMRR', 'RMRRR']);
 const foodCategorySchema = z.enum(foodCategoryIds);
 
-const hoursSchema = z.record(
+const hoursSchema: z.ZodType<JsonRestaurant['hours']> = z.record(
+  z.string(),
   z.object({
     open: z.string(),
     close: z.string(),
@@ -37,7 +38,7 @@ const hoursSchema = z.record(
   })
 );
 
-const jsonRestaurantSchema = z.object({
+const jsonRestaurantSchema: z.ZodType<JsonRestaurant> = z.object({
   name: z.string().min(1),
   category: z.array(foodCategorySchema).min(1),
   address: z.string().min(1),
@@ -53,19 +54,17 @@ const jsonRestaurantSchema = z.object({
   description: z.string().min(1),
 });
 
-const jsonRestaurantArraySchema = z.array(jsonRestaurantSchema);
+const jsonRestaurantArraySchema: z.ZodType<JsonRestaurant[]> = z.array(jsonRestaurantSchema);
 
-const parsedRestaurants = jsonRestaurantArraySchema.safeParse(rawRestaurants);
+const restaurantData = jsonRestaurantArraySchema.safeParse(rawRestaurants);
 
-if (!parsedRestaurants.success) {
-  console.error('Invalid restaurant data in restaurants.json', parsedRestaurants.error.format());
+if (!restaurantData.success) {
+  console.error('Invalid restaurant data in restaurants.json', restaurantData.error.format());
   throw new Error('Invalid restaurant data in restaurants.json');
 }
 
-const restaurantData: JsonRestaurant[] = parsedRestaurants.data;
-
 // Mock restaurant data for Penang, Malaysia
-export const penangRestaurants: Restaurant[] = restaurantData.map((restaurant, index) => ({
+export const penangRestaurants: Restaurant[] = restaurantData.data.map((restaurant, index) => ({
   ...restaurant,
   id: generateRestaurantId(index),
 }));

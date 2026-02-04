@@ -40,8 +40,9 @@ export interface JsonRestaurant {
     };
   };
   rating: number;
-  priceRange: string;
+  priceRange: Restaurant['priceRange'];
   phone?: string;
+  image?: string;
   description: string;
 }
 

@@ -25,6 +25,7 @@ import './App.css';
 function App() {
   // State management
   const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
+  const [selectedPriceRanges, setSelectedPriceRanges] = useState<Restaurant['priceRange'][]>([]);
   const [filteredRestaurants, setFilteredRestaurants] = useState<Restaurant[]>([]);
   const [radiusKm, setRadiusKm] = useState<number>(10);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -39,6 +40,14 @@ function App() {
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
   const { canSpin, recordSpin } = useSpinTracker();
+
+  const priceOptions: Restaurant['priceRange'][] = ['$', '$$', '$$$', '$$$$'];
+
+  const togglePriceRange = (price: Restaurant['priceRange']) => {
+    setSelectedPriceRanges((prev) =>
+      prev.includes(price) ? prev.filter((p) => p !== price) : [...prev, price]
+    );
+  };
 
   // Update current meal time
   useEffect(() => {
@@ -58,10 +67,11 @@ function App() {
       penangRestaurants,
       location,
       selectedCategories,
-      radiusKm
+      radiusKm,
+      selectedPriceRanges
     );
     setFilteredRestaurants(filtered);
-  }, [location, selectedCategories, radiusKm]);
+  }, [location, selectedCategories, radiusKm, selectedPriceRanges]);
 
   // Handle spin complete
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
@@ -190,6 +200,37 @@ function App() {
               onCategoryChange={setSelectedCategories}
               maxSelection={3}
             />
+          </div>
+
+          {/* Price Range Selector */}
+          <div className="mb-8">
+            <div className="mb-4 text-center">
+              <h3 className="font-heading text-lg font-semibold text-brand-black mb-2">
+                Price range
+              </h3>
+              <p className="text-sm text-eatspin-gray-1">
+                Select any (optional)
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              {priceOptions.map((price) => {
+                const isSelected = selectedPriceRanges.includes(price);
+                return (
+                  <button
+                    key={price}
+                    type="button"
+                    onClick={() => togglePriceRange(price)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                      isSelected
+                        ? 'bg-brand-orange text-white shadow-lg'
+                        : 'bg-white text-brand-black border border-gray-200 hover:border-brand-orange hover:text-brand-orange'
+                    }`}
+                  >
+                    {price}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Restaurant Count */}

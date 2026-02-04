@@ -42,7 +42,7 @@
       }
     },
     "rating": 4.5,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "phone": "+60 4-261 5282",
     "description": "Famous Chinese restaurant known for their double-cooked pork and flavorful dishes."
   },
@@ -89,7 +89,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Iconic 24/7 nasi kandar spot, legendary among locals and tourists."
   },
   {
@@ -135,7 +135,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Famous for nasi kandar and ayam masak merah since 1907."
   },
   {
@@ -182,7 +182,7 @@
       }
     },
     "rating": 4.2,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Traditional coffee shop serving excellent wantan mee and kopi."
   },
   {
@@ -228,7 +228,7 @@
       }
     },
     "rating": 4.1,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Famous supper spot for sup kambing and sup ayam."
   },
   {
@@ -274,7 +274,7 @@
       }
     },
     "rating": 4.6,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Legendary char koay teow with duck egg and prawns."
   },
   {
@@ -321,7 +321,7 @@
       }
     },
     "rating": 4.7,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Award-winning char koay teow cooked over charcoal fire."
   },
   {
@@ -367,7 +367,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Famous white curry mee with rich coconut milk broth."
   },
   {
@@ -413,7 +413,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Iconic Hainanese coffee shop with charcoal-toasted bread."
   },
   {
@@ -459,7 +459,7 @@
       }
     },
     "rating": 4.5,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Fluffy roti canai with various curry options."
   },
   {
@@ -505,7 +505,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Famous tandoori chicken and biryani since 1995."
   },
   {
@@ -551,7 +551,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Authentic South Indian banana leaf rice and vegetarian options."
   },
   {
@@ -597,7 +597,7 @@
       }
     },
     "rating": 4.5,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Trendy cafe known for bagels and specialty coffee."
   },
   {
@@ -643,7 +643,7 @@
       }
     },
     "rating": 4.6,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Hidden gem with excellent single-origin coffee."
   },
   {
@@ -689,7 +689,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Freshly baked artisan bread and pastries daily."
   },
   {
@@ -735,7 +735,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RMRR",
+    "priceRange": "$$$",
     "description": "Fresh seafood market with various cooking styles."
   },
   {
@@ -781,7 +781,7 @@
       }
     },
     "rating": 4.5,
-    "priceRange": "RMRR",
+    "priceRange": "$$$",
     "description": "Upscale seafood restaurant with ocean views."
   },
   {
@@ -827,7 +827,7 @@
       }
     },
     "rating": 4.2,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Food court with various Thai and local stalls."
   },
   {
@@ -873,7 +873,7 @@
       }
     },
     "rating": 4.7,
-    "priceRange": "RMRRR",
+    "priceRange": "$$$$",
     "description": "Premium sushi restaurant with fresh imported seafood."
   },
   {
@@ -919,7 +919,7 @@
       }
     },
     "rating": 4.5,
-    "priceRange": "RMRR",
+    "priceRange": "$$$",
     "description": "Cozy sushi bar with affordable lunch sets."
   },
   {
@@ -965,7 +965,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RMRR",
+    "priceRange": "$$$",
     "description": "Authentic Korean BBQ with premium meat cuts."
   },
   {
@@ -1011,7 +1011,7 @@
       }
     },
     "rating": 4.2,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Economy rice with 20+ vegetarian dishes daily."
   },
   {
@@ -1057,7 +1057,7 @@
       }
     },
     "rating": 4.6,
-    "priceRange": "RMRR",
+    "priceRange": "$$$",
     "description": "Nyonya-inspired desserts and fine dining."
   },
   {
@@ -1103,7 +1103,7 @@
       }
     },
     "rating": 4.5,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Famous for having the longest cake counter in Malaysia."
   },
   {
@@ -1149,7 +1149,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Traditional Indian apom with crispy edges."
   },
   {
@@ -1195,7 +1195,7 @@
       }
     },
     "rating": 4.2,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Open-air food court with various Malay hawker stalls."
   },
   {
@@ -1241,7 +1241,7 @@
       }
     },
     "rating": 4.1,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Iconic seaside hawker center with 100+ stalls."
   },
   {
@@ -1287,7 +1287,7 @@
       }
     },
     "rating": 4,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Modern food court with air conditioning and variety."
   },
   {
@@ -1334,7 +1334,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Specializes in beef noodles and tender beef dishes."
   },
   {
@@ -1380,7 +1380,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Famous late-night nasi kandar, queue starts at 10pm."
   },
   {
@@ -1427,7 +1427,7 @@
       }
     },
     "rating": 4.5,
-    "priceRange": "RMRR",
+    "priceRange": "$$$",
     "phone": "+60 4-331 2736",
     "description": "Famous charcoal steamboat with fish head soup base, featured in MICHELIN Guide."
   },
@@ -1474,7 +1474,7 @@
       }
     },
     "rating": 4.6,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Award-winning mee jawa with unique pumpkin broth, MICHELIN-selected since 1996."
   },
   {
@@ -1520,7 +1520,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RM",
+    "priceRange": "$",
     "phone": "+60 4-333 0779",
     "description": "Popular dim sum restaurant with extensive variety, always packed during breakfast hours."
   },
@@ -1567,7 +1567,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Famous market food court with chicken porridge and fresh fish balls, operates since early morning."
   },
   {
@@ -1613,7 +1613,7 @@
       }
     },
     "rating": 4.5,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Trendy two-story cafe with Penang Bridge views, serves coffee, cakes, and pastries."
   },
   {
@@ -1660,7 +1660,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Famous for tomyam noodles with minced pork and clear soup options, popular supper spot."
   },
   {
@@ -1707,7 +1707,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Local favorite for customizable curry mee with various toppings, also serves dry curry noodles."
   },
   {
@@ -1753,7 +1753,7 @@
       }
     },
     "rating": 4.2,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Famous for claypot chicken rice and porridge, known for fragrant chicken essence rice."
   },
   {
@@ -1800,7 +1800,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Home of Sri Siam fish head curry and yam rice with pork bone soup, closed alternate Mondays."
   },
   {
@@ -1847,7 +1847,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Known for sweet prawn broth Hokkien mee with dry version option, popular among locals."
   },
   {
@@ -1894,7 +1894,7 @@
       }
     },
     "rating": 4.5,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "MICHELIN-selected Hokkien-style herbal bak kut teh with claypot cooking, perfect balance of herbs and pepper."
   },
   {
@@ -1940,7 +1940,7 @@
       }
     },
     "rating": 4.2,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Traditional mee jawa with tomato-based gravy and crunchy pasembur crackers, unique homemade sauce."
   },
   {
@@ -1986,7 +1986,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RMRR",
+    "priceRange": "$$$",
     "description": "Popular seafood restaurant known for fresh catches and reasonable prices, air-conditioned dining."
   },
   {
@@ -2032,7 +2032,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Traditional Chinese restaurant serving home-style dishes and seafood, popular among locals."
   },
   {
@@ -2078,7 +2078,7 @@
       }
     },
     "rating": 4.1,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Busy food court with satay, koay teow thng, and various hawker stalls, popular for dinner and supper."
   },
   {
@@ -2124,7 +2124,7 @@
       }
     },
     "rating": 4.2,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Kopitiam with new char koay teow stall and mee goreng, often busy during breakfast hours."
   },
   {
@@ -2170,7 +2170,7 @@
       }
     },
     "rating": 4,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Food court with new Korean food stall serving Korean fried rice and other Korean dishes."
   },
   {
@@ -2216,7 +2216,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Cozy cafe serving Hokkien char and Moonlight hor fun, popular for their tasty noodle dishes."
   },
   {
@@ -2262,7 +2262,7 @@
       }
     },
     "rating": 4.2,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Traditional bakery famous for red mi ku (red tortoise buns) and other traditional pastries."
   },
   {
@@ -2308,7 +2308,7 @@
       }
     },
     "rating": 4.1,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Long-established food court with dim sum stalls and various breakfast options, popular among locals."
   },
   {
@@ -2354,7 +2354,7 @@
       }
     },
     "rating": 4.2,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Iconic seaside hawker center. Some stalls open as early as 11am for lunch crowds."
   },
   {
@@ -2400,7 +2400,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Popular spot for crispy thosai and chutneys in the heart of Little India."
   },
   {
@@ -2447,7 +2447,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Fried noodles expert known for their \"wok hei\" and generous portions."
   },
   {
@@ -2493,7 +2493,7 @@
       }
     },
     "rating": 4.5,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Trendy Indian cafe with modern decor and excellent tandoori sets."
   },
   {
@@ -2539,7 +2539,7 @@
       }
     },
     "rating": 4.6,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Michelin-recommended spot serving authentic Penang Assam Laksa."
   },
   {
@@ -2585,7 +2585,7 @@
       }
     },
     "rating": 4.5,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "A cultural space with dining, galleries, and live music. Great for lunches."
   },
   {
@@ -2631,7 +2631,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Chill cafe offering fusion Western and Asian dishes in a heritage shophouse."
   },
   {
@@ -2677,7 +2677,7 @@
       }
     },
     "rating": 4.1,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Traditional coffee shop atmosphere with upgraded local coffee and toast."
   },
   {
@@ -2723,7 +2723,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Busy stall famous for nasi lemak and various Malay lauk (side dishes)."
   },
   {
@@ -2770,7 +2770,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Heritage cafe home to the famous Penang Road Teochew Chendul and Asam Laksa."
   },
   {
@@ -2817,7 +2817,7 @@
       }
     },
     "rating": 4,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Old-school coffee shop serving hearty rice and noodle dishes for lunch."
   },
   {
@@ -2863,7 +2863,7 @@
       }
     },
     "rating": 4.2,
-    "priceRange": "RMRR",
+    "priceRange": "$$$",
     "description": "Restored heritage building offering a mix of Hainanese and Western cuisine."
   },
   {
@@ -2910,7 +2910,7 @@
       }
     },
     "rating": 4.5,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "No-frills Chinese restaurant famous for their unique double-roasted pork belly."
   },
   {
@@ -2956,7 +2956,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Spicy salad dish (Pasembur) with fresh jellyfish and cucumber, usually a lunch staple."
   },
   {
@@ -3002,7 +3002,7 @@
       }
     },
     "rating": 4.6,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "A modern colonial-style cafe serving artisanal coffee and hearty brunch items all day."
   },
   {
@@ -3048,7 +3048,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "phone": "+60 12-537 2290",
     "description": "Modern Thai restaurant specializing in rice-focused menu with authentic Pad Thai and Mango Kerabu."
   },
@@ -3095,7 +3095,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Popular local eatery famous for Bak Kut Teh and fresh dim sum varieties."
   },
   {
@@ -3141,7 +3141,7 @@
       }
     },
     "rating": 4.2,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Simple and affordable Yew Char Kueh (Chinese crullers) and traditional breakfast items."
   },
   {
@@ -3187,7 +3187,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Affordable Japanese sushi spot popular for lunch sets and fresh sashimi."
   },
   {
@@ -3233,7 +3233,7 @@
       }
     },
     "rating": 4.5,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Famous curry mee with rich, creamy broth and generous toppings like prawns and taufu pok."
   },
   {
@@ -3279,7 +3279,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Thick starchy gravy noodles with fish cakes, fish balls, and hard-boiled eggs."
   },
   {
@@ -3325,7 +3325,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Specializes in beef noodles with braised beef and beef balls in flavorful broth."
   },
   {
@@ -3371,7 +3371,7 @@
       }
     },
     "rating": 4.2,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Unique fruit rojak served on skewers with concentrated fruit salad sauce and groundnuts."
   },
   {
@@ -3417,7 +3417,7 @@
       }
     },
     "rating": 4.6,
-    "priceRange": "RMRR",
+    "priceRange": "$$$",
     "phone": "+60 4-333 5917",
     "description": "MICHELIN-selected since 1962. Famous for prawn curry, Hainanese fried fish steaks, and Teochew tofu."
   },
@@ -3465,7 +3465,7 @@
       }
     },
     "rating": 4.5,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "MICHELIN-selected 40-year-old family business. Flavorful yam rice with pork and salted vegetable soup."
   },
   {
@@ -3511,7 +3511,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Authentic Hainanese Chicken Chop with onion gravy, coleslaw, and crinkle-cut chips since 1970s."
   },
   {
@@ -3557,7 +3557,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Hand-stretched noodles (Mee Tarik) made to order with various meat options, dry or soup."
   },
   {
@@ -3603,7 +3603,7 @@
       }
     },
     "rating": 4.4,
-    "priceRange": "RM",
+    "priceRange": "$",
     "description": "Famous Nasi Kandar with thick creamy curry, fried chicken, and various side dishes."
   },
   {
@@ -3649,7 +3649,7 @@
       }
     },
     "rating": 4.2,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Trendy cafe offering Western and fusion meals, artisanal coffee, and French desserts."
   },
   {
@@ -3695,7 +3695,7 @@
       }
     },
     "rating": 4.3,
-    "priceRange": "RMR",
+    "priceRange": "$$",
     "description": "Gourmet burger joint with creative toppings and premium beef patties."
   }
 ]

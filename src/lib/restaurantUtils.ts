@@ -70,7 +70,8 @@ export const enhancedFilterRestaurants = (
   restaurants: Restaurant[],
   userLocation: { lat: number; lng: number } | null,
   selectedCategories: FoodCategory[],
-  radiusKm: number
+  radiusKm: number,
+  selectedPriceRanges: Restaurant['priceRange'][] = []
 ): Restaurant[] => {
   // First filter by categories
   let filtered = restaurants;
@@ -79,6 +80,10 @@ export const enhancedFilterRestaurants = (
     filtered = filtered.filter((restaurant) => 
       restaurant.category.some((category) => selectedCategories.includes(category as FoodCategory))
     );
+  }
+
+  if (selectedPriceRanges.length > 0) {
+    filtered = filtered.filter((restaurant) => selectedPriceRanges.includes(restaurant.priceRange));
   }
   
   // Then filter by radius

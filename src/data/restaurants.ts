@@ -26,7 +26,7 @@ const foodCategoryIds = [
   'breakfast',
 ] as const satisfies ReadonlyArray<FoodCategory>;
 
-const priceRangeSchema = z.enum(['RM', 'RMR', 'RMRR', 'RMRRR']);
+const priceRangeSchema = z.enum(['$', '$$', '$$$', '$$$$']);
 const foodCategorySchema = z.enum(foodCategoryIds);
 
 const hoursSchema: z.ZodType<JsonRestaurant['hours']> = z.record(

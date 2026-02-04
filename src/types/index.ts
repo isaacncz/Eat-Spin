@@ -15,7 +15,7 @@ export interface Restaurant {
     };
   };
   rating: number;
-  priceRange: 'RM' | 'RMR' | 'RMRR' | 'RMRRR';
+  priceRange: '$' | '$$' | '$$$' | '$$$$';
   phone?: string;
   image?: string;
   description?: string;
@@ -89,7 +89,7 @@ export type MealTime = 'breakfast' | 'lunch' | 'dinner' | 'none';
 export interface UserPreferences {
   selectedCategories: FoodCategory[];
   maxDistance: number; // in km
-  priceRange?: ('RM' | 'RMR' | 'RMRR' | 'RMRRR')[];
+  priceRange?: ('$' | '$$' | '$$$' | '$$$$')[];
 }
 
 export interface SubscriptionTier {

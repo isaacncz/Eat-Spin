@@ -210,29 +210,29 @@ function App() {
             </p>
           </div>
 
-          <div className="mb-8">
-            <div className="inline-flex p-1 bg-brand-linen rounded-full border border-eatspin-peach/70">
+          <div className="mb-8 sticky top-3 sm:top-6 z-30 flex justify-center">
+            <div className="inline-flex items-center justify-center p-1.5 bg-brand-black rounded-2xl border-2 border-brand-black shadow-lg">
               <button
                 type="button"
                 onClick={() => switchTab('auto')}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+                className={`min-h-12 px-5 py-3 rounded-xl text-base font-heading font-bold transition-all duration-200 ${
                   activeTab === 'auto'
-                    ? 'bg-brand-orange text-white shadow'
-                    : 'text-brand-black hover:bg-white'
+                    ? 'bg-brand-orange text-white shadow-lg'
+                    : 'bg-white text-brand-black hover:bg-eatspin-peach/30'
                 }`}
               >
-                <span className="inline-flex items-center gap-2"><Sparkles size={16} />Spin for me</span>
+                <span className="inline-flex items-center gap-2"><Sparkles size={18} />Spin for me</span>
               </button>
               <button
                 type="button"
                 onClick={() => switchTab('manual')}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+                className={`min-h-12 px-5 py-3 rounded-xl text-base font-heading font-bold transition-all duration-200 ${
                   activeTab === 'manual'
-                    ? 'bg-brand-orange text-white shadow'
-                    : 'text-brand-black hover:bg-white'
+                    ? 'bg-brand-orange text-white shadow-lg'
+                    : 'bg-white text-brand-black hover:bg-eatspin-peach/30'
                 }`}
               >
-                <span className="inline-flex items-center gap-2"><PencilLine size={16} />I know where</span>
+                <span className="inline-flex items-center gap-2"><PencilLine size={18} />I know where</span>
               </button>
             </div>
           </div>
@@ -420,7 +420,7 @@ function App() {
           )}
 
           {activeTab === 'manual' && (
-            <div id="wheel" className="py-4">
+            <div id="wheel" className="py-4 pb-36 sm:pb-8">
               <div className="text-center mb-5">
                 <h3 className="font-heading text-2xl font-bold text-brand-black mb-2">I know where</h3>
                 <p className="text-sm text-eatspin-gray-1">Add any restaurants you like and spin.</p>
@@ -448,26 +448,29 @@ function App() {
               />
 
               <div id="manual-input" className="mt-8 max-w-xl mx-auto">
-                <div className="flex gap-2">
+                <div className="sticky bottom-3 z-30 rounded-2xl border border-eatspin-peach/60 bg-white/95 p-3 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-white/85">
+                  <div className="flex flex-col sm:flex-row gap-2">
                   <Input
-                    value={manualInput}
-                    onChange={(e) => setManualInput(e.target.value)}
-                    onKeyDown={(e) => {
+                      value={manualInput}
+                      onChange={(e) => setManualInput(e.target.value)}
+                      onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
                         addManualRestaurant();
                       }
                     }}
-                    placeholder="Type any restaurant you like…"
-                  />
-                  <Button onClick={addManualRestaurant}>
-                    <Plus size={16} className="mr-1" /> Add
-                  </Button>
+                      placeholder="Type any restaurant you like…"
+                      className="h-12 text-base"
+                    />
+                    <Button onClick={addManualRestaurant} className="h-12 px-6 text-base font-heading font-bold bg-brand-orange hover:bg-brand-orange/90">
+                      <Plus size={18} className="mr-1" /> Add
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="mt-4 bg-white rounded-xl border border-eatspin-peach/60 p-4">
                   <div className="flex justify-between items-center mb-3">
-                    <h4 className="font-semibold text-brand-black">Restaurant list ({manualRestaurants.length})</h4>
+                    <h4 className="font-heading font-semibold text-brand-black">Restaurant list ({manualRestaurants.length})</h4>
                     {manualRestaurants.length > 0 && (
                       <button
                         type="button"

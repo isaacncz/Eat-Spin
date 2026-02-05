@@ -259,7 +259,7 @@ export function RouletteWheel({
       <button
         onClick={handleSpin}
         disabled={isSpinning || !canSpin}
-        className="relative overflow-hidden w-full max-w-xs sm:w-auto px-8 sm:px-12 py-4 bg-brand-orange text-white font-heading text-lg sm:text-xl font-bold rounded-full shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+        className="sticky bottom-3 sm:static z-30 relative overflow-hidden w-full max-w-sm px-8 sm:px-12 py-5 bg-brand-orange text-white font-heading text-xl font-bold rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
         <span className={`transition-opacity duration-300 ${isSpinning ? 'opacity-0' : 'opacity-100'}`}>
           {spinButtonLabel}

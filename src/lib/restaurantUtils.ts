@@ -2,6 +2,16 @@
 
 import type { Restaurant, FoodCategory } from '@/types';
 
+const nonHalalCategories: FoodCategory[] = ['chinese', 'japanese', 'korean', 'western'];
+
+/**
+ * Heuristic to determine if a restaurant should be considered non-halal.
+ * This can be replaced with explicit restaurant metadata in the future.
+ */
+export const isNonHalalRestaurant = (restaurant: Restaurant): boolean => {
+  return restaurant.category.some((category) => nonHalalCategories.includes(category as FoodCategory));
+};
+
 /**
  * Generate a unique ID for a restaurant based on its position in the array
  * @param index - The index of the restaurant in the array
@@ -71,7 +81,8 @@ export const enhancedFilterRestaurants = (
   userLocation: { lat: number; lng: number } | null,
   selectedCategories: FoodCategory[],
   radiusKm: number,
-  selectedPriceRanges: Restaurant['priceRange'][] = []
+  selectedPriceRanges: Restaurant['priceRange'][] = [],
+  nonHalalOnly = false
 ): Restaurant[] => {
   // First filter by categories
   let filtered = restaurants;
@@ -84,6 +95,10 @@ export const enhancedFilterRestaurants = (
 
   if (selectedPriceRanges.length > 0) {
     filtered = filtered.filter((restaurant) => selectedPriceRanges.includes(restaurant.priceRange));
+  }
+
+  if (nonHalalOnly) {
+    filtered = filtered.filter(isNonHalalRestaurant);
   }
   
   // Then filter by radius

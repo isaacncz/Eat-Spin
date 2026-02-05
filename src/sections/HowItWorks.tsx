@@ -89,12 +89,12 @@ export function HowItWorks() {
           {steps.map((step, index) => (
             <div
               key={index}
-              className="relative group"
+              className="relative group text-center"
             >
               {/* Card */}
-              <div className="bg-eatspin-linen rounded-3xl p-8 h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-2">
+              <div className="bg-eatspin-linen rounded-3xl p-8 h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-2 flex flex-col items-center">
                 {/* Step number */}
-                <div className="absolute -top-4 -left-4 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center font-heading font-bold text-brand-orange">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center font-heading font-bold text-brand-orange">
                   {index + 1}
                 </div>
 
@@ -107,10 +107,10 @@ export function HowItWorks() {
                 </div>
 
                 {/* Content */}
-                <h3 className="font-heading text-xl font-bold text-brand-black mb-3">
+                <h3 className="font-heading text-xl font-bold text-brand-black mb-3 text-center">
                   {step.title}
                 </h3>
-                <p className="text-eatspin-gray-1 text-sm leading-relaxed">
+                <p className="text-eatspin-gray-1 text-sm leading-relaxed text-center max-w-xs">
                   {step.description}
                 </p>
               </div>

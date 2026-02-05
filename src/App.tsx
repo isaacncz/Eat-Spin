@@ -391,6 +391,7 @@ function App() {
                           ? 'Add restaurants to start'
                           : 'Add at least 2 restaurants to spin'
                       }
+                      showResultDetails={false}
                     />
                   )}
 

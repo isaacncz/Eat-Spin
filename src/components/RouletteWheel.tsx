@@ -16,6 +16,7 @@ interface RouletteWheelProps {
   emptyTitle?: string;
   emptyDescription?: string;
   minCountHelperText?: string;
+  showResultDetails?: boolean;
 }
 
 // Sophisticated food-app color palette with good contrast
@@ -53,6 +54,7 @@ export function RouletteWheel({
   emptyTitle = 'No restaurants match your criteria',
   emptyDescription = 'Try selecting different categories or check back during meal hours',
   minCountHelperText,
+  showResultDetails = true,
 }: RouletteWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
@@ -297,56 +299,60 @@ export function RouletteWheel({
               {spinResult.name}
             </h3>
             
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2 text-eatspin-gray-1">
-                <MapPin size={16} className="text-eatspin-orange" />
-                <span>{spinResult.address}</span>
-              </div>
-              
-              <div className="flex items-center gap-2 text-eatspin-gray-1">
-                <Star size={16} className="text-yellow-500" />
-                <span>{spinResult.rating} / 5.0</span>
-                <span className="text-eatspin-gray-2">•</span>
-                <span className="text-eatspin-orange font-medium">{spinResult.priceRange}</span>
-              </div>
-              
-              {spinResult.distance && (
-                <div className="flex items-center gap-2 text-eatspin-gray-1">
-                  <Clock size={16} className="text-eatspin-orange" />
-                  <span>{spinResult.distance.toFixed(1)} km away</span>
+            {showResultDetails && (
+              <>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-eatspin-gray-1">
+                    <MapPin size={16} className="text-eatspin-orange" />
+                    <span>{spinResult.address}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 text-eatspin-gray-1">
+                    <Star size={16} className="text-yellow-500" />
+                    <span>{spinResult.rating} / 5.0</span>
+                    <span className="text-eatspin-gray-2">•</span>
+                    <span className="text-eatspin-orange font-medium">{spinResult.priceRange}</span>
+                  </div>
+                  
+                  {spinResult.distance && (
+                    <div className="flex items-center gap-2 text-eatspin-gray-1">
+                      <Clock size={16} className="text-eatspin-orange" />
+                      <span>{spinResult.distance.toFixed(1)} km away</span>
+                    </div>
+                  )}
+                  
+                  {spinResult.phone && (
+                    <div className="flex items-center gap-2 text-eatspin-gray-1">
+                      <Phone size={16} className="text-eatspin-orange" />
+                      <a href={`tel:${spinResult.phone}`} className="hover:text-eatspin-orange">
+                        {spinResult.phone}
+                      </a>
+                    </div>
+                  )}
                 </div>
-              )}
-              
-              {spinResult.phone && (
-                <div className="flex items-center gap-2 text-eatspin-gray-1">
-                  <Phone size={16} className="text-eatspin-orange" />
-                  <a href={`tel:${spinResult.phone}`} className="hover:text-eatspin-orange">
-                    {spinResult.phone}
-                  </a>
+                
+                {spinResult.description && (
+                  <p className="mt-4 text-sm text-eatspin-gray-1 leading-relaxed">
+                    {spinResult.description}
+                  </p>
+                )}
+                
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {spinResult.category.slice(0, 3).map((cat) => {
+                    const categoryConfig = foodCategories.find((c) => c.id === cat);
+                    return (
+                      <span
+                        key={cat}
+                        className="px-3 py-1 rounded-full text-xs font-medium text-white"
+                        style={{ backgroundColor: categoryConfig?.color || '#F54703' }}
+                      >
+                        {categoryConfig?.icon} {categoryConfig?.name}
+                      </span>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
-            
-            {spinResult.description && (
-              <p className="mt-4 text-sm text-eatspin-gray-1 leading-relaxed">
-                {spinResult.description}
-              </p>
+              </>
             )}
-            
-            <div className="mt-4 flex flex-wrap gap-2">
-              {spinResult.category.slice(0, 3).map((cat) => {
-                const categoryConfig = foodCategories.find((c) => c.id === cat);
-                return (
-                  <span
-                    key={cat}
-                    className="px-3 py-1 rounded-full text-xs font-medium text-white"
-                    style={{ backgroundColor: categoryConfig?.color || '#F54703' }}
-                  >
-                    {categoryConfig?.icon} {categoryConfig?.name}
-                  </span>
-                );
-              })}
-            </div>
           </div>
         </div>
       )}

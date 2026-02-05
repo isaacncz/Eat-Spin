@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLocation } from '@/hooks/useLocation';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
@@ -20,10 +20,103 @@ import { CTA } from '@/sections/CTA';
 import { Footer } from '@/sections/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X } from 'lucide-react';
+import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X, Save, Trash2 } from 'lucide-react';
 import './App.css';
 
 type SpinTab = 'auto' | 'manual';
+type PresetMealTime = Exclude<MealTime, 'none'> | null;
+interface ManualPreset {
+  id: string;
+  name: string;
+  restaurants: string[];
+  mealTime: PresetMealTime;
+  createdAt: number;
+}
+
+const MANUAL_RESTAURANTS_STORAGE_KEY = 'eatspin:manual-restaurants';
+const MANUAL_PRESETS_STORAGE_KEY = 'eatspin:manual-presets';
+
+const createManualRestaurant = (name: string): Restaurant => {
+  const now = Date.now();
+  return {
+    id: `manual-${now}-${Math.random().toString(36).slice(2, 8)}`,
+    name,
+    category: ['street food'],
+    address: 'Your custom pick',
+    coordinates: { lat: 0, lng: 0 },
+    hours: {
+      daily: { open: '00:00', close: '23:59' },
+    },
+    rating: 5,
+    priceRange: '$$',
+    description: 'Added by you.',
+  };
+};
+
+const getPresetMealTime = (): PresetMealTime => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 10) return 'breakfast';
+  if (hour >= 10 && hour < 15) return 'lunch';
+  if (hour >= 15 && hour < 22) return 'dinner';
+  return null;
+};
+
+const loadManualRestaurants = (): Restaurant[] => {
+  if (typeof window === 'undefined') return [];
+
+  const storedRestaurants = window.localStorage.getItem(MANUAL_RESTAURANTS_STORAGE_KEY);
+  if (!storedRestaurants) return [];
+
+  try {
+    const parsedRestaurants = JSON.parse(storedRestaurants);
+    if (!Array.isArray(parsedRestaurants)) return [];
+
+    return parsedRestaurants.filter((restaurant): restaurant is Restaurant => (
+      typeof restaurant?.id === 'string'
+      && typeof restaurant?.name === 'string'
+      && typeof restaurant?.address === 'string'
+      && typeof restaurant?.description === 'string'
+      && typeof restaurant?.rating === 'number'
+      && typeof restaurant?.priceRange === 'string'
+      && Array.isArray(restaurant?.category)
+      && typeof restaurant?.coordinates?.lat === 'number'
+      && typeof restaurant?.coordinates?.lng === 'number'
+      && typeof restaurant?.hours === 'object'
+    ));
+  } catch {
+    return [];
+  }
+};
+
+const loadManualPresets = (): ManualPreset[] => {
+  if (typeof window === 'undefined') return [];
+
+  const storedPresets = window.localStorage.getItem(MANUAL_PRESETS_STORAGE_KEY);
+  if (!storedPresets) return [];
+
+  try {
+    const parsedPresets = JSON.parse(storedPresets);
+    if (!Array.isArray(parsedPresets)) return [];
+
+    return parsedPresets.filter((preset): preset is ManualPreset => {
+      const restaurants = (preset as { restaurants?: unknown }).restaurants;
+
+      return (
+        typeof (preset as { id?: unknown }).id === 'string'
+        && typeof (preset as { name?: unknown }).name === 'string'
+        && Array.isArray(restaurants)
+        && restaurants.every((restaurant: unknown) => typeof restaurant === 'string')
+        && ((preset as { mealTime?: unknown }).mealTime === null
+          || (preset as { mealTime?: unknown }).mealTime === 'breakfast'
+          || (preset as { mealTime?: unknown }).mealTime === 'lunch'
+          || (preset as { mealTime?: unknown }).mealTime === 'dinner')
+        && typeof (preset as { createdAt?: unknown }).createdAt === 'number'
+      );
+    });
+  } catch {
+    return [];
+  }
+};
 
 function App() {
   // State management
@@ -42,9 +135,13 @@ function App() {
   const [autoWheelKey, setAutoWheelKey] = useState(0);
 
   const [manualInput, setManualInput] = useState('');
-  const [manualRestaurants, setManualRestaurants] = useState<Restaurant[]>([]);
+  const [manualRestaurants, setManualRestaurants] = useState<Restaurant[]>(() => loadManualRestaurants());
   const [manualWheelKey, setManualWheelKey] = useState(0);
   const [manualSpinResult, setManualSpinResult] = useState<Restaurant | null>(null);
+  const [presetNameInput, setPresetNameInput] = useState('');
+  const [presetMealTimeInput, setPresetMealTimeInput] = useState<PresetMealTime>(null);
+  const [manualPresets, setManualPresets] = useState<ManualPreset[]>(() => loadManualPresets());
+  const autoLoadedMealTimeRef = useRef<PresetMealTime>(null);
 
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
@@ -142,27 +239,48 @@ function App() {
       return;
     }
 
-    const now = new Date();
-    const id = `manual-${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`;
-
-    const restaurant: Restaurant = {
-      id,
-      name,
-      category: ['street food'],
-      address: 'Your custom pick',
-      coordinates: { lat: 0, lng: 0 },
-      hours: {
-        daily: { open: '00:00', close: '23:59' },
-      },
-      rating: 5,
-      priceRange: '$$',
-      description: 'Added by you.',
-    };
-
-    setManualRestaurants((prev) => [...prev, restaurant]);
+    setManualRestaurants((prev) => [...prev, createManualRestaurant(name)]);
     setManualInput('');
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
+  };
+
+  const buildRestaurantsFromNames = useCallback((names: string[]) => {
+    const uniqueNames = names
+      .map((name) => name.trim())
+      .filter(Boolean)
+      .filter((name, index, arr) => arr.findIndex((item) => item.toLowerCase() === name.toLowerCase()) === index);
+
+    return uniqueNames.map((name) => createManualRestaurant(name));
+  }, []);
+
+  const loadPresetRestaurants = useCallback((preset: ManualPreset) => {
+    const restaurants = buildRestaurantsFromNames(preset.restaurants);
+    setManualRestaurants(restaurants);
+    setManualSpinResult(null);
+    setManualWheelKey((prev) => prev + 1);
+  }, [buildRestaurantsFromNames]);
+
+  const saveCurrentAsPreset = () => {
+    const trimmedName = presetNameInput.trim();
+    if (!trimmedName || manualRestaurants.length === 0) return;
+
+    const restaurantNames = manualRestaurants.map((restaurant) => restaurant.name.trim()).filter(Boolean);
+    const newPreset: ManualPreset = {
+      id: `preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: trimmedName,
+      restaurants: restaurantNames,
+      mealTime: presetMealTimeInput,
+      createdAt: Date.now(),
+    };
+
+    setManualPresets((prev) => [newPreset, ...prev]);
+    setPresetNameInput('');
+    setPresetMealTimeInput(null);
+  };
+
+  const deletePreset = (presetId: string) => {
+    setManualPresets((prev) => prev.filter((preset) => preset.id !== presetId));
   };
 
   const removeManualRestaurant = (id: string) => {
@@ -183,6 +301,35 @@ function App() {
     if (manualRestaurants.length === 1) return 'Add at least 2 restaurants to spin';
     return undefined;
   }, [manualRestaurants.length]);
+
+  useEffect(() => {
+    window.localStorage.setItem(MANUAL_RESTAURANTS_STORAGE_KEY, JSON.stringify(manualRestaurants));
+  }, [manualRestaurants]);
+
+  useEffect(() => {
+    window.localStorage.setItem(MANUAL_PRESETS_STORAGE_KEY, JSON.stringify(manualPresets));
+  }, [manualPresets]);
+
+  useEffect(() => {
+    const currentPresetMealTime = getPresetMealTime();
+
+    if (autoLoadedMealTimeRef.current === currentPresetMealTime) return;
+
+    autoLoadedMealTimeRef.current = currentPresetMealTime;
+
+    if (currentPresetMealTime === null) return;
+
+    const matchedPreset = manualPresets.find((preset) => preset.mealTime === currentPresetMealTime);
+    if (!matchedPreset) return;
+
+    const timeoutId = window.setTimeout(() => {
+      loadPresetRestaurants(matchedPreset);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [manualPresets, loadPresetRestaurants, currentMealTime]);
 
   return (
     <div className="min-h-screen bg-brand-linen">
@@ -448,6 +595,76 @@ function App() {
               />
 
               <div id="manual-input" className="mt-8 max-w-xl mx-auto">
+                <div className="mb-4 bg-white rounded-xl border border-eatspin-peach/60 p-4 space-y-3">
+                  <div>
+                    <h4 className="font-heading font-semibold text-brand-black">Quick Presets</h4>
+                    <p className="text-xs text-eatspin-gray-1">Save this wheel and load it anytime. Meal presets auto-load by current time.</p>
+                  </div>
+
+                  <div className="grid sm:grid-cols-[1fr_auto_auto] gap-2">
+                    <Input
+                      value={presetNameInput}
+                      onChange={(e) => setPresetNameInput(e.target.value)}
+                      placeholder="Preset name (e.g. Lunch Nearby)"
+                      className="h-11"
+                    />
+                    <select
+                      value={presetMealTimeInput ?? ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === 'breakfast' || value === 'lunch' || value === 'dinner') {
+                          setPresetMealTimeInput(value);
+                          return;
+                        }
+                        setPresetMealTimeInput(null);
+                      }}
+                      className="h-11 rounded-md border border-input bg-transparent px-3 text-sm"
+                    >
+                      <option value="">No meal time</option>
+                      <option value="breakfast">Breakfast</option>
+                      <option value="lunch">Lunch</option>
+                      <option value="dinner">Dinner</option>
+                    </select>
+                    <Button
+                      onClick={saveCurrentAsPreset}
+                      disabled={manualRestaurants.length === 0 || !presetNameInput.trim()}
+                      className="h-11 bg-brand-black hover:bg-brand-black/90"
+                    >
+                      <Save size={16} className="mr-2" /> Save
+                    </Button>
+                  </div>
+
+                  {manualPresets.length === 0 ? (
+                    <p className="text-sm text-eatspin-gray-1">No saved presets yet.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {manualPresets.map((preset) => (
+                        <li key={preset.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-linen px-3 py-2">
+                          <button
+                            type="button"
+                            onClick={() => loadPresetRestaurants(preset)}
+                            className="text-left flex-1"
+                          >
+                            <p className="text-sm font-medium text-brand-black">{preset.name}</p>
+                            <p className="text-xs text-eatspin-gray-1">
+                              {preset.restaurants.length} picks
+                              {preset.mealTime ? ` • ${preset.mealTime}` : ''}
+                            </p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deletePreset(preset.id)}
+                            className="text-eatspin-gray-1 hover:text-red-500"
+                            aria-label={`Delete preset ${preset.name}`}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
                 <div className="sticky bottom-3 z-30 rounded-2xl border border-eatspin-peach/60 bg-white/95 p-3 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-white/85">
                   <div className="flex flex-col sm:flex-row gap-2">
                   <Input

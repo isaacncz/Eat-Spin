@@ -101,16 +101,16 @@ export function Hero({ onGetStarted }: HeroProps) {
               <span className="text-brand-orange">Let's EatSpin!</span>
             </h1>
 
-            <p className="text-lg text-eatspin-gray-1 mb-8 max-w-lg">
+            <p className="text-base sm:text-lg text-eatspin-gray-1 mb-8 max-w-lg">
               Can't decide what to eat? Let our magical roulette wheel choose for you! 
               Discover amazing restaurants in Penang based on your preferences and location.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <Button
                 onClick={onGetStarted}
                 size="lg"
-                className="bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-lg font-bold px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                className="w-full sm:w-auto bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-base sm:text-lg font-bold px-6 sm:px-8 py-5 sm:py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
               >
                 Start Spinning
                 <ArrowRight
@@ -122,7 +122,7 @@ export function Hero({ onGetStarted }: HeroProps) {
               <Button
                 variant="outline"
                 size="lg"
-                className="border-eatspin-orange text-eatspin-orange hover:bg-eatspin-orange/10 font-medium px-8 py-6 rounded-full"
+                className="w-full sm:w-auto border-eatspin-orange text-eatspin-orange hover:bg-eatspin-orange/10 font-medium px-6 sm:px-8 py-5 sm:py-6 rounded-full"
               >
                 <Play size={18} className="mr-2" />
                 Watch Demo
@@ -130,18 +130,16 @@ export function Hero({ onGetStarted }: HeroProps) {
             </div>
 
             {/* Stats */}
-            <div className="flex items-center gap-8 mt-10">
-              <div>
+            <div className="mt-10 grid grid-cols-3 gap-4 sm:gap-6 max-w-md">
+              <div className="text-center sm:text-left">
                 <p className="font-heading text-2xl font-bold text-brand-orange">30+</p>
                 <p className="text-sm text-eatspin-gray-1">Restaurants</p>
               </div>
-              <div className="w-px h-10 bg-eatspin-gray-3" />
-              <div>
+              <div className="text-center sm:text-left sm:border-l sm:border-eatspin-gray-3 sm:pl-6">
                 <p className="font-heading text-2xl font-bold text-brand-orange">1-2km</p>
                 <p className="text-sm text-eatspin-gray-1">Search Radius</p>
               </div>
-              <div className="w-px h-10 bg-eatspin-gray-3" />
-              <div>
+              <div className="text-center sm:text-left sm:border-l sm:border-eatspin-gray-3 sm:pl-6">
                 <p className="font-heading text-2xl font-bold text-brand-orange">Free</p>
                 <p className="text-sm text-eatspin-gray-1">To Start</p>
               </div>

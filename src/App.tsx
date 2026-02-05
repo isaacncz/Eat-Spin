@@ -271,7 +271,7 @@ function App() {
                     }
                   }}
                  disabled={isSpinning || filteredRestaurants.length === 0}
-                 className="bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-lg font-bold px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-70"
+                 className="w-full sm:w-auto bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-base sm:text-lg font-bold px-6 sm:px-8 py-5 sm:py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-70"
                >
                 <Utensils size={20} className="mr-2" />
                 Spin for {currentMealTime !== 'none' ? currentMealTime : 'Food'}
@@ -281,7 +281,7 @@ function App() {
                 <Button
                   onClick={resetWheel}
                   variant="outline"
-                  className="border-eatspin-orange text-eatspin-orange hover:bg-eatspin-orange/10 font-medium px-6 py-6 rounded-full"
+                  className="w-full sm:w-auto border-eatspin-orange text-eatspin-orange hover:bg-eatspin-orange/10 font-medium px-6 py-5 sm:py-6 rounded-full"
                 >
                   <RotateCcw size={18} className="mr-2" />
                   Spin Again

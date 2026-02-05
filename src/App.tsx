@@ -26,6 +26,7 @@ function App() {
   // State management
   const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
   const [selectedPriceRanges, setSelectedPriceRanges] = useState<Restaurant['priceRange'][]>([]);
+  const [nonHalalOnly, setNonHalalOnly] = useState(false);
   const [filteredRestaurants, setFilteredRestaurants] = useState<Restaurant[]>([]);
   const [radiusKm, setRadiusKm] = useState<number>(10);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -68,10 +69,11 @@ function App() {
       location,
       selectedCategories,
       radiusKm,
-      selectedPriceRanges
+      selectedPriceRanges,
+      nonHalalOnly
     );
     setFilteredRestaurants(filtered);
-  }, [location, selectedCategories, radiusKm, selectedPriceRanges]);
+  }, [location, selectedCategories, radiusKm, selectedPriceRanges, nonHalalOnly]);
 
   // Handle spin complete
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
@@ -233,13 +235,38 @@ function App() {
             </div>
           </div>
 
+          {/* Dietary Preference */}
+          <div className="mb-8">
+            <div className="mb-4 text-center">
+              <h3 className="font-heading text-lg font-semibold text-brand-black mb-2">
+                Dietary preference
+              </h3>
+              <p className="text-sm text-eatspin-gray-1">
+                Show only non-halal options
+              </p>
+            </div>
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => setNonHalalOnly((prev) => !prev)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  nonHalalOnly
+                    ? 'bg-brand-orange text-white shadow-lg'
+                    : 'bg-white text-brand-black border border-gray-200 hover:border-brand-orange hover:text-brand-orange'
+                }`}
+              >
+                Non-Halal Only
+              </button>
+            </div>
+          </div>
+
           {/* Restaurant Count */}
           {location && (
             <div className="text-center mb-6">
               <p className="text-sm text-eatspin-gray-1">
                 <span className="font-semibold text-brand-orange">{filteredRestaurants.length}</span>{' '}
                 restaurants within {radiusKm} km
-                {selectedCategories.length > 0 && ' match your preferences'}
+                {(selectedCategories.length > 0 || nonHalalOnly) && ' match your preferences'}
               </p>
             </div>
           )}

@@ -3,6 +3,7 @@ import type { Restaurant } from '@/types';
 import { Loader2, MapPin, Clock, Star, Phone } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
+import { Button } from '@/components/ui/button';
 
 interface RouletteWheelProps {
   restaurants: Restaurant[];
@@ -11,6 +12,12 @@ interface RouletteWheelProps {
   isSpinning: boolean;
   setIsSpinning: (spinning: boolean) => void;
   onShuffle: () => void;
+  canSpin?: boolean;
+  helperText?: string;
+  spinButtonLabel?: string;
+  emptyStateTitle?: string;
+  emptyStateSubtitle?: string;
+  onEditList?: () => void;
 }
 
 // Sophisticated food-app color palette with good contrast
@@ -43,6 +50,12 @@ export function RouletteWheel({
   isSpinning,
   setIsSpinning,
   onShuffle,
+  canSpin = restaurants.length > 0,
+  helperText,
+  spinButtonLabel = 'Spin the Wheel!',
+  emptyStateTitle = 'No restaurants match your criteria',
+  emptyStateSubtitle = 'Try selecting different categories or check back during meal hours',
+  onEditList,
 }: RouletteWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
@@ -66,7 +79,7 @@ export function RouletteWheel({
   }, [restaurants.length]);
 
   const handleSpin = () => {
-    if (isSpinning || restaurants.length === 0) return;
+    if (isSpinning || restaurants.length === 0 || !canSpin) return;
 
     setIsSpinning(true);
     setSpinResult(null);
@@ -110,10 +123,10 @@ export function RouletteWheel({
       <div className="flex flex-col items-center justify-center py-12">
         <div className="text-center">
           <p className="text-lg font-medium text-eatspin-gray-1 mb-2">
-            No restaurants match your criteria
+            {emptyStateTitle}
           </p>
           <p className="text-sm text-eatspin-gray-2">
-            Try selecting different categories or check back during meal hours
+            {emptyStateSubtitle}
           </p>
         </div>
       </div>
@@ -245,11 +258,11 @@ export function RouletteWheel({
       {/* Spin Button */}
       <button
         onClick={handleSpin}
-        disabled={isSpinning}
+        disabled={isSpinning || !canSpin}
         className="relative overflow-hidden w-full max-w-xs sm:w-auto px-8 sm:px-12 py-4 bg-brand-orange text-white font-heading text-lg sm:text-xl font-bold rounded-full shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
         <span className={`transition-opacity duration-300 ${isSpinning ? 'opacity-0' : 'opacity-100'}`}>
-          Spin the Wheel!
+          {spinButtonLabel}
         </span>
         {isSpinning && (
           <span className="absolute inset-0 flex items-center justify-center">
@@ -257,6 +270,10 @@ export function RouletteWheel({
           </span>
         )}
       </button>
+
+      {helperText && (
+        <p className="text-sm text-eatspin-gray-1 text-center">{helperText}</p>
+      )}
 
       {totalCount > restaurants.length && (
         <div className="text-center">
@@ -335,6 +352,21 @@ export function RouletteWheel({
                   </span>
                 );
               })}
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Button
+                onClick={handleSpin}
+                disabled={isSpinning || !canSpin}
+                className="bg-brand-orange hover:bg-brand-orange/90 text-white"
+              >
+                Spin again
+              </Button>
+              {onEditList && (
+                <Button variant="outline" onClick={onEditList}>
+                  Edit list
+                </Button>
+              )}
             </div>
           </div>
         </div>

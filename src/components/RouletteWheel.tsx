@@ -137,7 +137,10 @@ export function RouletteWheel({
         </div>
 
         {/* Wheel Container */}
-        <div className="relative w-72 h-72 sm:w-96 sm:h-96">
+        <div
+          className="relative"
+          style={{ width: 'min(88vw, 24rem)', height: 'min(88vw, 24rem)' }}
+        >
           {/* Wheel */}
           <div
             ref={wheelRef}
@@ -243,7 +246,7 @@ export function RouletteWheel({
       <button
         onClick={handleSpin}
         disabled={isSpinning}
-        className="relative overflow-hidden px-12 py-4 bg-brand-orange text-white font-heading text-xl font-bold rounded-full shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+        className="relative overflow-hidden w-full max-w-xs sm:w-auto px-8 sm:px-12 py-4 bg-brand-orange text-white font-heading text-lg sm:text-xl font-bold rounded-full shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
         <span className={`transition-opacity duration-300 ${isSpinning ? 'opacity-0' : 'opacity-100'}`}>
           Spin the Wheel!

@@ -85,13 +85,12 @@ function App() {
   const buildManualRestaurant = (name: string): Restaurant => ({
     id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name,
-    category: ['street food'],
-    address: 'User added option',
+    category: [],
+    address: '',
     coordinates: { lat: 0, lng: 0 },
     hours: {},
     rating: 0,
-    priceRange: '$$',
-    description: 'Added manually',
+    priceRange: '$',
   });
 
   const addManualRestaurant = useCallback(() => {

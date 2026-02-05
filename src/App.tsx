@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation } from '@/hooks/useLocation';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
@@ -19,14 +19,17 @@ import { Testimonials } from '@/sections/Testimonials';
 import { CTA } from '@/sections/CTA';
 import { Footer } from '@/sections/Footer';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RotateCcw, Crown, MapPin, Utensils } from 'lucide-react';
 import './App.css';
+
+type WheelMode = 'spin-for-me' | 'i-know-where';
 
 function App() {
   // State management
   const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
   const [selectedPriceRanges, setSelectedPriceRanges] = useState<Restaurant['priceRange'][]>([]);
-  const [filteredRestaurants, setFilteredRestaurants] = useState<Restaurant[]>([]);
   const [radiusKm, setRadiusKm] = useState<number>(10);
   const [isSpinning, setIsSpinning] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
@@ -34,8 +37,14 @@ function App() {
   const [currentMealTime, setCurrentMealTime] = useState<MealTime>('none');
   const [isPremium, setIsPremium] = useState(false);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
-  const [showWheelSection, setShowWheelSection] = useState(false);
+  const [activeTab, setActiveTab] = useState<WheelMode>('spin-for-me');
+
   const [wheelRestaurants, setWheelRestaurants] = useState<Restaurant[]>([]);
+  const [showSpinForMeWheel, setShowSpinForMeWheel] = useState(false);
+
+  const [manualInput, setManualInput] = useState('');
+  const [manualRestaurants, setManualRestaurants] = useState<Restaurant[]>([]);
+  const [showManualWheel, setShowManualWheel] = useState(false);
 
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
@@ -54,24 +63,66 @@ function App() {
     const updateMealTime = () => {
       setCurrentMealTime(getCurrentMealTime());
     };
-    
+
     updateMealTime();
-    const interval = setInterval(updateMealTime, 60000); // Check every minute
-    
+    const interval = setInterval(updateMealTime, 60000);
+
     return () => clearInterval(interval);
   }, []);
 
-  // Filter restaurants when location, categories, or radius change
-  useEffect(() => {
-    const filtered = enhancedFilterRestaurants(
-      penangRestaurants,
-      location,
-      selectedCategories,
-      radiusKm,
-      selectedPriceRanges
+  const filteredRestaurants = useMemo(
+    () =>
+      enhancedFilterRestaurants(
+        penangRestaurants,
+        location,
+        selectedCategories,
+        radiusKm,
+        selectedPriceRanges
+      ),
+    [location, selectedCategories, radiusKm, selectedPriceRanges]
+  );
+
+  const buildManualRestaurant = (name: string): Restaurant => ({
+    id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name,
+    category: ['street food'],
+    address: 'User added option',
+    coordinates: { lat: 0, lng: 0 },
+    hours: {},
+    rating: 0,
+    priceRange: '$$',
+    description: 'Added manually',
+  });
+
+  const addManualRestaurant = useCallback(() => {
+    const trimmed = manualInput.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    const hasDuplicate = manualRestaurants.some(
+      (restaurant) => restaurant.name.toLocaleLowerCase() === trimmed.toLocaleLowerCase()
     );
-    setFilteredRestaurants(filtered);
-  }, [location, selectedCategories, radiusKm, selectedPriceRanges]);
+
+    if (!hasDuplicate) {
+      setManualRestaurants((prev) => [...prev, buildManualRestaurant(trimmed)]);
+    }
+
+    setManualInput('');
+  }, [manualInput, manualRestaurants]);
+
+  const removeManualRestaurant = (id: string) => {
+    setManualRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== id));
+    setSpinResult(null);
+  };
+
+  const clearManualRestaurants = () => {
+    const confirmed = window.confirm('Clear all restaurants?');
+    if (confirmed) {
+      setManualRestaurants([]);
+      setSpinResult(null);
+    }
+  };
 
   // Handle spin complete
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
@@ -107,31 +158,50 @@ function App() {
     setWheelRestaurants(shuffled.slice(0, 12));
   };
 
-  // Main App Content
+  const handleStartSpinForMe = () => {
+    if (handleSpinAttempt()) {
+      shuffleWheel();
+      setShowSpinForMeWheel(true);
+      setTimeout(() => {
+        const wheelSection = document.getElementById('wheel');
+        wheelSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  };
+
+  const handleTabChange = (value: string) => {
+    const nextTab = value as WheelMode;
+    setActiveTab(nextTab);
+    setSpinResult(null);
+    setIsSpinning(false);
+
+    if (nextTab === 'spin-for-me') {
+      setShowSpinForMeWheel(false);
+      setWheelRestaurants([]);
+    }
+
+    if (nextTab === 'i-know-where') {
+      setShowManualWheel(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-brand-linen">
-      {/* Navigation */}
-      <Navbar 
-        isPremium={isPremium} 
-        onUpgradeClick={() => setShowSubscription(true)} 
+      <Navbar
+        isPremium={isPremium}
+        onUpgradeClick={() => setShowSubscription(true)}
       />
 
-      {/* Hero Section */}
-       <Hero onGetStarted={() => {
-         const appSection = document.getElementById('app');
-         appSection?.scrollIntoView({ behavior: 'smooth' });
-       }} />
+      <Hero onGetStarted={() => {
+        const appSection = document.getElementById('app');
+        appSection?.scrollIntoView({ behavior: 'smooth' });
+      }} />
 
-      {/* How It Works Section */}
       <HowItWorks />
-
-      {/* Features Section */}
       <Features />
 
-      {/* Main App Section */}
       <section id="app" className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-4xl mx-auto">
-          {/* Section Header */}
           <div className="text-center mb-8">
             <h2 className="font-heading text-3xl sm:text-4xl font-bold text-brand-black mb-4">
               Let's Find You Something to Eat!
@@ -141,158 +211,267 @@ function App() {
             </p>
           </div>
 
-          {/* Location Permission */}
-          {!location && (
-            <div className="mb-8">
-              <LocationPermission
-                isLoading={locationLoading}
-                error={locationError}
-                onRequestLocation={requestLocation}
-                location={location}
-              />
-            </div>
-          )}
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <TabsList className="w-full h-auto grid grid-cols-2 mb-8 bg-brand-linen p-1">
+              <TabsTrigger value="spin-for-me" className="py-3 text-sm sm:text-base">Spin for me</TabsTrigger>
+              <TabsTrigger value="i-know-where" className="py-3 text-sm sm:text-base">I know where</TabsTrigger>
+            </TabsList>
 
-          {/* Location Status */}
-          {location && (
-            <div className="mb-6 flex items-center justify-center">
-              <div className="flex items-center gap-2 px-4 py-2 bg-eatspin-success/10 rounded-full">
-                <div className="w-2 h-2 bg-eatspin-success rounded-full animate-pulse" />
-                <MapPin size={16} className="text-eatspin-success" />
-                <span className="text-sm font-medium text-eatspin-success">
-                  Finding restaurants near you
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Radius Selector */}
-          {location && (
-            <div className="mb-6 max-w-md mx-auto">
-              <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
-                Search Radius: <span className="text-brand-orange font-bold">{radiusKm} km</span>
-              </label>
-              <input
-                type="range"
-                min="1"
-                max="50"
-                value={radiusKm}
-                onChange={(e) => setRadiusKm(Number(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-orange"
-              />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>1 km</span>
-                <span>25 km</span>
-                <span>50 km</span>
-              </div>
-            </div>
-          )}
-
-          {/* Meal Time Indicator */}
-          <div className="mb-6 flex justify-center">
-            <MealTimeIndicator />
-          </div>
-
-          {/* Food Category Selector */}
-          <div className="mb-8">
-            <FoodCategorySelector
-              selectedCategories={selectedCategories}
-              onCategoryChange={setSelectedCategories}
-              maxSelection={3}
-            />
-          </div>
-
-          {/* Price Range Selector */}
-          <div className="mb-8">
-            <div className="mb-4 text-center">
-              <h3 className="font-heading text-lg font-semibold text-brand-black mb-2">
-                Price range
-              </h3>
-              <p className="text-sm text-eatspin-gray-1">
-                Select any (optional)
-              </p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-2">
-              {priceOptions.map((price) => {
-                const isSelected = selectedPriceRanges.includes(price);
-                return (
-                  <button
-                    key={price}
-                    type="button"
-                    onClick={() => togglePriceRange(price)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                      isSelected
-                        ? 'bg-brand-orange text-white shadow-lg'
-                        : 'bg-white text-brand-black border border-gray-200 hover:border-brand-orange hover:text-brand-orange'
-                    }`}
-                  >
-                    {price}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Restaurant Count */}
-          {location && (
-            <div className="text-center mb-6">
-              <p className="text-sm text-eatspin-gray-1">
-                <span className="font-semibold text-brand-orange">{filteredRestaurants.length}</span>{' '}
-                restaurants within {radiusKm} km
-                {selectedCategories.length > 0 && ' match your preferences'}
-              </p>
-            </div>
-          )}
-
-          {/* Spin Limit Warning */}
-          {showSpinLimitWarning && currentMealTime !== 'none' && (
-            <div className="mb-6">
-              <SpinLimitWarning
-                mealTime={currentMealTime}
-                onUpgrade={() => setShowSubscription(true)}
-                onClose={() => setShowSpinLimitWarning(false)}
-              />
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          {location && filteredRestaurants.length > 0 && (
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-               <Button
-                  onClick={() => {
-                    if (handleSpinAttempt()) {
-                      shuffleWheel();
-                      setShowWheelSection(true);
-                      // Navigate to wheel section
-                      setTimeout(() => {
-                        const wheelSection = document.getElementById('wheel');
-                        wheelSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      }, 100);
-                    }
-                  }}
-                 disabled={isSpinning || filteredRestaurants.length === 0}
-                 className="bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-lg font-bold px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-70"
-               >
-                <Utensils size={20} className="mr-2" />
-                Spin for {currentMealTime !== 'none' ? currentMealTime : 'Food'}
-              </Button>
-
-              {spinResult && (
-                <Button
-                  onClick={resetWheel}
-                  variant="outline"
-                  className="border-eatspin-orange text-eatspin-orange hover:bg-eatspin-orange/10 font-medium px-6 py-6 rounded-full"
-                >
-                  <RotateCcw size={18} className="mr-2" />
-                  Spin Again
-                </Button>
+            <TabsContent value="spin-for-me" className="space-y-6">
+              {!location && (
+                <div className="mb-8">
+                  <LocationPermission
+                    isLoading={locationLoading}
+                    error={locationError}
+                    onRequestLocation={requestLocation}
+                    location={location}
+                  />
+                </div>
               )}
-            </div>
-          )}
 
-          {/* Premium Status */}
+              {location && (
+                <div className="mb-6 flex items-center justify-center">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-eatspin-success/10 rounded-full">
+                    <div className="w-2 h-2 bg-eatspin-success rounded-full animate-pulse" />
+                    <MapPin size={16} className="text-eatspin-success" />
+                    <span className="text-sm font-medium text-eatspin-success">
+                      Finding restaurants near you
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {location && (
+                <div className="mb-6 max-w-md mx-auto">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
+                    Search Radius: <span className="text-brand-orange font-bold">{radiusKm} km</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="50"
+                    value={radiusKm}
+                    onChange={(e) => setRadiusKm(Number(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-orange"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>1 km</span>
+                    <span>25 km</span>
+                    <span>50 km</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="mb-6 flex justify-center">
+                <MealTimeIndicator />
+              </div>
+
+              <div className="mb-8">
+                <FoodCategorySelector
+                  selectedCategories={selectedCategories}
+                  onCategoryChange={setSelectedCategories}
+                  maxSelection={3}
+                />
+              </div>
+
+              <div className="mb-8">
+                <div className="mb-4 text-center">
+                  <h3 className="font-heading text-lg font-semibold text-brand-black mb-2">Price range</h3>
+                  <p className="text-sm text-eatspin-gray-1">Select any (optional)</p>
+                </div>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {priceOptions.map((price) => {
+                    const isSelected = selectedPriceRanges.includes(price);
+                    return (
+                      <button
+                        key={price}
+                        type="button"
+                        onClick={() => togglePriceRange(price)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                          isSelected
+                            ? 'bg-brand-orange text-white shadow-lg'
+                            : 'bg-white text-brand-black border border-gray-200 hover:border-brand-orange hover:text-brand-orange'
+                        }`}
+                      >
+                        {price}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {location && (
+                <div className="text-center mb-6">
+                  <p className="text-sm text-eatspin-gray-1">
+                    <span className="font-semibold text-brand-orange">{filteredRestaurants.length}</span>{' '}
+                    restaurants within {radiusKm} km
+                    {selectedCategories.length > 0 && ' match your preferences'}
+                  </p>
+                </div>
+              )}
+
+              {showSpinLimitWarning && currentMealTime !== 'none' && (
+                <div className="mb-6">
+                  <SpinLimitWarning
+                    mealTime={currentMealTime}
+                    onUpgrade={() => setShowSubscription(true)}
+                    onClose={() => setShowSpinLimitWarning(false)}
+                  />
+                </div>
+              )}
+
+              {location && filteredRestaurants.length > 0 && (
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                  <Button
+                    onClick={handleStartSpinForMe}
+                    disabled={isSpinning || filteredRestaurants.length === 0}
+                    className="bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-lg font-bold px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-70"
+                  >
+                    <Utensils size={20} className="mr-2" />
+                    Spin for {currentMealTime !== 'none' ? currentMealTime : 'Food'}
+                  </Button>
+
+                  {spinResult && (
+                    <Button
+                      onClick={resetWheel}
+                      variant="outline"
+                      className="border-eatspin-orange text-eatspin-orange hover:bg-eatspin-orange/10 font-medium px-6 py-6 rounded-full"
+                    >
+                      <RotateCcw size={18} className="mr-2" />
+                      Spin Again
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {showSpinForMeWheel && location && filteredRestaurants.length > 0 && (
+                <section id="wheel" className="py-8 px-2 sm:px-4 bg-brand-linen rounded-2xl">
+                  <div className="max-w-4xl mx-auto">
+                    <div className="text-center mb-8">
+                      <h2 className="font-heading text-2xl sm:text-3xl font-bold text-brand-black mb-2">Spin the Wheel!</h2>
+                      <p className="text-eatspin-gray-1">
+                        {filteredRestaurants.length} restaurants within {radiusKm} km ready to be discovered
+                      </p>
+                    </div>
+
+                    <RouletteWheel
+                      restaurants={wheelRestaurants}
+                      totalCount={filteredRestaurants.length}
+                      onSpinComplete={handleSpinComplete}
+                      isSpinning={isSpinning}
+                      setIsSpinning={setIsSpinning}
+                      onShuffle={shuffleWheel}
+                    />
+                  </div>
+                </section>
+              )}
+            </TabsContent>
+
+            <TabsContent value="i-know-where" className="space-y-6">
+              <section className="py-4 px-2 sm:px-4 bg-brand-linen rounded-2xl">
+                <div className="max-w-4xl mx-auto">
+                  <div className="text-center mb-6">
+                    <h3 className="font-heading text-2xl font-bold text-brand-black">Your restaurant wheel</h3>
+                    <p className="text-eatspin-gray-1">Type any options you want and spin when ready.</p>
+                  </div>
+
+                  {showManualWheel && (
+                    <RouletteWheel
+                      restaurants={manualRestaurants}
+                      totalCount={manualRestaurants.length}
+                      onSpinComplete={handleSpinComplete}
+                      isSpinning={isSpinning}
+                      setIsSpinning={setIsSpinning}
+                      minSpinCount={2}
+                      spinButtonLabel="Spin"
+                      emptyTitle="Add restaurants to start"
+                      emptyDescription="Type any restaurant you like…"
+                      minCountHelperText={
+                        manualRestaurants.length === 0
+                          ? 'Add restaurants to start'
+                          : 'Add at least 2 restaurants to spin'
+                      }
+                    />
+                  )}
+
+                  {!showManualWheel && (
+                    <div className="text-center py-12">
+                      <p className="text-sm text-eatspin-gray-2">Add restaurants to start</p>
+                    </div>
+                  )}
+
+                  <div className="mt-8 space-y-4">
+                    <div className="flex gap-2">
+                      <Input
+                        value={manualInput}
+                        onChange={(event) => setManualInput(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            addManualRestaurant();
+                            setShowManualWheel(true);
+                          }
+                        }}
+                        placeholder="Type any restaurant you like…"
+                        className="h-11"
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          addManualRestaurant();
+                          setShowManualWheel(true);
+                        }}
+                        className="h-11"
+                      >
+                        Add
+                      </Button>
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-gray-200 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm font-semibold text-brand-black">Restaurant list ({manualRestaurants.length})</p>
+                        {manualRestaurants.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={clearManualRestaurants}
+                            className="text-xs text-eatspin-orange font-medium hover:underline"
+                          >
+                            Clear all
+                          </button>
+                        )}
+                      </div>
+
+                      {manualRestaurants.length === 0 && (
+                        <p className="text-sm text-eatspin-gray-2">Add restaurants to start</p>
+                      )}
+
+                      <ul className="space-y-2">
+                        {manualRestaurants.map((restaurant) => (
+                          <li
+                            key={restaurant.id}
+                            className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-gray-100"
+                          >
+                            <span className="text-sm text-brand-black">{restaurant.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeManualRestaurant(restaurant.id)}
+                              className="text-sm text-eatspin-orange hover:text-eatspin-orange/80"
+                              aria-label={`Remove ${restaurant.name}`}
+                            >
+                              ❌
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </TabsContent>
+          </Tabs>
+
           {!isPremium && (
-            <div className="text-center">
+            <div className="text-center mt-8">
               <button
                 onClick={() => setShowSubscription(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full text-sm font-medium hover:shadow-lg transition-all duration-300 hover:scale-105"
@@ -303,9 +482,8 @@ function App() {
             </div>
           )}
 
-          {/* Premium User Badge */}
           {isPremium && (
-            <div className="text-center">
+            <div className="text-center mt-8">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full text-sm font-medium">
                 <Crown size={16} />
                 Premium Member - Unlimited Spins
@@ -315,41 +493,10 @@ function App() {
         </div>
       </section>
 
-       {/* Roulette Wheel Section */}
-       {showWheelSection && location && filteredRestaurants.length > 0 && (
-         <section id="wheel" className="py-16 px-4 sm:px-6 lg:px-8 bg-brand-linen">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="font-heading text-2xl sm:text-3xl font-bold text-brand-black mb-2">
-                Spin the Wheel!
-              </h2>
-              <p className="text-eatspin-gray-1">
-                {filteredRestaurants.length} restaurants within {radiusKm} km ready to be discovered
-              </p>
-            </div>
-
-            <RouletteWheel
-              restaurants={wheelRestaurants}
-              totalCount={filteredRestaurants.length}
-              onSpinComplete={handleSpinComplete}
-              isSpinning={isSpinning}
-              setIsSpinning={setIsSpinning}
-              onShuffle={shuffleWheel}
-            />
-          </div>
-        </section>
-      )}
-
-      {/* Testimonials Section */}
       <Testimonials />
-
-      {/* CTA Section */}
       <CTA />
-
-      {/* Footer */}
       <Footer />
 
-      {/* Subscription Modal */}
       <SubscriptionModal
         isOpen={showSubscription}
         onClose={() => setShowSubscription(false)}

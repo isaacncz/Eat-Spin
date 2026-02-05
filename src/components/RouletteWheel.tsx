@@ -10,7 +10,12 @@ interface RouletteWheelProps {
   onSpinComplete: (restaurant: Restaurant) => void;
   isSpinning: boolean;
   setIsSpinning: (spinning: boolean) => void;
-  onShuffle: () => void;
+  onShuffle?: () => void;
+  minSpinCount?: number;
+  spinButtonLabel?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
+  minCountHelperText?: string;
 }
 
 // Sophisticated food-app color palette with good contrast
@@ -43,6 +48,11 @@ export function RouletteWheel({
   isSpinning,
   setIsSpinning,
   onShuffle,
+  minSpinCount = 1,
+  spinButtonLabel = 'Spin the Wheel!',
+  emptyTitle = 'No restaurants match your criteria',
+  emptyDescription = 'Try selecting different categories or check back during meal hours',
+  minCountHelperText,
 }: RouletteWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
@@ -66,7 +76,7 @@ export function RouletteWheel({
   }, [restaurants.length]);
 
   const handleSpin = () => {
-    if (isSpinning || restaurants.length === 0) return;
+    if (isSpinning || restaurants.length < minSpinCount) return;
 
     setIsSpinning(true);
     setSpinResult(null);
@@ -110,10 +120,10 @@ export function RouletteWheel({
       <div className="flex flex-col items-center justify-center py-12">
         <div className="text-center">
           <p className="text-lg font-medium text-eatspin-gray-1 mb-2">
-            No restaurants match your criteria
+            {emptyTitle}
           </p>
           <p className="text-sm text-eatspin-gray-2">
-            Try selecting different categories or check back during meal hours
+            {emptyDescription}
           </p>
         </div>
       </div>
@@ -242,11 +252,11 @@ export function RouletteWheel({
       {/* Spin Button */}
       <button
         onClick={handleSpin}
-        disabled={isSpinning}
+        disabled={isSpinning || restaurants.length < minSpinCount}
         className="relative overflow-hidden px-12 py-4 bg-brand-orange text-white font-heading text-xl font-bold rounded-full shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
         <span className={`transition-opacity duration-300 ${isSpinning ? 'opacity-0' : 'opacity-100'}`}>
-          Spin the Wheel!
+          {spinButtonLabel}
         </span>
         {isSpinning && (
           <span className="absolute inset-0 flex items-center justify-center">
@@ -255,7 +265,11 @@ export function RouletteWheel({
         )}
       </button>
 
-      {totalCount > restaurants.length && (
+      {!isSpinning && restaurants.length < minSpinCount && minCountHelperText && (
+        <p className="text-sm text-eatspin-gray-2">{minCountHelperText}</p>
+      )}
+
+      {onShuffle && totalCount > restaurants.length && (
         <div className="text-center">
           <p className="text-sm text-eatspin-gray-1 mb-2">
             Showing {restaurants.length} of {totalCount} restaurants

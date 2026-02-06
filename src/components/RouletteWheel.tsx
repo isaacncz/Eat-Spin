@@ -73,6 +73,7 @@ export function RouletteWheel({
   const wheelRef = useRef<HTMLDivElement>(null);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
   const currentRotationRef = useRef(0);
+  const [wheelSize, setWheelSize] = useState(384);
 
   // Generate conic gradient for wheel segments
   const wheelBackground = useMemo(() => {
@@ -131,6 +132,20 @@ export function RouletteWheel({
     }
   }, [restaurants]);
 
+  useEffect(() => {
+    const updateWheelSize = () => {
+      if (typeof window === 'undefined') return;
+      const maxSize = 448;
+      const minSize = 280;
+      const size = Math.min(window.innerWidth * 0.92, maxSize);
+      setWheelSize(Math.max(size, minSize));
+    };
+
+    updateWheelSize();
+    window.addEventListener('resize', updateWheelSize);
+    return () => window.removeEventListener('resize', updateWheelSize);
+  }, []);
+
   if (restaurants.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -147,11 +162,10 @@ export function RouletteWheel({
   }
 
   const segmentAngle = 360 / restaurants.length;
-  const wheelSize = 384; // 96 * 4 (w-96 h-96)
   const centerX = wheelSize / 2;
   const centerY = wheelSize / 2;
   // Position text at 65% from center to give more space with larger center circle
-  const textRadius = (wheelSize / 2) * 0.65;
+  const textRadius = (wheelSize / 2) * 0.74;
 
   return (
     <div className="flex flex-col items-center gap-8 py-8">
@@ -163,10 +177,7 @@ export function RouletteWheel({
         </div>
 
         {/* Wheel Container */}
-        <div
-          className="relative"
-          style={{ width: 'min(88vw, 24rem)', height: 'min(88vw, 24rem)' }}
-        >
+        <div className="relative" style={{ width: `${wheelSize}px`, height: `${wheelSize}px` }}>
           {/* Wheel */}
           <div
             ref={wheelRef}
@@ -207,11 +218,7 @@ export function RouletteWheel({
               const isLightBackground = color === '#F4F1DE' || color === '#F2CC8F';
               const textColor = isLightBackground ? '#3D405B' : '#FFFFFF';
               
-              // Smart truncation based on number of segments
-              const maxChars = restaurants.length <= 6 ? 16 : restaurants.length <= 10 ? 13 : 10;
-              const displayName = restaurant.name.length > maxChars 
-                ? restaurant.name.substring(0, maxChars - 2) + '..' 
-                : restaurant.name;
+              const displayName = restaurant.name;
               
               return (
                 <div
@@ -225,7 +232,7 @@ export function RouletteWheel({
                   }}
                 >
                   <span 
-                    className="text-[10px] sm:text-xs font-bold whitespace-nowrap leading-tight"
+                    className="max-w-[120px] sm:max-w-[160px] text-[10px] sm:text-xs font-bold leading-tight text-center break-words"
                     style={{
                       color: textColor,
                       textShadow: isLightBackground 
@@ -254,12 +261,12 @@ export function RouletteWheel({
             })}
 
             {/* Larger Center Circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-4 border-eatspin-peach">
-              <span className="text-2xl font-heading text-eatspin-orange font-bold">SPIN</span>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-4 border-eatspin-peach">
+              <span className="text-lg sm:text-xl font-heading text-eatspin-orange font-bold">SPIN</span>
             </div>
             
             {/* Inner decorative ring */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full border-2 border-white/20 pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-28 sm:h-28 rounded-full border-2 border-white/20 pointer-events-none" />
           </div>
 
           {/* Decorative outer rings */}
@@ -373,13 +380,6 @@ export function RouletteWheel({
             </div>
 
             <div className="mt-5 flex flex-wrap justify-center gap-3">
-              <Button
-                onClick={handleSpin}
-                disabled={isSpinning || !canSpin}
-                className="bg-brand-orange hover:bg-brand-orange/90 text-white mx-auto"
-              >
-                Spin again
-              </Button>
               {onEditList && (
                 <Button variant="outline" onClick={onEditList}>
                   Edit list

@@ -20,7 +20,7 @@ import { CTA } from '@/sections/CTA';
 import { Footer } from '@/sections/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X, Save, Trash2 } from 'lucide-react';
+import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X, Save, Trash2, ChevronDown } from 'lucide-react';
 import './App.css';
 
 type SpinTab = 'auto' | 'manual';
@@ -123,7 +123,7 @@ function App() {
   const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
   const [selectedPriceRanges, setSelectedPriceRanges] = useState<Restaurant['priceRange'][]>([]);
   const [nonHalalOnly, setNonHalalOnly] = useState(false);
-  const [radiusKm, setRadiusKm] = useState<number>(10);
+  const [radiusKm, setRadiusKm] = useState<number>(5);
   const [isSpinning, setIsSpinning] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
   const [showSpinLimitWarning, setShowSpinLimitWarning] = useState(false);
@@ -139,7 +139,8 @@ function App() {
   const [manualWheelKey, setManualWheelKey] = useState(0);
   const [manualSpinResult, setManualSpinResult] = useState<Restaurant | null>(null);
   const [presetNameInput, setPresetNameInput] = useState('');
-  const [presetMealTimeInput, setPresetMealTimeInput] = useState<PresetMealTime>(null);
+  const [presetMealTimeInput, setPresetMealTimeInput] = useState<PresetMealTime>(() => getPresetMealTime());
+  const [selectedPresetId, setSelectedPresetId] = useState('');
   const [manualPresets, setManualPresets] = useState<ManualPreset[]>(() => loadManualPresets());
   const autoLoadedMealTimeRef = useRef<PresetMealTime>(null);
 
@@ -331,6 +332,7 @@ function App() {
     };
   }, [manualPresets, loadPresetRestaurants, currentMealTime]);
 
+
   return (
     <div className="min-h-screen bg-brand-linen">
       <Navbar
@@ -420,7 +422,7 @@ function App() {
                     max="50"
                     value={radiusKm}
                     onChange={(e) => setRadiusKm(Number(e.target.value))}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-orange"
+                    className="range-theme w-full"
                   />
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>1 km</span>
@@ -601,6 +603,31 @@ function App() {
                     <p className="text-xs text-eatspin-gray-1">Save this wheel and load it anytime. Meal presets auto-load by current time.</p>
                   </div>
 
+                  {manualPresets.length > 0 && (
+                    <div className="relative">
+                      <select
+                        value={selectedPresetId}
+                        onChange={(e) => {
+                          const presetId = e.target.value;
+                          setSelectedPresetId(presetId);
+                          const selectedPreset = manualPresets.find((preset) => preset.id === presetId);
+                          if (selectedPreset) {
+                            loadPresetRestaurants(selectedPreset);
+                          }
+                        }}
+                        className="preset-select h-11 w-full rounded-lg border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
+                      >
+                        <option value="">🎯 Load a saved wheel preset</option>
+                        {manualPresets.map((preset) => (
+                          <option key={preset.id} value={preset.id}>
+                            {preset.mealTime === 'breakfast' ? '🌅' : preset.mealTime === 'lunch' ? '☀️' : preset.mealTime === 'dinner' ? '🌙' : '🕒'} {preset.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
+                    </div>
+                  )}
+
                   <div className="grid sm:grid-cols-[1fr_auto_auto] gap-2">
                     <Input
                       value={presetNameInput}
@@ -608,7 +635,8 @@ function App() {
                       placeholder="Preset name (e.g. Lunch Nearby)"
                       className="h-11"
                     />
-                    <select
+                    <div className="relative">
+                      <select
                       value={presetMealTimeInput ?? ''}
                       onChange={(e) => {
                         const value = e.target.value;
@@ -618,13 +646,15 @@ function App() {
                         }
                         setPresetMealTimeInput(null);
                       }}
-                      className="h-11 rounded-md border border-input bg-transparent px-3 text-sm"
-                    >
-                      <option value="">No meal time</option>
-                      <option value="breakfast">Breakfast</option>
-                      <option value="lunch">Lunch</option>
-                      <option value="dinner">Dinner</option>
-                    </select>
+                        className="preset-select h-11 w-full rounded-md border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
+                      >
+                        <option value="">🕒 No meal time</option>
+                        <option value="breakfast">🌅 Breakfast</option>
+                        <option value="lunch">☀️ Lunch</option>
+                        <option value="dinner">🌙 Dinner</option>
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
+                    </div>
                     <Button
                       onClick={saveCurrentAsPreset}
                       disabled={manualRestaurants.length === 0 || !presetNameInput.trim()}
@@ -721,9 +751,10 @@ function App() {
                 </div>
 
                 {manualSpinResult && (
-                  <p className="mt-4 text-center text-sm text-eatspin-gray-1">
-                    Last result: <span className="font-semibold text-brand-black">{manualSpinResult.name}</span>
-                  </p>
+                  <div className="mt-4 rounded-xl border border-eatspin-peach/60 bg-gradient-to-r from-white to-brand-linen px-4 py-3 text-center shadow-sm">
+                    <p className="text-xs uppercase tracking-[0.18em] text-eatspin-gray-1">Last result</p>
+                    <p className="font-heading text-lg text-brand-black">✨ {manualSpinResult.name}</p>
+                  </div>
                 )}
               </div>
             </div>

@@ -131,6 +131,7 @@ function App() {
   const [isPremium, setIsPremium] = useState(false);
   const [showWheelSection, setShowWheelSection] = useState(false);
   const [wheelRestaurants, setWheelRestaurants] = useState<Restaurant[]>([]);
+  const [roundRemovedRestaurantIds, setRoundRemovedRestaurantIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<SpinTab>('auto');
   const [autoWheelKey, setAutoWheelKey] = useState(0);
 
@@ -179,6 +180,10 @@ function App() {
     )
   ), [location, selectedCategories, radiusKm, selectedPriceRanges, nonHalalOnly]);
 
+  const roundRestaurants = useMemo(() => (
+    filteredRestaurants.filter((restaurant) => !roundRemovedRestaurantIds.includes(restaurant.id))
+  ), [filteredRestaurants, roundRemovedRestaurantIds]);
+
   // Handle spin complete
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
     recordSpin(restaurant.id, currentMealTime);
@@ -206,13 +211,22 @@ function App() {
 
   const resetAutoWheel = () => {
     setShowSpinLimitWarning(false);
+    setRoundRemovedRestaurantIds([]);
+    setShowWheelSection(false);
+    setWheelRestaurants([]);
     setAutoWheelKey((prev) => prev + 1);
   };
 
   // Shuffle wheel restaurants
   const shuffleWheel = () => {
-    const shuffled = [...filteredRestaurants].sort(() => Math.random() - 0.5);
+    const shuffled = [...roundRestaurants].sort(() => Math.random() - 0.5);
     setWheelRestaurants(shuffled.slice(0, 12));
+  };
+
+  const removeRestaurantForRound = (restaurantId: string) => {
+    setRoundRemovedRestaurantIds((prev) => (prev.includes(restaurantId) ? prev : [...prev, restaurantId]));
+    setWheelRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== restaurantId));
+    setAutoWheelKey((prev) => prev + 1);
   };
 
   const switchTab = (tab: SpinTab) => {
@@ -220,6 +234,7 @@ function App() {
     if (tab === 'auto') {
       setWheelRestaurants([]);
       setShowWheelSection(false);
+      setRoundRemovedRestaurantIds([]);
       setAutoWheelKey((prev) => prev + 1);
     } else {
       setManualSpinResult(null);
@@ -497,10 +512,52 @@ function App() {
               {location && (
                 <div className="text-center mb-6">
                   <p className="text-sm text-eatspin-gray-1">
-                    <span className="font-semibold text-brand-orange">{filteredRestaurants.length}</span>{' '}
-                    restaurants within {radiusKm} km
-                    {(selectedCategories.length > 0 || nonHalalOnly) && ' match your preferences'}
+                    <span className="font-semibold text-brand-orange">{roundRestaurants.length}</span>{' '}
+                    restaurants match your criteria
                   </p>
+                </div>
+              )}
+
+              {location && roundRestaurants.length > 0 && (
+                <div className="mb-8 rounded-2xl border border-eatspin-peach/60 bg-white p-4 sm:p-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-heading text-lg font-semibold text-brand-black">Review this round</h3>
+                      <p className="text-sm text-eatspin-gray-1">Remove places just for this round before you spin.</p>
+                    </div>
+                    <p className="text-sm font-medium text-brand-black">
+                      {roundRestaurants.length} restaurants remaining
+                    </p>
+                  </div>
+
+                  <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                    {roundRestaurants.map((restaurant) => (
+                      <li key={restaurant.id} className="flex items-start justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
+                        <div>
+                          <p className="font-medium text-brand-black">{restaurant.name}</p>
+                          <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-eatspin-gray-1">
+                            {restaurant.category.slice(0, 2).map((tag) => (
+                              <span key={`${restaurant.id}-${tag}`} className="rounded-full bg-white px-2 py-0.5 capitalize">
+                                {tag}
+                              </span>
+                            ))}
+                            <span className="rounded-full bg-white px-2 py-0.5">{restaurant.priceRange}</span>
+                            {restaurant.distance && (
+                              <span className="rounded-full bg-white px-2 py-0.5">{restaurant.distance.toFixed(1)} km</span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeRestaurantForRound(restaurant.id)}
+                          className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
+                          aria-label={`Remove ${restaurant.name} for this round`}
+                        >
+                          <X size={14} /> Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
@@ -514,7 +571,7 @@ function App() {
                 </div>
               )}
 
-              {location && filteredRestaurants.length > 0 && (
+              {location && roundRestaurants.length > 0 && (
                 <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
                   <Button
                     onClick={() => {
@@ -527,7 +584,7 @@ function App() {
                         }, 100);
                       }
                     }}
-                    disabled={isSpinning || filteredRestaurants.length === 0}
+                    disabled={isSpinning || roundRestaurants.length === 0}
                     className="w-full sm:w-auto bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-base sm:text-lg font-bold px-6 sm:px-8 py-5 sm:py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-70"
                   >
                     <Utensils size={20} className="mr-2" />
@@ -762,7 +819,7 @@ function App() {
         </div>
       </section>
 
-      {activeTab === 'auto' && showWheelSection && location && filteredRestaurants.length > 0 && (
+      {activeTab === 'auto' && showWheelSection && location && roundRestaurants.length > 0 && (
         <section id="wheel" className="py-16 px-4 sm:px-6 lg:px-8 bg-brand-linen">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
@@ -770,14 +827,14 @@ function App() {
                 Spin the Wheel!
               </h2>
               <p className="text-eatspin-gray-1">
-                {filteredRestaurants.length} restaurants within {radiusKm} km ready to be discovered
+                {roundRestaurants.length} restaurants ready for this round
               </p>
             </div>
 
             <RouletteWheel
               key={`auto-${autoWheelKey}`}
               restaurants={wheelRestaurants}
-              totalCount={filteredRestaurants.length}
+              totalCount={roundRestaurants.length}
               onSpinComplete={handleSpinComplete}
               isSpinning={isSpinning}
               setIsSpinning={setIsSpinning}

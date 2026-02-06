@@ -165,7 +165,7 @@ export function RouletteWheel({
   const centerX = wheelSize / 2;
   const centerY = wheelSize / 2;
   // Position text at 65% from center to give more space with larger center circle
-  const textRadius = (wheelSize / 2) * 0.74;
+  const textRadius = (wheelSize / 2) * 0.7;
 
   return (
     <div className="flex flex-col items-center gap-8 py-8">
@@ -232,7 +232,7 @@ export function RouletteWheel({
                   }}
                 >
                   <span 
-                    className="max-w-[120px] sm:max-w-[160px] text-[10px] sm:text-xs font-bold leading-tight text-center break-words"
+                    className="max-w-[110px] sm:max-w-[150px] text-[9px] sm:text-[11px] font-semibold leading-tight text-center break-words"
                     style={{
                       color: textColor,
                       textShadow: isLightBackground 
@@ -261,8 +261,8 @@ export function RouletteWheel({
             })}
 
             {/* Larger Center Circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-4 border-eatspin-peach">
-              <span className="text-lg sm:text-xl font-heading text-eatspin-orange font-bold">SPIN</span>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-4 border-eatspin-peach">
+              <span className="text-base sm:text-lg font-heading text-eatspin-orange font-bold">SPIN</span>
             </div>
             
             {/* Inner decorative ring */}
@@ -270,8 +270,8 @@ export function RouletteWheel({
           </div>
 
           {/* Decorative outer rings */}
-          <div className="absolute inset-0 rounded-full border-8 border-white/20 pointer-events-none shadow-inner" />
-          <div className="absolute inset-0 rounded-full border-4 border-eatspin-peach/60 pointer-events-none" />
+          <div className="absolute inset-0 rounded-full border-6 border-white/20 pointer-events-none shadow-inner" />
+          <div className="absolute inset-0 rounded-full border-[3px] border-eatspin-peach/60 pointer-events-none" />
         </div>
       </div>
 

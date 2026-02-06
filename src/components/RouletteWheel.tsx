@@ -71,8 +71,10 @@ export function RouletteWheel({
   onEditList,
 }: RouletteWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
+  const wheelContainerRef = useRef<HTMLDivElement>(null);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
   const currentRotationRef = useRef(0);
+  const [wheelSize, setWheelSize] = useState(384);
 
   // Generate conic gradient for wheel segments
   const wheelBackground = useMemo(() => {
@@ -131,6 +133,22 @@ export function RouletteWheel({
     }
   }, [restaurants]);
 
+  useEffect(() => {
+    if (!wheelContainerRef.current) return;
+
+    const updateWheelSize = () => {
+      if (wheelContainerRef.current) {
+        setWheelSize(wheelContainerRef.current.clientWidth);
+      }
+    };
+
+    updateWheelSize();
+    const observer = new ResizeObserver(updateWheelSize);
+    observer.observe(wheelContainerRef.current);
+
+    return () => observer.disconnect();
+  }, []);
+
   if (restaurants.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -147,16 +165,15 @@ export function RouletteWheel({
   }
 
   const segmentAngle = 360 / restaurants.length;
-  const wheelSize = 384; // 96 * 4 (w-96 h-96)
   const centerX = wheelSize / 2;
   const centerY = wheelSize / 2;
-  // Position text at 65% from center to give more space with larger center circle
-  const textRadius = (wheelSize / 2) * 0.65;
+  // Position text closer to edge for longer names
+  const textRadius = (wheelSize / 2) * 0.78;
 
   return (
     <div className="flex flex-col items-center gap-8 py-8">
       {/* Roulette Wheel */}
-      <div className="relative mx-auto">
+      <div className="relative mx-auto w-full max-w-[30rem]">
         {/* Pointer */}
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
           <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[30px] border-t-eatspin-orange drop-shadow-lg" />
@@ -164,8 +181,9 @@ export function RouletteWheel({
 
         {/* Wheel Container */}
         <div
-          className="relative"
-          style={{ width: 'min(88vw, 24rem)', height: 'min(88vw, 24rem)' }}
+          ref={wheelContainerRef}
+          className="relative mx-auto"
+          style={{ width: 'min(92vw, 30rem)', height: 'min(92vw, 30rem)' }}
         >
           {/* Wheel */}
           <div
@@ -207,11 +225,7 @@ export function RouletteWheel({
               const isLightBackground = color === '#F4F1DE' || color === '#F2CC8F';
               const textColor = isLightBackground ? '#3D405B' : '#FFFFFF';
               
-              // Smart truncation based on number of segments
-              const maxChars = restaurants.length <= 6 ? 16 : restaurants.length <= 10 ? 13 : 10;
-              const displayName = restaurant.name.length > maxChars 
-                ? restaurant.name.substring(0, maxChars - 2) + '..' 
-                : restaurant.name;
+              const displayName = restaurant.name;
               
               return (
                 <div
@@ -225,7 +239,7 @@ export function RouletteWheel({
                   }}
                 >
                   <span 
-                    className="text-[10px] sm:text-xs font-bold whitespace-nowrap leading-tight"
+                    className="text-[9px] sm:text-[11px] md:text-xs font-bold leading-tight text-center max-w-[5.5rem] sm:max-w-[6.5rem] md:max-w-[7.5rem] whitespace-normal"
                     style={{
                       color: textColor,
                       textShadow: isLightBackground 
@@ -254,12 +268,12 @@ export function RouletteWheel({
             })}
 
             {/* Larger Center Circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-4 border-eatspin-peach">
-              <span className="text-2xl font-heading text-eatspin-orange font-bold">SPIN</span>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-4 border-eatspin-peach">
+              <span className="text-lg sm:text-2xl font-heading text-eatspin-orange font-bold">SPIN</span>
             </div>
             
             {/* Inner decorative ring */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full border-2 border-white/20 pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-white/20 pointer-events-none" />
           </div>
 
           {/* Decorative outer rings */}
@@ -372,20 +386,13 @@ export function RouletteWheel({
               })}
             </div>
 
-            <div className="mt-5 flex flex-wrap justify-center gap-3">
-              <Button
-                onClick={handleSpin}
-                disabled={isSpinning || !canSpin}
-                className="bg-brand-orange hover:bg-brand-orange/90 text-white mx-auto"
-              >
-                Spin again
-              </Button>
-              {onEditList && (
+            {onEditList && (
+              <div className="mt-5 flex flex-wrap justify-center gap-3">
                 <Button variant="outline" onClick={onEditList}>
                   Edit list
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}

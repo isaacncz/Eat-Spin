@@ -219,6 +219,13 @@ export function RouletteWheel({
               const textColor = isLightBackground ? '#3D405B' : '#FFFFFF';
               
               const displayName = restaurant.name;
+              const nameLength = displayName.length;
+              const nameSizeClass =
+                nameLength <= 12
+                  ? 'text-[10px] sm:text-[13px]'
+                  : nameLength <= 18
+                    ? 'text-[9px] sm:text-[12px]'
+                    : 'text-[8px] sm:text-[11px]';
               
               return (
                 <div
@@ -232,7 +239,7 @@ export function RouletteWheel({
                   }}
                 >
                   <span 
-                    className="max-w-[110px] sm:max-w-[150px] text-[9px] sm:text-[11px] font-semibold leading-tight text-center break-words"
+                    className={`max-w-[110px] sm:max-w-[150px] font-semibold leading-tight text-center break-words ${nameSizeClass}`}
                     style={{
                       color: textColor,
                       textShadow: isLightBackground 

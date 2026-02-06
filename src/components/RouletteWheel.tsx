@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock, Star, Phone } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,19 @@ const WHEEL_COLORS = [
 function getSegmentColor(index: number): string {
   return WHEEL_COLORS[index % WHEEL_COLORS.length];
 }
+
+
+const getOpeningHoursLabel = (restaurant: Restaurant): string => {
+  const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const dayKey = dayOrder[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+  const todayHours = restaurant.hours[dayKey];
+  const dailyHours = restaurant.hours.daily;
+  const fallbackHours = Object.values(restaurant.hours)[0];
+  const selectedHours = todayHours ?? dailyHours ?? fallbackHours;
+
+  if (!selectedHours || selectedHours.closed) return 'Closed today';
+  return `Open ${selectedHours.open} • Close ${selectedHours.close}`;
+};
 
 export function RouletteWheel({
   restaurants,
@@ -143,7 +156,7 @@ export function RouletteWheel({
   return (
     <div className="flex flex-col items-center gap-8 py-8">
       {/* Roulette Wheel */}
-      <div className="relative">
+      <div className="relative mx-auto">
         {/* Pointer */}
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
           <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[30px] border-t-eatspin-orange drop-shadow-lg" />
@@ -318,10 +331,15 @@ export function RouletteWheel({
               
               {spinResult.distance && (
                 <div className="flex items-center gap-2 text-eatspin-gray-1">
-                  <Clock size={16} className="text-eatspin-orange" />
+                  <Clock3 size={16} className="text-eatspin-orange" />
                   <span>{spinResult.distance.toFixed(1)} km away</span>
                 </div>
               )}
+
+              <div className="flex items-center gap-2 text-eatspin-gray-1">
+                <Clock3 size={16} className="text-eatspin-orange" />
+                <span>{getOpeningHoursLabel(spinResult)}</span>
+              </div>
               
               {spinResult.phone && (
                 <div className="flex items-center gap-2 text-eatspin-gray-1">
@@ -354,11 +372,11 @@ export function RouletteWheel({
               })}
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-3">
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
               <Button
                 onClick={handleSpin}
                 disabled={isSpinning || !canSpin}
-                className="bg-brand-orange hover:bg-brand-orange/90 text-white"
+                className="bg-brand-orange hover:bg-brand-orange/90 text-white mx-auto"
               >
                 Spin again
               </Button>

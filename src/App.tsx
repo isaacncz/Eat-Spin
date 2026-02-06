@@ -9,6 +9,7 @@ import { FoodCategorySelector } from '@/components/FoodCategorySelector';
 import { RouletteWheel } from '@/components/RouletteWheel';
 import { LocationPermission } from '@/components/LocationPermission';
 import { SubscriptionModal } from '@/components/SubscriptionModal';
+import { GroupSpinPanel } from '@/components/GroupSpinPanel';
 import { MealTimeIndicator } from '@/components/MealTimeIndicator';
 import { SpinLimitWarning } from '@/components/SpinLimitWarning';
 import { Navbar } from '@/sections/Navbar';
@@ -566,6 +567,10 @@ function App() {
             </>
           )}
 
+
+          <div className="mt-10">
+            <GroupSpinPanel />
+          </div>
           {activeTab === 'manual' && (
             <div id="wheel" className="py-4 pb-36 sm:pb-8">
               <div className="text-center mb-5">

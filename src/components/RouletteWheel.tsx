@@ -71,9 +71,10 @@ export function RouletteWheel({
   onEditList,
 }: RouletteWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
+  const wheelContainerRef = useRef<HTMLDivElement>(null);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
   const currentRotationRef = useRef(0);
-  const [wheelSize, setWheelSize] = useState(384);
+  const [wheelSize, setWheelSize] = useState(320);
 
   // Generate conic gradient for wheel segments
   const wheelBackground = useMemo(() => {
@@ -133,17 +134,23 @@ export function RouletteWheel({
   }, [restaurants]);
 
   useEffect(() => {
+    const container = wheelContainerRef.current;
+    if (!container) return;
+
     const updateWheelSize = () => {
-      if (typeof window === 'undefined') return;
-      const maxSize = 448;
-      const minSize = 280;
-      const size = Math.min(window.innerWidth * 0.92, maxSize);
-      setWheelSize(Math.max(size, minSize));
+      const nextSize = container.offsetWidth;
+      if (nextSize > 0) {
+        setWheelSize(nextSize);
+      }
     };
 
     updateWheelSize();
-    window.addEventListener('resize', updateWheelSize);
-    return () => window.removeEventListener('resize', updateWheelSize);
+    const observer = new ResizeObserver(() => {
+      updateWheelSize();
+    });
+    observer.observe(container);
+
+    return () => observer.disconnect();
   }, []);
 
   if (restaurants.length === 0) {
@@ -165,19 +172,23 @@ export function RouletteWheel({
   const centerX = wheelSize / 2;
   const centerY = wheelSize / 2;
   // Position text at 65% from center to give more space with larger center circle
-  const textRadius = (wheelSize / 2) * 0.7;
+  const textRadius = (wheelSize / 2) * 0.66;
 
   return (
     <div className="flex flex-col items-center gap-8 py-8">
       {/* Roulette Wheel */}
-      <div className="relative mx-auto">
+      <div className="relative mx-auto w-full max-w-[28rem] px-3 sm:px-4 overflow-hidden">
         {/* Pointer */}
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
           <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[30px] border-t-eatspin-orange drop-shadow-lg" />
         </div>
 
         {/* Wheel Container */}
-        <div className="relative" style={{ width: `${wheelSize}px`, height: `${wheelSize}px` }}>
+        <div
+          ref={wheelContainerRef}
+          className="relative w-full aspect-square"
+          style={{ maxWidth: 'min(90vw, 28rem)' }}
+        >
           {/* Wheel */}
           <div
             ref={wheelRef}
@@ -220,12 +231,19 @@ export function RouletteWheel({
               
               const displayName = restaurant.name;
               const nameLength = displayName.length;
-              const nameSizeClass =
-                nameLength <= 12
-                  ? 'text-[10px] sm:text-[13px]'
-                  : nameLength <= 18
-                    ? 'text-[9px] sm:text-[12px]'
-                    : 'text-[8px] sm:text-[11px]';
+              const maxFontSize = wheelSize * 0.045;
+              const minFontSize = wheelSize * 0.022;
+              const lengthFactor = Math.min(Math.max((nameLength - 4) / 24, 0), 1);
+              const baseFontSize =
+                maxFontSize - (maxFontSize - minFontSize) * lengthFactor;
+              const maxLabelWidth = wheelSize * 0.28;
+              const estimatedCharWidth = 0.6;
+              const fitFontSize = maxLabelWidth / Math.max(nameLength * estimatedCharWidth, 1);
+              const computedFontSize = Math.max(
+                minFontSize,
+                Math.min(baseFontSize, fitFontSize),
+              );
+              const fontWeight = nameLength <= 5 ? 700 : 600;
               
               return (
                 <div
@@ -238,10 +256,13 @@ export function RouletteWheel({
                     transformOrigin: 'center center',
                   }}
                 >
-                  <span 
-                    className={`max-w-[110px] sm:max-w-[150px] font-semibold leading-tight text-center break-words ${nameSizeClass}`}
+                  <span
+                    className="text-center leading-tight whitespace-nowrap"
                     style={{
                       color: textColor,
+                      fontSize: `${computedFontSize}px`,
+                      fontWeight,
+                      maxWidth: `${maxLabelWidth}px`,
                       textShadow: isLightBackground 
                         ? '0 1px 3px rgba(255,255,255,0.9), 0 1px 2px rgba(0,0,0,0.5)' 
                         : '0 2px 4px rgba(0,0,0,0.9), 0 1px 1px rgba(0,0,0,0.8)',

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Play } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import gsap from 'gsap';
 
 interface HeroProps {
@@ -115,15 +115,6 @@ export function Hero({ onGetStarted }: HeroProps) {
                   size={20}
                   className="ml-2 group-hover:translate-x-1 transition-transform"
                 />
-              </Button>
-
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full sm:w-auto border-eatspin-orange text-eatspin-orange hover:bg-eatspin-orange/10 font-medium px-6 sm:px-8 py-5 sm:py-6 rounded-full"
-              >
-                <Play size={18} className="mr-2" />
-                Watch Demo
               </Button>
             </div>
 

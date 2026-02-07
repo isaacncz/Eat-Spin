@@ -71,8 +71,11 @@ export function RouletteWheel({
   onEditList,
 }: RouletteWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
+  const wheelScrollRef = useRef<HTMLDivElement>(null);
+  const wheelContainerRef = useRef<HTMLDivElement>(null);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
   const currentRotationRef = useRef(0);
+  const [wheelSize, setWheelSize] = useState(320);
 
   // Generate conic gradient for wheel segments
   const wheelBackground = useMemo(() => {
@@ -91,8 +94,22 @@ export function RouletteWheel({
     return `conic-gradient(from 0deg, ${stops.join(', ')})`;
   }, [restaurants.length]);
 
+  const recenterWheel = () => {
+    const target = wheelScrollRef.current ?? wheelContainerRef.current;
+    if (!target) return;
+
+    // Some layouts reflow right after click; a second scroll on the next frame is more reliable on mobile.
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  };
+
   const handleSpin = () => {
     if (isSpinning || restaurants.length === 0 || !canSpin) return;
+
+    // Re-center the wheel in view when starting a spin (especially useful on mobile).
+    recenterWheel();
 
     setIsSpinning(true);
     setSpinResult(null);
@@ -131,6 +148,26 @@ export function RouletteWheel({
     }
   }, [restaurants]);
 
+  useEffect(() => {
+    const container = wheelContainerRef.current;
+    if (!container) return;
+
+    const updateWheelSize = () => {
+      const nextSize = container.offsetWidth;
+      if (nextSize > 0) {
+        setWheelSize(nextSize);
+      }
+    };
+
+    updateWheelSize();
+    const observer = new ResizeObserver(() => {
+      updateWheelSize();
+    });
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
+
   if (restaurants.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -147,16 +184,21 @@ export function RouletteWheel({
   }
 
   const segmentAngle = 360 / restaurants.length;
-  const wheelSize = 384; // 96 * 4 (w-96 h-96)
   const centerX = wheelSize / 2;
   const centerY = wheelSize / 2;
   // Position text at 65% from center to give more space with larger center circle
-  const textRadius = (wheelSize / 2) * 0.65;
+  const textRadius = (wheelSize / 2) * 0.66;
+  const isManualResult = Boolean(
+    spinResult
+      && (spinResult.id.startsWith('manual-')
+        || spinResult.address === 'Your custom pick'
+        || spinResult.description === 'Added by you.')
+  );
 
   return (
     <div className="flex flex-col items-center gap-8 py-8">
       {/* Roulette Wheel */}
-      <div className="relative mx-auto">
+      <div ref={wheelScrollRef} className="relative mx-auto w-full max-w-[28rem] px-3 sm:px-4 overflow-hidden">
         {/* Pointer */}
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
           <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[30px] border-t-eatspin-orange drop-shadow-lg" />
@@ -164,8 +206,9 @@ export function RouletteWheel({
 
         {/* Wheel Container */}
         <div
-          className="relative"
-          style={{ width: 'min(88vw, 24rem)', height: 'min(88vw, 24rem)' }}
+          ref={wheelContainerRef}
+          className="relative w-full aspect-square"
+          style={{ maxWidth: 'min(90vw, 28rem)' }}
         >
           {/* Wheel */}
           <div
@@ -207,11 +250,21 @@ export function RouletteWheel({
               const isLightBackground = color === '#F4F1DE' || color === '#F2CC8F';
               const textColor = isLightBackground ? '#3D405B' : '#FFFFFF';
               
-              // Smart truncation based on number of segments
-              const maxChars = restaurants.length <= 6 ? 16 : restaurants.length <= 10 ? 13 : 10;
-              const displayName = restaurant.name.length > maxChars 
-                ? restaurant.name.substring(0, maxChars - 2) + '..' 
-                : restaurant.name;
+              const displayName = restaurant.name;
+              const nameLength = displayName.length;
+              const maxFontSize = wheelSize * 0.045;
+              const minFontSize = wheelSize * 0.022;
+              const lengthFactor = Math.min(Math.max((nameLength - 4) / 24, 0), 1);
+              const baseFontSize =
+                maxFontSize - (maxFontSize - minFontSize) * lengthFactor;
+              const maxLabelWidth = wheelSize * 0.28;
+              const estimatedCharWidth = 0.6;
+              const fitFontSize = maxLabelWidth / Math.max(nameLength * estimatedCharWidth, 1);
+              const computedFontSize = Math.max(
+                minFontSize,
+                Math.min(baseFontSize, fitFontSize),
+              );
+              const fontWeight = nameLength <= 5 ? 700 : 600;
               
               return (
                 <div
@@ -224,10 +277,13 @@ export function RouletteWheel({
                     transformOrigin: 'center center',
                   }}
                 >
-                  <span 
-                    className="text-[10px] sm:text-xs font-bold whitespace-nowrap leading-tight"
+                  <span
+                    className="text-center leading-tight whitespace-nowrap"
                     style={{
                       color: textColor,
+                      fontSize: `${computedFontSize}px`,
+                      fontWeight,
+                      maxWidth: `${maxLabelWidth}px`,
                       textShadow: isLightBackground 
                         ? '0 1px 3px rgba(255,255,255,0.9), 0 1px 2px rgba(0,0,0,0.5)' 
                         : '0 2px 4px rgba(0,0,0,0.9), 0 1px 1px rgba(0,0,0,0.8)',
@@ -254,17 +310,17 @@ export function RouletteWheel({
             })}
 
             {/* Larger Center Circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-4 border-eatspin-peach">
-              <span className="text-2xl font-heading text-eatspin-orange font-bold">SPIN</span>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-4 border-eatspin-peach">
+              <span className="text-base sm:text-lg font-heading text-eatspin-orange font-bold">SPIN</span>
             </div>
             
             {/* Inner decorative ring */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full border-2 border-white/20 pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-28 sm:h-28 rounded-full border-2 border-white/20 pointer-events-none" />
           </div>
 
           {/* Decorative outer rings */}
-          <div className="absolute inset-0 rounded-full border-8 border-white/20 pointer-events-none shadow-inner" />
-          <div className="absolute inset-0 rounded-full border-4 border-eatspin-peach/60 pointer-events-none" />
+          <div className="absolute inset-0 rounded-full border-6 border-white/20 pointer-events-none shadow-inner" />
+          <div className="absolute inset-0 rounded-full border-[3px] border-eatspin-peach/60 pointer-events-none" />
         </div>
       </div>
 
@@ -306,17 +362,18 @@ export function RouletteWheel({
       {/* Result Display */}
       {spinResult && (
         <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="bg-white rounded-2xl shadow-xl p-6 border border-eatspin-peach">
-            <div className="flex items-center gap-2 mb-3">
+          <div className={`bg-white rounded-2xl shadow-xl p-6 border border-eatspin-peach ${isManualResult ? 'text-center' : ''}`}>
+            <div className={`flex items-center gap-2 mb-3 ${isManualResult ? 'justify-center' : ''}`}>
               <div className="w-2 h-2 bg-eatspin-success rounded-full animate-pulse" />
               <span className="text-sm font-medium text-eatspin-success">Your Food Destiny</span>
             </div>
             
-            <h3 className="font-heading text-2xl font-bold text-brand-black mb-3">
+            <h3 className={`font-heading text-2xl font-bold text-brand-black mb-3 ${isManualResult ? 'text-center' : ''}`}>
               {spinResult.name}
             </h3>
             
-            <div className="space-y-2 text-sm">
+            {!isManualResult && (
+              <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2 text-eatspin-gray-1">
                 <MapPin size={16} className="text-eatspin-orange" />
                 <span>{spinResult.address}</span>
@@ -349,15 +406,16 @@ export function RouletteWheel({
                   </a>
                 </div>
               )}
-            </div>
+              </div>
+            )}
             
             {spinResult.description && (
-              <p className="mt-4 text-sm text-eatspin-gray-1 leading-relaxed">
+               <p className={`mt-4 text-sm text-eatspin-gray-1 leading-relaxed ${isManualResult ? 'text-center' : ''}`}>
                 {spinResult.description}
               </p>
             )}
             
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className={`mt-4 flex flex-wrap gap-2 ${isManualResult ? 'justify-center' : ''}`}>
               {spinResult.category.slice(0, 3).map((cat) => {
                 const categoryConfig = foodCategories.find((c) => c.id === cat);
                 return (
@@ -373,13 +431,6 @@ export function RouletteWheel({
             </div>
 
             <div className="mt-5 flex flex-wrap justify-center gap-3">
-              <Button
-                onClick={handleSpin}
-                disabled={isSpinning || !canSpin}
-                className="bg-brand-orange hover:bg-brand-orange/90 text-white mx-auto"
-              >
-                Spin again
-              </Button>
               {onEditList && (
                 <Button variant="outline" onClick={onEditList}>
                   Edit list

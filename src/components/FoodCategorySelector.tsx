@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { FoodCategory } from '@/types';
 import { foodCategories } from '@/data/restaurants';
 import { Check } from 'lucide-react';
@@ -86,8 +87,10 @@ export function FoodCategorySelector({
               }`}
               style={{
                 backgroundColor: isSelected ? category.color : '#fff',
+                ...(isSelected
+                  ? ({ ['--tw-ring-color' as any]: category.color } as CSSProperties)
+                  : {}),
               }}
-              {...(isSelected && { ringColor: category.color })}
             >
               <span className="text-2xl mb-1">{category.icon}</span>
               <span

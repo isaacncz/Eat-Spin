@@ -20,23 +20,22 @@ interface RouletteWheelProps {
   onEditList?: () => void;
 }
 
-// Sophisticated food-app color palette with good contrast
+// Vibrant appetizing color palette
 const WHEEL_COLORS = [
-  '#E07A5F', // Warm terracotta
-  '#81B29A', // Sage green  
-  '#F4F1DE', // Cream
-  '#F2CC8F', // Mustard gold
-  '#3D405B', // Deep slate
-  '#E07A5F', // Warm terracotta
-  '#81B29A', // Sage green
-  '#F4F1DE', // Cream
-  '#F2CC8F', // Mustard gold
-  '#3D405B', // Deep slate
-  '#E07A5F', // Warm terracotta
-  '#81B29A', // Sage green
-  '#F4F1DE', // Cream
-  '#F2CC8F', // Mustard gold
-  '#3D405B', // Deep slate
+  '#FF6B6B', // Juicy tomato red
+  '#FF9F43', // Orange spice
+  '#F4C430', // Sunny yellow (slightly darker for white text)
+  '#6BCB77', // Fresh green
+  '#4D96FF', // Appetizing blue
+  '#A45EE5', // Vibrant purple
+  '#FF6B6B', // Juicy tomato red
+  '#FF9F43', // Orange spice
+  '#F4C430', // Sunny yellow (slightly darker for white text)
+  '#6BCB77', // Fresh green
+  '#4D96FF', // Appetizing blue
+  '#A45EE5', // Vibrant purple
+  '#FF6B6B', // Juicy tomato red
+  '#FF9F43', // Orange spice
 ];
 
 function getSegmentColor(index: number): string {
@@ -136,6 +135,16 @@ export function RouletteWheel({
         setIsSpinning(false);
         setSpinResult(result);
         onSpinComplete(result);
+
+        setTimeout(() => {
+          const resultCard = document.getElementById('spin-result-card');
+          if (resultCard) {
+            resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            requestAnimationFrame(() => {
+              resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+          }
+        }, 100);
       },
     });
   };
@@ -234,21 +243,18 @@ export function RouletteWheel({
             {restaurants.map((restaurant, index) => {
               const startAngle = (360 / restaurants.length) * index;
               const midAngle = startAngle + segmentAngle / 2;
-              const color = getSegmentColor(index);
-              
               // Convert polar to cartesian coordinates
               // Subtract 90 degrees because 0 degrees is at 3 o'clock, we want it at 12 o'clock
               const angleRad = ((midAngle - 90) * Math.PI) / 180;
               const x = centerX + textRadius * Math.cos(angleRad);
               const y = centerY + textRadius * Math.sin(angleRad);
               
-              // Text rotation: always point toward center
+               // Text rotation: always point toward center
               // Add 90 degrees to make text read from outside toward center
               const textRotation = midAngle + 90;
               
-              // Determine text color based on background
-              const isLightBackground = color === '#F4F1DE' || color === '#F2CC8F';
-              const textColor = isLightBackground ? '#3D405B' : '#FFFFFF';
+              // All colors in our palette have good contrast with white text
+              const textColor = '#FFFFFF';
               
               const displayName = restaurant.name;
               const nameLength = displayName.length;
@@ -284,9 +290,7 @@ export function RouletteWheel({
                       fontSize: `${computedFontSize}px`,
                       fontWeight,
                       maxWidth: `${maxLabelWidth}px`,
-                      textShadow: isLightBackground 
-                        ? '0 1px 3px rgba(255,255,255,0.9), 0 1px 2px rgba(0,0,0,0.5)' 
-                        : '0 2px 4px rgba(0,0,0,0.9), 0 1px 1px rgba(0,0,0,0.8)',
+                      textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 1px 1px rgba(0,0,0,0.8)',
                     }}
                   >
                     {displayName}
@@ -296,9 +300,7 @@ export function RouletteWheel({
                       className="text-[8px] sm:text-[10px] font-semibold whitespace-nowrap"
                       style={{
                         color: textColor,
-                        textShadow: isLightBackground 
-                          ? '0 1px 2px rgba(255,255,255,0.8), 0 1px 1px rgba(0,0,0,0.4)' 
-                          : '0 1px 3px rgba(0,0,0,0.8), 0 1px 1px rgba(0,0,0,0.6)',
+                        textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 1px 1px rgba(0,0,0,0.6)',
                         opacity: 0.9,
                       }}
                     >
@@ -361,7 +363,7 @@ export function RouletteWheel({
 
       {/* Result Display */}
       {spinResult && (
-        <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div id="spin-result-card" className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className={`bg-white rounded-2xl shadow-xl p-6 border border-eatspin-peach ${isManualResult ? 'text-center' : ''}`}>
             <div className={`flex items-center gap-2 mb-3 ${isManualResult ? 'justify-center' : ''}`}>
               <div className="w-2 h-2 bg-eatspin-success rounded-full animate-pulse" />

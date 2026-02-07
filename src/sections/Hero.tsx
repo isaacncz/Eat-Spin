@@ -125,7 +125,7 @@ export function Hero({ onGetStarted }: HeroProps) {
                 <p className="text-sm text-eatspin-gray-1">Restaurants</p>
               </div>
               <div className="text-center sm:text-left sm:border-l sm:border-eatspin-gray-3 sm:pl-6">
-                <p className="font-heading text-2xl font-bold text-brand-orange">1-2km</p>
+                <p className="font-heading text-2xl font-bold text-brand-orange">1-20km</p>
                 <p className="text-sm text-eatspin-gray-1">Search Radius</p>
               </div>
               <div className="text-center sm:text-left sm:border-l sm:border-eatspin-gray-3 sm:pl-6">

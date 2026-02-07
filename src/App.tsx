@@ -20,7 +20,9 @@ import { CTA } from '@/sections/CTA';
 import { Footer } from '@/sections/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X, Save, Trash2, ChevronDown } from 'lucide-react';
+import { Toaster } from '@/components/ui/sonner';
+import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X, Trash2, ChevronDown } from 'lucide-react';
+import { toast } from 'sonner';
 import './App.css';
 
 type SpinTab = 'auto' | 'manual';
@@ -59,6 +61,13 @@ const getPresetMealTime = (): PresetMealTime => {
   if (hour >= 10 && hour < 15) return 'lunch';
   if (hour >= 15 && hour < 22) return 'dinner';
   return null;
+};
+
+const presetMealTimeTimeToLabel = (mealTime: PresetMealTime): string => {
+  if (mealTime === 'breakfast') return 'Breakfast';
+  if (mealTime === 'lunch') return 'Lunch';
+  if (mealTime === 'dinner') return 'Dinner';
+  return '';
 };
 
 const loadManualRestaurants = (): Restaurant[] => {
@@ -134,6 +143,7 @@ function App() {
   const [roundRemovedRestaurantIds, setRoundRemovedRestaurantIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<SpinTab>('auto');
   const [autoWheelKey, setAutoWheelKey] = useState(0);
+  const [isReviewExpanded, setIsReviewExpanded] = useState(false);
 
   const [manualInput, setManualInput] = useState('');
   const [manualRestaurants, setManualRestaurants] = useState<Restaurant[]>(() => loadManualRestaurants());
@@ -141,7 +151,6 @@ function App() {
   const [manualSpinResult, setManualSpinResult] = useState<Restaurant | null>(null);
   const [presetNameInput, setPresetNameInput] = useState('');
   const [presetMealTimeInput, setPresetMealTimeInput] = useState<PresetMealTime>(() => getPresetMealTime());
-  const [selectedPresetId, setSelectedPresetId] = useState('');
   const [manualPresets, setManualPresets] = useState<ManualPreset[]>(() => loadManualPresets());
   const autoLoadedMealTimeRef = useRef<PresetMealTime>(null);
 
@@ -291,6 +300,9 @@ function App() {
     };
 
     setManualPresets((prev) => [newPreset, ...prev]);
+    toast.success(`Preset "${trimmedName}" saved!`, {
+      description: `${restaurantNames.length} restaurants saved${presetMealTimeInput ? ` for ${presetMealTimeTimeToLabel(presetMealTimeInput)}` : ''}`,
+    });
     setPresetNameInput('');
     setPresetMealTimeInput(null);
   };
@@ -434,15 +446,15 @@ function App() {
                   <input
                     type="range"
                     min="1"
-                    max="50"
+                    max="20"
                     value={radiusKm}
                     onChange={(e) => setRadiusKm(Number(e.target.value))}
                     className="range-theme w-full"
                   />
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>1 km</span>
-                    <span>25 km</span>
-                    <span>50 km</span>
+                    <span>10 km</span>
+                    <span>20 km</span>
                   </div>
                 </div>
               )}
@@ -451,62 +463,64 @@ function App() {
                 <MealTimeIndicator />
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                  <div className="mb-4 text-center">
+                    <h3 className="font-heading text-lg font-semibold text-brand-black mb-2">
+                      Price range
+                    </h3>
+                    <p className="text-sm text-eatspin-gray-1">Select any (optional)</p>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {priceOptions.map((price) => {
+                      const isSelected = selectedPriceRanges.includes(price);
+                      return (
+                        <button
+                          key={price}
+                          type="button"
+                          onClick={() => togglePriceRange(price)}
+                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                            isSelected
+                              ? 'bg-brand-orange text-white shadow-lg'
+                              : 'bg-white text-brand-black border border-gray-200 hover:border-brand-orange hover:text-brand-orange'
+                          }`}
+                        >
+                          {price}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-4 text-center">
+                    <h3 className="font-heading text-lg font-semibold text-brand-black mb-2">
+                      Dietary preference
+                    </h3>
+                    <p className="text-sm text-eatspin-gray-1">Show only non-halal options</p>
+                  </div>
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setNonHalalOnly((prev) => !prev)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                        nonHalalOnly
+                          ? 'bg-brand-orange text-white shadow-lg'
+                          : 'bg-white text-brand-black border border-gray-200 hover:border-brand-orange hover:text-brand-orange'
+                      }`}
+                    >
+                      Non-Halal Only
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div className="mb-8">
                 <FoodCategorySelector
                   selectedCategories={selectedCategories}
                   onCategoryChange={setSelectedCategories}
                   maxSelection={3}
                 />
-              </div>
-
-              <div className="mb-8">
-                <div className="mb-4 text-center">
-                  <h3 className="font-heading text-lg font-semibold text-brand-black mb-2">
-                    Price range
-                  </h3>
-                  <p className="text-sm text-eatspin-gray-1">Select any (optional)</p>
-                </div>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {priceOptions.map((price) => {
-                    const isSelected = selectedPriceRanges.includes(price);
-                    return (
-                      <button
-                        key={price}
-                        type="button"
-                        onClick={() => togglePriceRange(price)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                          isSelected
-                            ? 'bg-brand-orange text-white shadow-lg'
-                            : 'bg-white text-brand-black border border-gray-200 hover:border-brand-orange hover:text-brand-orange'
-                        }`}
-                      >
-                        {price}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="mb-8">
-                <div className="mb-4 text-center">
-                  <h3 className="font-heading text-lg font-semibold text-brand-black mb-2">
-                    Dietary preference
-                  </h3>
-                  <p className="text-sm text-eatspin-gray-1">Show only non-halal options</p>
-                </div>
-                <div className="flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => setNonHalalOnly((prev) => !prev)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                      nonHalalOnly
-                        ? 'bg-brand-orange text-white shadow-lg'
-                        : 'bg-white text-brand-black border border-gray-200 hover:border-brand-orange hover:text-brand-orange'
-                    }`}
-                  >
-                    Non-Halal Only
-                  </button>
-                </div>
               </div>
 
               {location && (
@@ -521,47 +535,66 @@ function App() {
               {location && roundRestaurants.length > 0 && (
                 <div className="mb-8 rounded-2xl border border-eatspin-peach/60 bg-white p-4 sm:p-5">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <h3 className="font-heading text-lg font-semibold text-brand-black">Review this round</h3>
-                      <p className="text-sm text-eatspin-gray-1">Remove places just for this round before you spin.</p>
+                    <div className="flex items-center gap-2">
+                      {/* User TODO: Make this section collapsible by editing isReviewExpanded state */}
+                      <button
+                        type="button"
+                        onClick={() => setIsReviewExpanded(!isReviewExpanded)}
+                        className="flex items-center gap-2"
+                      >
+                        <ChevronDown
+                          size={20}
+                          className={`text-eatspin-gray-1 transition-transform duration-200 ${
+                            isReviewExpanded ? 'rotate-180' : ''
+                          }`}
+                        />
+                        <h3 className="font-heading text-lg font-semibold text-brand-black">Review this round</h3>
+                      </button>
                     </div>
                     <p className="text-sm font-medium text-brand-black">
                       {roundRestaurants.length} restaurants remaining
                     </p>
                   </div>
 
-                  <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
-                    {roundRestaurants.map((restaurant) => (
-                      <li key={restaurant.id} className="flex items-start justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
-                        <div>
-                          <p className="font-medium text-brand-black">{restaurant.name}</p>
-                          <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-eatspin-gray-1">
-                            {restaurant.category.slice(0, 2).map((tag) => (
-                              <span key={`${restaurant.id}-${tag}`} className="rounded-full bg-white px-2 py-0.5 capitalize">
-                                {tag}
-                              </span>
-                            ))}
-                            <span className="rounded-full bg-white px-2 py-0.5">{restaurant.priceRange}</span>
-                            {restaurant.distance && (
-                              <span className="rounded-full bg-white px-2 py-0.5">{restaurant.distance.toFixed(1)} km</span>
-                            )}
+                  <div
+                    className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                      isReviewExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                    }`}
+                  >
+                    <ul className="overflow-hidden max-h-72 space-y-2 pr-1">
+                      {roundRestaurants.map((restaurant) => (
+                        <li key={restaurant.id} className="flex items-start justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
+                          <div>
+                            <p className="font-medium text-brand-black">{restaurant.name}</p>
+                            <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-eatspin-gray-1">
+                              {restaurant.category.slice(0, 2).map((tag) => (
+                                <span key={`${restaurant.id}-${tag}`} className="rounded-full bg-white px-2 py-0.5 capitalize">
+                                  {tag}
+                                </span>
+                              ))}
+                              <span className="rounded-full bg-white px-2 py-0.5">{restaurant.priceRange}</span>
+                              {restaurant.distance && (
+                                <span className="rounded-full bg-white px-2 py-0.5">{restaurant.distance.toFixed(1)} km</span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeRestaurantForRound(restaurant.id)}
-                          className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-                          aria-label={`Remove ${restaurant.name} for this round`}
-                        >
-                          <X size={14} /> Remove
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                          <button
+                            type="button"
+                            onClick={() => removeRestaurantForRound(restaurant.id)}
+                            className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
+                            aria-label={`Remove ${restaurant.name} for this round`}
+                          >
+                            <X size={14} /> Remove
+                          </button>
+                        </li>
+                      ))}
 
-              {showSpinLimitWarning && currentMealTime !== 'none' && (
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                {showSpinLimitWarning && currentMealTime !== 'none' && (
                 <div className="mb-6">
                   <SpinLimitWarning
                     mealTime={currentMealTime}
@@ -627,10 +660,10 @@ function App() {
 
           {activeTab === 'manual' && (
             <div id="wheel" className="py-4 pb-36 sm:pb-8">
-              <div className="text-center mb-5">
+              {/* <div className="text-center mb-5">
                 <h3 className="font-heading text-2xl font-bold text-brand-black mb-2">I know where</h3>
                 <p className="text-sm text-eatspin-gray-1">Add any restaurants you like and spin.</p>
-              </div>
+              </div> */}
 
               <RouletteWheel
                 key={`manual-${manualWheelKey}-${manualRestaurants.length}`}
@@ -648,111 +681,17 @@ function App() {
                 spinButtonLabel="Spin the Wheel!"
                 emptyStateTitle="Add restaurants to start"
                 emptyStateSubtitle="Type any restaurant you like…"
-                onEditList={() => {
-                  document.getElementById('manual-input')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }}
               />
 
-              <div id="manual-input" className="mt-8 max-w-xl mx-auto">
-                <div className="mb-4 bg-white rounded-xl border border-eatspin-peach/60 p-4 space-y-3">
-                  <div>
-                    <h4 className="font-heading font-semibold text-brand-black">Quick Presets</h4>
-                    <p className="text-xs text-eatspin-gray-1">Save this wheel and load it anytime. Meal presets auto-load by current time.</p>
-                  </div>
-
-                  {manualPresets.length > 0 && (
-                    <div className="relative">
-                      <select
-                        value={selectedPresetId}
-                        onChange={(e) => {
-                          const presetId = e.target.value;
-                          setSelectedPresetId(presetId);
-                          const selectedPreset = manualPresets.find((preset) => preset.id === presetId);
-                          if (selectedPreset) {
-                            loadPresetRestaurants(selectedPreset);
-                          }
-                        }}
-                        className="preset-select h-11 w-full rounded-lg border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
-                      >
-                        <option value="">🎯 Load a saved wheel preset</option>
-                        {manualPresets.map((preset) => (
-                          <option key={preset.id} value={preset.id}>
-                            {preset.mealTime === 'breakfast' ? '🌅' : preset.mealTime === 'lunch' ? '☀️' : preset.mealTime === 'dinner' ? '🌙' : '🕒'} {preset.name}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
+                <div id="manual-input" className="mt-8 max-w-xl mx-auto">
+                  {manualSpinResult && (
+                    <div className="mb-3 rounded-xl border border-eatspin-peach/60 bg-gradient-to-r from-white to-brand-linen px-4 py-3 text-center shadow-sm">
+                      <p className="text-xs uppercase tracking-[0.18em] text-eatspin-gray-1">Last result</p>
+                      <p className="font-heading text-lg text-brand-black">✨ {manualSpinResult.name}</p>
                     </div>
                   )}
 
-                  <div className="grid sm:grid-cols-[1fr_auto_auto] gap-2">
-                    <Input
-                      value={presetNameInput}
-                      onChange={(e) => setPresetNameInput(e.target.value)}
-                      placeholder="Preset name (e.g. Lunch Nearby)"
-                      className="h-11"
-                    />
-                    <div className="relative">
-                      <select
-                      value={presetMealTimeInput ?? ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === 'breakfast' || value === 'lunch' || value === 'dinner') {
-                          setPresetMealTimeInput(value);
-                          return;
-                        }
-                        setPresetMealTimeInput(null);
-                      }}
-                        className="preset-select h-11 w-full rounded-md border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
-                      >
-                        <option value="">🕒 No meal time</option>
-                        <option value="breakfast">🌅 Breakfast</option>
-                        <option value="lunch">☀️ Lunch</option>
-                        <option value="dinner">🌙 Dinner</option>
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
-                    </div>
-                    <Button
-                      onClick={saveCurrentAsPreset}
-                      disabled={manualRestaurants.length === 0 || !presetNameInput.trim()}
-                      className="h-11 bg-brand-black hover:bg-brand-black/90"
-                    >
-                      <Save size={16} className="mr-2" /> Save
-                    </Button>
-                  </div>
-
-                  {manualPresets.length === 0 ? (
-                    <p className="text-sm text-eatspin-gray-1">No saved presets yet.</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {manualPresets.map((preset) => (
-                        <li key={preset.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-linen px-3 py-2">
-                          <button
-                            type="button"
-                            onClick={() => loadPresetRestaurants(preset)}
-                            className="text-left flex-1"
-                          >
-                            <p className="text-sm font-medium text-brand-black">{preset.name}</p>
-                            <p className="text-xs text-eatspin-gray-1">
-                              {preset.restaurants.length} picks
-                              {preset.mealTime ? ` • ${preset.mealTime}` : ''}
-                            </p>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => deletePreset(preset.id)}
-                            className="text-eatspin-gray-1 hover:text-red-500"
-                            aria-label={`Delete preset ${preset.name}`}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                <div className="sticky bottom-3 z-30 rounded-2xl border border-eatspin-peach/60 bg-white/95 p-3 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-white/85">
+                  <div className="sticky bottom-3 z-30 rounded-2xl border border-eatspin-peach/60 bg-white/95 p-3 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-white/85">
                   <div className="flex flex-col sm:flex-row gap-2">
                   <Input
                       value={manualInput}
@@ -807,13 +746,81 @@ function App() {
                   )}
                 </div>
 
-                {manualSpinResult && (
-                  <div className="mt-4 rounded-xl border border-eatspin-peach/60 bg-gradient-to-r from-white to-brand-linen px-4 py-3 text-center shadow-sm">
-                    <p className="text-xs uppercase tracking-[0.18em] text-eatspin-gray-1">Last result</p>
-                    <p className="font-heading text-lg text-brand-black">✨ {manualSpinResult.name}</p>
+                <div className="mt-4 bg-white rounded-xl border border-eatspin-peach/60 p-4 space-y-3">
+                  <div>
+                    <h4 className="font-heading font-semibold text-brand-black">Quick Presets</h4>
+                    <p className="text-xs text-eatspin-gray-1">Save this wheel and load it anytime. Meal presets auto-load by current time.</p>
                   </div>
-                )}
-              </div>
+
+                  <div className="grid sm:grid-cols-[1fr_auto_auto] gap-2">
+                    <Input
+                      value={presetNameInput}
+                      onChange={(e) => setPresetNameInput(e.target.value)}
+                      placeholder="Preset name (e.g. Lunch Nearby)"
+                      className="h-11"
+                    />
+                    <div className="relative">
+                      <select
+                        value={presetMealTimeInput ?? ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === 'breakfast' || value === 'lunch' || value === 'dinner') {
+                            setPresetMealTimeInput(value);
+                            return;
+                          }
+                          setPresetMealTimeInput(null);
+                        }}
+                        className="preset-select h-11 w-full rounded-md border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
+                      >
+                        <option value="">🕒 No meal time</option>
+                        <option value="breakfast">🌅 Breakfast</option>
+                        <option value="lunch">☀️ Lunch</option>
+                        <option value="dinner">🌙 Dinner</option>
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
+                    </div>
+                    <Button
+                      onClick={saveCurrentAsPreset}
+                      disabled={manualRestaurants.length === 0 || !presetNameInput.trim()}
+                      className="h-11 px-4 bg-brand-orange text-white font-semibold hover:bg-brand-orange/90"
+                    >
+                      Save Preset
+                    </Button>
+                  </div>
+
+                  {manualPresets.length === 0 ? (
+                    <p className="text-sm text-eatspin-gray-1">No saved presets yet.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {manualPresets.map((preset) => (
+                        <li key={preset.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-linen px-3 py-2">
+                          <button
+                            type="button"
+                            onClick={() => loadPresetRestaurants(preset)}
+                            className="text-left flex-1"
+                          >
+                            <p className="text-sm font-medium text-brand-black">
+                              {preset.mealTime === 'breakfast' ? '🌅' : preset.mealTime === 'lunch' ? '☀️' : preset.mealTime === 'dinner' ? '🌙' : '🕒'} {preset.name}
+                            </p>
+                            <p className="text-xs text-eatspin-gray-1">
+                              {preset.restaurants.length} picks{preset.mealTime ? ` • ${presetMealTimeTimeToLabel(preset.mealTime)}` : ''}
+                            </p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deletePreset(preset.id)}
+                            className="text-eatspin-gray-1 hover:text-red-500"
+                            aria-label={`Delete preset ${preset.name}`}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                </div>
             </div>
           )}
         </div>
@@ -853,6 +860,8 @@ function App() {
         onClose={() => setShowSubscription(false)}
         onSubscribe={handleSubscribe}
       />
+
+      <Toaster />
     </div>
   );
 }

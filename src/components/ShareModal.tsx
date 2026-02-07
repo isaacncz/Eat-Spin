@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Download, Loader2, MessageCircle } from 'lucide-react';
+import { Download, Instagram, Loader2, MessageCircle } from 'lucide-react';
 
 import type { Restaurant } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -17,43 +17,10 @@ export interface ShareModalProps {
   isOpen: boolean;
   onClose: () => void;
   restaurant: Restaurant;
-  wheelElement?: HTMLElement | null;
 }
 
-type Html2CanvasFn = (element: HTMLElement, options?: {
-  scale?: number;
-  backgroundColor?: string;
-  useCORS?: boolean;
-}) => Promise<HTMLCanvasElement>;
-
-declare global {
-  interface Window {
-    html2canvas?: Html2CanvasFn;
-  }
-}
-
-let html2CanvasLoader: Promise<Html2CanvasFn | null> | null = null;
-
-async function loadHtml2Canvas(): Promise<Html2CanvasFn | null> {
-  if (window.html2canvas) return window.html2canvas;
-
-  if (!html2CanvasLoader) {
-    html2CanvasLoader = new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
-      script.async = true;
-      script.onload = () => resolve(window.html2canvas ?? null);
-      script.onerror = () => resolve(null);
-      document.head.appendChild(script);
-    });
-  }
-
-  return html2CanvasLoader;
-}
-
-export function ShareModal({ isOpen, onClose, restaurant, wheelElement }: ShareModalProps) {
+export function ShareModal({ isOpen, onClose, restaurant }: ShareModalProps) {
   const shareCardRef = useRef<HTMLDivElement>(null);
-  const [wheelImageUrl, setWheelImageUrl] = useState<string>();
   const [shareImageUrl, setShareImageUrl] = useState<string>();
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,46 +41,17 @@ export function ShareModal({ isOpen, onClose, restaurant, wheelElement }: ShareM
       .join('\n');
   }, [restaurant]);
 
-  const captureNode = async (node: HTMLElement): Promise<HTMLCanvasElement> => {
-    const html2canvas = await loadHtml2Canvas();
-
-    if (html2canvas) {
-      return html2canvas(node, {
-        scale: 2,
-        backgroundColor: '#FFF9F4',
-        useCORS: true,
-      });
-    }
-
-    return domToCanvas(node, {
-      scale: 2,
-      backgroundColor: '#FFF9F4',
-    });
-  };
-
   const generateImage = async () => {
-    if (!isOpen) return;
+    if (!isOpen || !shareCardRef.current) return;
 
     setIsGenerating(true);
     setError(null);
 
     try {
-      let capturedWheelImage: string | undefined;
-
-      if (wheelElement) {
-        const wheelCanvas = await captureNode(wheelElement);
-        capturedWheelImage = wheelCanvas.toDataURL('image/png');
-      }
-
-      setWheelImageUrl(capturedWheelImage);
-
-      await new Promise((resolve) => setTimeout(resolve, 80));
-
-      if (!shareCardRef.current) {
-        throw new Error('Share card preview is unavailable.');
-      }
-
-      const cardCanvas = await captureNode(shareCardRef.current);
+      const cardCanvas = await domToCanvas(shareCardRef.current, {
+        scale: 2,
+        backgroundColor: '#FFF9F4',
+      });
       setShareImageUrl(cardCanvas.toDataURL('image/png'));
     } catch {
       setError('Could not generate your share image. Please try again.');
@@ -130,7 +68,13 @@ export function ShareModal({ isOpen, onClose, restaurant, wheelElement }: ShareM
 
     generateImage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, restaurant.id, wheelElement]);
+  }, [isOpen, restaurant.id]);
+
+  const getFile = async () => {
+    if (!shareImageUrl) return null;
+    const imageBlob = await (await fetch(shareImageUrl)).blob();
+    return new File([imageBlob], 'eatspin-result.png', { type: 'image/png' });
+  };
 
   const downloadImage = () => {
     if (!shareImageUrl) return;
@@ -142,30 +86,31 @@ export function ShareModal({ isOpen, onClose, restaurant, wheelElement }: ShareM
     link.click();
   };
 
-  const handleWhatsAppShare = async () => {
-    if (!shareImageUrl) return;
-
-    try {
-      const hasCanShare = typeof navigator.canShare === 'function';
-      if (hasCanShare) {
-        const imageBlob = await (await fetch(shareImageUrl)).blob();
-        const file = new File([imageBlob], 'eatspin-result.png', { type: 'image/png' });
-
-        if (navigator.canShare?.({ files: [file] })) {
-          await navigator.share({
-            text: shareText,
-            files: [file],
-            title: 'EatSpin Result',
-          });
-          return;
-        }
-      }
-    } catch {
-      // fall back to wa.me
-    }
-
+  const handleWhatsAppShare = () => {
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleInstagramStoryShare = async () => {
+    try {
+      const file = await getFile();
+      const hasNativeShare = typeof navigator.canShare === 'function' && typeof navigator.share === 'function';
+
+      if (file && hasNativeShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'EatSpin Result',
+          text: 'Sharing to Instagram Story',
+        });
+        return;
+      }
+
+      downloadImage();
+      window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
+    } catch {
+      setError('Instagram sharing is not supported on this device. Image downloaded instead.');
+      downloadImage();
+    }
   };
 
   return (
@@ -174,13 +119,13 @@ export function ShareModal({ isOpen, onClose, restaurant, wheelElement }: ShareM
         <DialogContent className="max-w-3xl border-eatspin-peach bg-[#FFF9F4]/95 p-0 backdrop-blur-md" showCloseButton>
           <DialogHeader className="px-6 pt-6">
             <DialogTitle>Share your result</DialogTitle>
-            <DialogDescription>Share to WhatsApp and instagram story, or download your result image.</DialogDescription>
+            <DialogDescription>Send to WhatsApp, share to Instagram Story, or download your result image.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 px-6 pb-6">
-            <div className="overflow-hidden rounded-xl border border-eatspin-peach bg-white p-4">
+            <div className="flex min-h-[500px] items-center justify-center overflow-hidden rounded-xl border border-eatspin-peach bg-white p-4">
               {isGenerating ? (
-                <div className="flex h-[420px] items-center justify-center gap-3 text-eatspin-gray-1">
+                <div className="flex items-center justify-center gap-3 text-eatspin-gray-1">
                   <Loader2 className="h-6 w-6 animate-spin" />
                   Generating your share image...
                 </div>
@@ -190,7 +135,7 @@ export function ShareModal({ isOpen, onClose, restaurant, wheelElement }: ShareM
                     <img src={shareImageUrl} alt="Generated share card preview" className="h-auto w-full" />
                   ) : (
                     <div className="origin-top-left scale-[0.38]" style={{ width: '1080px' }}>
-                      <ShareResultCard restaurant={restaurant} wheelImageUrl={wheelImageUrl} />
+                      <ShareResultCard restaurant={restaurant} />
                     </div>
                   )}
                 </div>
@@ -199,31 +144,40 @@ export function ShareModal({ isOpen, onClose, restaurant, wheelElement }: ShareM
 
             {error && <p className="text-sm text-red-500">{error}</p>}
 
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="grid gap-3 sm:grid-cols-2">
               <Button
                 className="w-full bg-[#25D366] text-white hover:bg-[#1EA952]"
                 onClick={handleWhatsAppShare}
                 disabled={isGenerating || !shareImageUrl}
               >
                 <MessageCircle className="mr-2 h-4 w-4" />
-                Share to WhatsApp and instagram story
+                Send to WhatsApp
               </Button>
               <Button
-                className="w-full bg-brand-orange text-white hover:bg-eatspin-orange"
-                onClick={downloadImage}
+                className="w-full bg-[#E4405F] text-white hover:bg-[#cc2f4f]"
+                onClick={handleInstagramStoryShare}
                 disabled={isGenerating || !shareImageUrl}
               >
-                <Download className="mr-2 h-4 w-4" />
-                Download Image
+                <Instagram className="mr-2 h-4 w-4" />
+                Share to Instagram Story
               </Button>
             </div>
+
+            <Button
+              className="w-full bg-brand-orange text-white hover:bg-eatspin-orange"
+              onClick={downloadImage}
+              disabled={isGenerating || !shareImageUrl}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download Image
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
       <div className="pointer-events-none fixed -left-[9999px] top-0 opacity-0">
         <div ref={shareCardRef}>
-          <ShareResultCard restaurant={restaurant} wheelImageUrl={wheelImageUrl} />
+          <ShareResultCard restaurant={restaurant} />
         </div>
       </div>
     </>

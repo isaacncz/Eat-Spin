@@ -455,7 +455,6 @@ export function RouletteWheel({
             isOpen={isShareModalOpen}
             onClose={() => setIsShareModalOpen(false)}
             restaurant={spinResult}
-            wheelElement={wheelRef.current}
           />
         </div>
       )}

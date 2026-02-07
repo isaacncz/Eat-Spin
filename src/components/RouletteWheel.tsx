@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone, MessageCircle } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
+import { ShareModal } from '@/components/ShareModal';
 
 interface RouletteWheelProps {
   restaurants: Restaurant[];
@@ -73,6 +74,7 @@ export function RouletteWheel({
   const wheelScrollRef = useRef<HTMLDivElement>(null);
   const wheelContainerRef = useRef<HTMLDivElement>(null);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const currentRotationRef = useRef(0);
   const [wheelSize, setWheelSize] = useState(320);
 
@@ -433,6 +435,14 @@ export function RouletteWheel({
             </div>
 
             <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <Button
+                className="bg-[#25D366] text-white hover:bg-[#1EA952]"
+                onClick={() => setIsShareModalOpen(true)}
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Share Result
+              </Button>
+
               {onEditList && (
                 <Button variant="outline" onClick={onEditList}>
                   Edit list
@@ -440,6 +450,13 @@ export function RouletteWheel({
               )}
             </div>
           </div>
+
+          <ShareModal
+            isOpen={isShareModalOpen}
+            onClose={() => setIsShareModalOpen(false)}
+            restaurant={spinResult}
+            wheelElement={wheelRef.current}
+          />
         </div>
       )}
     </div>

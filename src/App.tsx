@@ -386,7 +386,11 @@ function App() {
             </p>
           </div>
 
-          <div className="mb-8 sticky top-3 sm:top-6 z-30 flex justify-center">
+          <div className="mb-6 flex justify-center">
+            <MealTimeIndicator />
+          </div>
+
+          <div className="mb-8 flex justify-center">
             <div className="inline-flex items-center justify-center p-1.5 bg-brand-black rounded-2xl border-2 border-brand-black shadow-lg">
               <button
                 type="button"
@@ -458,10 +462,6 @@ function App() {
                   </div>
                 </div>
               )}
-
-              <div className="mb-6 flex justify-center">
-                <MealTimeIndicator />
-              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>

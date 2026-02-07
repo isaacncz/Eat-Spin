@@ -55,7 +55,8 @@ export function Hero({ onGetStarted }: HeroProps) {
   return (
     <section
       ref={heroRef}
-      className="relative min-h-screen flex items-center overflow-hidden pt-28 sm:pt-24"
+      className="relative min-h-screen flex items-center overflow-hidden"
+      style={{ paddingTop: 'var(--navbar-height,72px)' }}
     >
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

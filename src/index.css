@@ -4,6 +4,22 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --navbar-height: 80px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --navbar-height: 72px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --navbar-height: 64px;
+  }
+}
+
 @layer base {
   :root {
     --background: 30 100% 99%;
@@ -47,6 +63,7 @@
   
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: var(--navbar-height, 80px);
   }
   
   body {

@@ -20,6 +20,11 @@ export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const navbarHeight = isScrolled || isMobileMenuOpen ? 64 : 80;
+    document.documentElement.style.setProperty('--navbar-height', `${navbarHeight}px`);
+  }, [isScrolled, isMobileMenuOpen]);
+
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {

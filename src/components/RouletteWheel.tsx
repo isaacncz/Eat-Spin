@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
@@ -75,6 +75,61 @@ export function RouletteWheel({
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
   const currentRotationRef = useRef(0);
   const [wheelSize, setWheelSize] = useState(320);
+  const celebrationTimeoutsRef = useRef<number[]>([]);
+  const celebrationElementsRef = useRef<HTMLElement[]>([]);
+
+  const clearCelebrationEffects = useCallback(() => {
+    celebrationTimeoutsRef.current.forEach((timeoutId) => {
+      window.clearTimeout(timeoutId);
+    });
+    celebrationTimeoutsRef.current = [];
+
+    celebrationElementsRef.current.forEach((node) => {
+      node.remove();
+    });
+    celebrationElementsRef.current = [];
+  }, []);
+
+  const triggerCelebration = useCallback(() => {
+    clearCelebrationEffects();
+
+    const celebrationLayer = document.createElement('div');
+    celebrationLayer.className = 'celebration-layer';
+    document.body.appendChild(celebrationLayer);
+    celebrationElementsRef.current.push(celebrationLayer);
+
+    const burst = document.createElement('div');
+    burst.className = 'celebration-burst';
+    celebrationLayer.appendChild(burst);
+
+    const emojis = ['🎉', '✨', '⭐', '🏆'];
+    const emojiCount = 18;
+
+    for (let i = 0; i < emojiCount; i++) {
+      const timer = window.setTimeout(() => {
+        const emoji = document.createElement('span');
+        emoji.className = 'celebration-emoji';
+        emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        emoji.style.left = `${Math.random() * 100}vw`;
+        emoji.style.top = `${62 + Math.random() * 32}vh`;
+        emoji.style.animationDelay = `${Math.random() * 0.3}s`;
+        emoji.style.fontSize = `${1 + Math.random() * 1.1}rem`;
+        celebrationLayer.appendChild(emoji);
+
+        const removeTimer = window.setTimeout(() => {
+          emoji.remove();
+        }, 3000);
+        celebrationTimeoutsRef.current.push(removeTimer);
+      }, i * 140);
+
+      celebrationTimeoutsRef.current.push(timer);
+    }
+
+    const cleanupTimer = window.setTimeout(() => {
+      clearCelebrationEffects();
+    }, 3400);
+    celebrationTimeoutsRef.current.push(cleanupTimer);
+  }, [clearCelebrationEffects]);
 
   // Generate conic gradient for wheel segments
   const wheelBackground = useMemo(() => {
@@ -176,6 +231,27 @@ export function RouletteWheel({
 
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!spinResult) return;
+
+    const resultCard = document.getElementById('spin-result-card');
+    if (resultCard) {
+      gsap.fromTo(
+        resultCard,
+        { autoAlpha: 0, y: 30, scale: 0.92 },
+        { autoAlpha: 1, y: 0, scale: 1, duration: 0.6, ease: 'elastic.out(1, 0.55)' },
+      );
+    }
+
+    triggerCelebration();
+  }, [spinResult, triggerCelebration]);
+
+  useEffect(() => {
+    return () => {
+      clearCelebrationEffects();
+    };
+  }, [clearCelebrationEffects]);
 
   if (restaurants.length === 0) {
     return (
@@ -363,26 +439,36 @@ export function RouletteWheel({
 
       {/* Result Display */}
       {spinResult && (
-        <div id="spin-result-card" className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="bg-white rounded-2xl shadow-xl p-6 border border-eatspin-peach text-center">
+        <div id="spin-result-card" className="w-full max-w-md relative z-10">
+          <div className="celebration-ring celebration-ring-sm" />
+          <div className="celebration-ring celebration-ring-lg" />
+
+          <div className="celebration-crown-badge">
+            <Crown size={16} className="text-yellow-900" />
+            <span>FOOD DESTINY</span>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-xl p-6 border text-center relative celebration-result-card">
             <div className="flex items-center justify-center gap-2 mb-3">
               <div className="w-2 h-2 bg-eatspin-success rounded-full animate-pulse" />
-              <span className="text-sm font-medium text-eatspin-success">Your Food Destiny</span>
+              <span className="text-sm font-semibold text-[#B8860B]">Your Food Destiny</span>
             </div>
-            
-            <h3 className="font-heading text-2xl font-bold text-brand-black mb-3">
+
+            <h3 className="font-heading text-2xl font-bold text-brand-black mb-3 flex items-center justify-center gap-2">
+              <Trophy size={20} className="celebration-floating-icon text-[#F4C430]" />
               {spinResult.name}
+              <Trophy size={20} className="celebration-floating-icon text-[#FFD700]" />
             </h3>
             
             {!isManualResult && (
               <div className="space-y-2 text-sm">
               <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                <MapPin size={16} className="text-eatspin-orange flex-shrink-0" />
+                <MapPin size={16} className="text-[#F4C430] flex-shrink-0" />
                 <span>{spinResult.address}</span>
               </div>
               
               <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                <Star size={16} className="text-yellow-500 flex-shrink-0" />
+                <Star size={16} className="text-[#FFD700] flex-shrink-0" />
                 <span>{spinResult.rating} / 5.0</span>
                 <span className="text-eatspin-gray-2">•</span>
                 <span className="text-eatspin-orange font-medium">{spinResult.priceRange}</span>
@@ -390,19 +476,19 @@ export function RouletteWheel({
               
               {spinResult.distance && (
                 <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                  <Clock3 size={16} className="text-eatspin-orange flex-shrink-0" />
+                  <Clock3 size={16} className="text-[#F4C430] flex-shrink-0" />
                   <span>{spinResult.distance.toFixed(1)} km away</span>
                 </div>
               )}
 
               <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                <Clock3 size={16} className="text-eatspin-orange flex-shrink-0" />
+                <Clock3 size={16} className="text-[#F4C430] flex-shrink-0" />
                 <span>{getOpeningHoursLabel(spinResult)}</span>
               </div>
               
               {spinResult.phone && (
                 <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                  <Phone size={16} className="text-eatspin-orange flex-shrink-0" />
+                  <Phone size={16} className="text-[#F4C430] flex-shrink-0" />
                   <a href={`tel:${spinResult.phone}`} className="hover:text-eatspin-orange">
                     {spinResult.phone}
                   </a>

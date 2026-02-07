@@ -3,6 +3,30 @@ interface CaptureOptions {
   backgroundColor?: string;
 }
 
+const ignoredStyleKeys = new Set(['cssText', 'length', 'parentRule']);
+
+function inlineComputedStyles(sourceNode: Element, targetNode: Element) {
+  const sourceStyle = window.getComputedStyle(sourceNode);
+  const targetStyle = (targetNode as HTMLElement).style;
+
+  for (const propertyName of sourceStyle) {
+    if (ignoredStyleKeys.has(propertyName)) continue;
+    targetStyle.setProperty(
+      propertyName,
+      sourceStyle.getPropertyValue(propertyName),
+      sourceStyle.getPropertyPriority(propertyName),
+    );
+  }
+
+  const sourceChildren = Array.from(sourceNode.children);
+  const targetChildren = Array.from(targetNode.children);
+  const childCount = Math.min(sourceChildren.length, targetChildren.length);
+
+  for (let index = 0; index < childCount; index += 1) {
+    inlineComputedStyles(sourceChildren[index], targetChildren[index]);
+  }
+}
+
 export async function domToCanvas(element: HTMLElement, options: CaptureOptions = {}): Promise<HTMLCanvasElement> {
   const rect = element.getBoundingClientRect();
   const scale = options.scale ?? 1;
@@ -10,6 +34,7 @@ export async function domToCanvas(element: HTMLElement, options: CaptureOptions 
   const height = Math.max(Math.ceil(rect.height), 1);
 
   const clonedElement = element.cloneNode(true) as HTMLElement;
+  inlineComputedStyles(element, clonedElement);
 
   const wrapper = document.createElement('div');
   wrapper.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');

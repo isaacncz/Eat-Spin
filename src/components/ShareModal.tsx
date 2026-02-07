@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { domToCanvas } from '@/lib/domToCanvas';
 import { Download, Loader2, MessageCircle } from 'lucide-react';
 
 import type { Restaurant } from '@/types';
@@ -12,12 +11,44 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ShareResultCard } from '@/components/ShareResultCard';
+import { domToCanvas } from '@/lib/domToCanvas';
 
 export interface ShareModalProps {
   isOpen: boolean;
   onClose: () => void;
   restaurant: Restaurant;
   wheelElement?: HTMLElement | null;
+}
+
+type Html2CanvasFn = (element: HTMLElement, options?: {
+  scale?: number;
+  backgroundColor?: string;
+  useCORS?: boolean;
+}) => Promise<HTMLCanvasElement>;
+
+declare global {
+  interface Window {
+    html2canvas?: Html2CanvasFn;
+  }
+}
+
+let html2CanvasLoader: Promise<Html2CanvasFn | null> | null = null;
+
+async function loadHtml2Canvas(): Promise<Html2CanvasFn | null> {
+  if (window.html2canvas) return window.html2canvas;
+
+  if (!html2CanvasLoader) {
+    html2CanvasLoader = new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
+      script.async = true;
+      script.onload = () => resolve(window.html2canvas ?? null);
+      script.onerror = () => resolve(null);
+      document.head.appendChild(script);
+    });
+  }
+
+  return html2CanvasLoader;
 }
 
 export function ShareModal({ isOpen, onClose, restaurant, wheelElement }: ShareModalProps) {
@@ -43,6 +74,23 @@ export function ShareModal({ isOpen, onClose, restaurant, wheelElement }: ShareM
       .join('\n');
   }, [restaurant]);
 
+  const captureNode = async (node: HTMLElement): Promise<HTMLCanvasElement> => {
+    const html2canvas = await loadHtml2Canvas();
+
+    if (html2canvas) {
+      return html2canvas(node, {
+        scale: 2,
+        backgroundColor: '#FFF9F4',
+        useCORS: true,
+      });
+    }
+
+    return domToCanvas(node, {
+      scale: 2,
+      backgroundColor: '#FFF9F4',
+    });
+  };
+
   const generateImage = async () => {
     if (!isOpen) return;
 
@@ -53,10 +101,7 @@ export function ShareModal({ isOpen, onClose, restaurant, wheelElement }: ShareM
       let capturedWheelImage: string | undefined;
 
       if (wheelElement) {
-        const wheelCanvas = await domToCanvas(wheelElement, {
-          scale: 2,
-          backgroundColor: '#FFF9F4',
-        });
+        const wheelCanvas = await captureNode(wheelElement);
         capturedWheelImage = wheelCanvas.toDataURL('image/png');
       }
 
@@ -68,11 +113,7 @@ export function ShareModal({ isOpen, onClose, restaurant, wheelElement }: ShareM
         throw new Error('Share card preview is unavailable.');
       }
 
-      const cardCanvas = await domToCanvas(shareCardRef.current, {
-        scale: 2,
-        backgroundColor: '#FFF9F4',
-      });
-
+      const cardCanvas = await captureNode(shareCardRef.current);
       setShareImageUrl(cardCanvas.toDataURL('image/png'));
     } catch {
       setError('Could not generate your share image. Please try again.');
@@ -139,15 +180,19 @@ export function ShareModal({ isOpen, onClose, restaurant, wheelElement }: ShareM
           <div className="space-y-4 px-6 pb-6">
             <div className="overflow-hidden rounded-xl border border-eatspin-peach bg-white p-4">
               {isGenerating ? (
-                <div className="flex h-[360px] items-center justify-center gap-3 text-eatspin-gray-1">
+                <div className="flex h-[420px] items-center justify-center gap-3 text-eatspin-gray-1">
                   <Loader2 className="h-6 w-6 animate-spin" />
                   Generating your share image...
                 </div>
               ) : (
-                <div className="mx-auto w-full max-w-[380px] overflow-hidden rounded-lg border bg-[#FFF9F4] shadow-md">
-                  <div className="origin-top-left scale-[0.35]" style={{ width: '1080px', height: '1350px' }}>
-                    <ShareResultCard restaurant={restaurant} wheelImageUrl={wheelImageUrl} />
-                  </div>
+                <div className="mx-auto w-full max-w-[440px] overflow-hidden rounded-lg border bg-[#FFF9F4] shadow-md">
+                  {shareImageUrl ? (
+                    <img src={shareImageUrl} alt="Generated share card preview" className="h-auto w-full" />
+                  ) : (
+                    <div className="origin-top-left scale-[0.38]" style={{ width: '1080px' }}>
+                      <ShareResultCard restaurant={restaurant} wheelImageUrl={wheelImageUrl} />
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -7,80 +7,96 @@ export interface ShareResultCardProps {
 }
 
 const cardWidth = 1080;
-const cardHeight = 1350;
+const wedgeColors = ['#FF6B6B', '#FF9F43', '#F4C430', '#6BCB77', '#4D96FF', '#A45EE5'];
 
-export function ShareResultCard({ restaurant, wheelImageUrl }: ShareResultCardProps) {
+function getWedgePath(cx: number, cy: number, radius: number, startAngle: number, endAngle: number) {
+  const startRadians = (Math.PI / 180) * startAngle;
+  const endRadians = (Math.PI / 180) * endAngle;
+  const x1 = cx + radius * Math.cos(startRadians);
+  const y1 = cy + radius * Math.sin(startRadians);
+  const x2 = cx + radius * Math.cos(endRadians);
+  const y2 = cy + radius * Math.sin(endRadians);
+  const largeArcFlag = endAngle - startAngle <= 180 ? 0 : 1;
+
+  return `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+}
+
+export function ShareResultCard({ restaurant }: ShareResultCardProps) {
   const now = new Date();
   const categories = restaurant.category
     .map((categoryId) => foodCategories.find((item) => item.id === categoryId))
-    .filter((category) => Boolean(category));
+    .filter((category): category is NonNullable<typeof category> => Boolean(category))
+    .slice(0, 3);
 
   return (
     <article
-      className="relative overflow-hidden"
+      className="relative overflow-hidden rounded-[28px] border-4 border-[#F7C8AA] bg-[#FFF9F4]"
       style={{
         width: `${cardWidth}px`,
-        height: `${cardHeight}px`,
-        background: 'linear-gradient(180deg, #FFF9F4 0%, #FFF3E8 100%)',
         fontFamily: 'Inter, system-ui, sans-serif',
       }}
     >
-      <div className="absolute inset-0 opacity-25" style={{ background: 'radial-gradient(circle at top right, #F54703 0%, transparent 50%)' }} />
-      <div className="relative z-10 flex h-full flex-col p-14 text-brand-black">
-        <header className="flex items-center gap-5">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-orange text-3xl text-white shadow-lg">🎰</div>
-          <div>
-            <p className="text-4xl font-bold text-brand-black">EatSpin</p>
-            <p className="text-3xl font-semibold text-eatspin-orange">🎰 Today's Food Destiny!</p>
+      <div className="flex flex-col">
+        <header className="border-b-2 border-[#F8D9C3] px-14 py-10">
+          <div className="flex items-center gap-5">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-orange text-3xl text-white shadow-sm">🍽️</div>
+            <p className="text-5xl font-extrabold text-brand-black">EatSpin</p>
           </div>
+          <p className="mt-2 pl-[84px] text-4xl font-semibold text-eatspin-orange">🎰 Today's Food Destiny!</p>
         </header>
 
-        <div className="my-8 h-1.5 w-full rounded-full" style={{ background: 'linear-gradient(90deg, #F54703 0%, #FFC89E 100%)' }} />
+        <main className="px-14 py-10">
+          <div className="rounded-3xl border-2 border-[#F4B892] bg-white p-6 shadow-sm">
+            <div className="relative flex h-[520px] items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[#F8C9A9] bg-[#FFF9F4]">
+              <div className="absolute left-1/2 top-2 z-10 h-0 w-0 -translate-x-1/2 border-l-[24px] border-r-[24px] border-t-[34px] border-l-transparent border-r-transparent border-t-eatspin-orange" />
 
-        <section className="mb-7 rounded-3xl border border-[#FBD8C2] bg-white/90 p-5 shadow-lg">
-          <div className="flex h-[470px] items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed border-[#F9B386] bg-[#FFF9F4]">
-            {wheelImageUrl ? (
-              <img src={wheelImageUrl} alt="Frozen roulette wheel" className="h-full w-full object-contain" />
-            ) : (
-              <div className="text-center text-3xl font-semibold text-[#CF6D38]">
-                <p>🎡 Wheel preview unavailable</p>
-                <p className="mt-3 text-2xl font-normal">Spin in-app to capture your proof!</p>
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border-[3px] border-eatspin-orange bg-white p-8 shadow-xl">
-          <div className="mb-5 inline-flex items-center rounded-full bg-[#3AC66A] px-5 py-2 text-2xl font-semibold text-white shadow-sm">
-            Winner!
-          </div>
-
-          <h1 className="text-6xl font-extrabold leading-tight text-brand-black">{restaurant.name}</h1>
-
-          <p className="mt-5 text-3xl font-semibold text-[#475467]">
-            ⭐ {restaurant.rating.toFixed(1)}/5 • 💰 {restaurant.priceRange}
-            {restaurant.distance ? ` • 📍 ${restaurant.distance.toFixed(1)}km away` : ''}
-          </p>
-
-          {restaurant.address && <p className="mt-3 text-2xl text-[#667085]">📍 {restaurant.address}</p>}
-
-          {categories.length > 0 && (
-            <div className="mt-6 flex flex-wrap gap-3">
-              {categories.map((category) => (
-                <span
-                  key={category!.id}
-                  className="rounded-full px-4 py-2 text-2xl font-medium text-white"
-                  style={{ backgroundColor: category!.color }}
-                >
-                  {category!.icon} {category!.name}
-                </span>
-              ))}
+              <svg viewBox="0 0 420 420" className="h-[400px] w-[400px] drop-shadow-lg" role="img" aria-label="Frozen wheel at winner position">
+                {wedgeColors.map((color, index) => {
+                  const angleStep = 360 / wedgeColors.length;
+                  const start = -90 + index * angleStep;
+                  const end = start + angleStep;
+                  return <path key={color} d={getWedgePath(210, 210, 188, start, end)} fill={color} stroke="rgba(255,255,255,0.5)" strokeWidth="2" />;
+                })}
+                <path d={getWedgePath(210, 210, 188, -32, 28)} fill="rgba(255,255,255,0.35)" stroke="#fff" strokeWidth="4" />
+                <circle cx="210" cy="210" r="44" fill="white" />
+                <text x="210" y="217" textAnchor="middle" fontSize="24" fontWeight="700" fill="#F54703">SPIN</text>
+              </svg>
             </div>
-          )}
-        </section>
+          </div>
 
-        <footer className="mt-auto text-center text-2xl font-medium text-[#7A5138]">
-          {now.toLocaleDateString()} • {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • 🔗 try it out at eatspin.netlify.com
+          <section className="mt-8 rounded-3xl border-2 border-[#F4B892] bg-white px-8 py-7 shadow-sm">
+            <h1 className="text-6xl font-extrabold uppercase tracking-tight text-brand-black">✨ {restaurant.name}</h1>
+            <p className="mt-4 text-[34px] font-semibold text-[#344054]">
+              ⭐ {restaurant.rating.toFixed(1)}/5 • {restaurant.priceRange}
+              {restaurant.distance ? ` • 📍 ${restaurant.distance.toFixed(1)} km away` : ''}
+            </p>
+            {restaurant.address && <p className="mt-3 text-3xl text-[#475467]">📍 {restaurant.address}</p>}
+
+            {categories.length > 0 && (
+              <>
+                <div className="mt-5 flex flex-wrap gap-4 text-5xl">
+                  {categories.map((category) => (
+                    <span key={`icon-${category.id}`}>{category.icon}</span>
+                  ))}
+                </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {categories.map((category) => (
+                    <span
+                      key={category.id}
+                      className="rounded-full border border-[#F2C2A3] bg-[#FFF5EE] px-5 py-2 text-2xl font-medium text-[#8A4A28]"
+                    >
+                      [{category.name}]
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+        </main>
+
+        <footer className="border-t-2 border-[#F8D9C3] bg-[#FFF2E7] px-14 py-7 text-[29px] text-[#7A5138]">
+          <p>📅 {now.toLocaleDateString()} • 🕐 {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+          <p className="mt-2">🔗 try it out at eatspin.netlify.com</p>
         </footer>
       </div>
     </article>

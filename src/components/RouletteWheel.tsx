@@ -364,45 +364,45 @@ export function RouletteWheel({
       {/* Result Display */}
       {spinResult && (
         <div id="spin-result-card" className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className={`bg-white rounded-2xl shadow-xl p-6 border border-eatspin-peach ${isManualResult ? 'text-center' : ''}`}>
-            <div className={`flex items-center gap-2 mb-3 ${isManualResult ? 'justify-center' : ''}`}>
+          <div className="bg-white rounded-2xl shadow-xl p-6 border border-eatspin-peach text-center">
+            <div className="flex items-center justify-center gap-2 mb-3">
               <div className="w-2 h-2 bg-eatspin-success rounded-full animate-pulse" />
               <span className="text-sm font-medium text-eatspin-success">Your Food Destiny</span>
             </div>
             
-            <h3 className={`font-heading text-2xl font-bold text-brand-black mb-3 ${isManualResult ? 'text-center' : ''}`}>
+            <h3 className="font-heading text-2xl font-bold text-brand-black mb-3">
               {spinResult.name}
             </h3>
             
             {!isManualResult && (
               <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2 text-eatspin-gray-1">
-                <MapPin size={16} className="text-eatspin-orange" />
+              <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
+                <MapPin size={16} className="text-eatspin-orange flex-shrink-0" />
                 <span>{spinResult.address}</span>
               </div>
               
-              <div className="flex items-center gap-2 text-eatspin-gray-1">
-                <Star size={16} className="text-yellow-500" />
+              <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
+                <Star size={16} className="text-yellow-500 flex-shrink-0" />
                 <span>{spinResult.rating} / 5.0</span>
                 <span className="text-eatspin-gray-2">•</span>
                 <span className="text-eatspin-orange font-medium">{spinResult.priceRange}</span>
               </div>
               
               {spinResult.distance && (
-                <div className="flex items-center gap-2 text-eatspin-gray-1">
-                  <Clock3 size={16} className="text-eatspin-orange" />
+                <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
+                  <Clock3 size={16} className="text-eatspin-orange flex-shrink-0" />
                   <span>{spinResult.distance.toFixed(1)} km away</span>
                 </div>
               )}
 
-              <div className="flex items-center gap-2 text-eatspin-gray-1">
-                <Clock3 size={16} className="text-eatspin-orange" />
+              <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
+                <Clock3 size={16} className="text-eatspin-orange flex-shrink-0" />
                 <span>{getOpeningHoursLabel(spinResult)}</span>
               </div>
               
               {spinResult.phone && (
-                <div className="flex items-center gap-2 text-eatspin-gray-1">
-                  <Phone size={16} className="text-eatspin-orange" />
+                <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
+                  <Phone size={16} className="text-eatspin-orange flex-shrink-0" />
                   <a href={`tel:${spinResult.phone}`} className="hover:text-eatspin-orange">
                     {spinResult.phone}
                   </a>
@@ -412,12 +412,12 @@ export function RouletteWheel({
             )}
             
             {spinResult.description && (
-               <p className={`mt-4 text-sm text-eatspin-gray-1 leading-relaxed ${isManualResult ? 'text-center' : ''}`}>
+               <p className="mt-4 text-sm text-eatspin-gray-1 leading-relaxed">
                 {spinResult.description}
               </p>
             )}
             
-            <div className={`mt-4 flex flex-wrap gap-2 ${isManualResult ? 'justify-center' : ''}`}>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
               {spinResult.category.slice(0, 3).map((cat) => {
                 const categoryConfig = foodCategories.find((c) => c.id === cat);
                 return (

@@ -7,16 +7,10 @@ export interface Restaurant {
     lat: number;
     lng: number;
   };
-  hours: {
-    [key: string]: {
-      open: string;
-      close: string;
-      closed?: boolean;
-    };
-  };
+  hours: RestaurantHours;
   rating: number;
-  priceRange: '$' | '$$' | '$$$' | '$$$$';
-  phone?: string;
+  priceRange: '$' | '$$' | '$$$';
+  phone: string;
   image?: string;
   description?: string;
   isOpen?: boolean;
@@ -32,19 +26,30 @@ export interface JsonRestaurant {
     lat: number;
     lng: number;
   };
-  hours: {
-    [key: string]: {
-      open: string;
-      close: string;
-      closed?: boolean;
-    };
-  };
+  hours: RestaurantHours;
   rating: number;
   priceRange: Restaurant['priceRange'];
-  phone?: string;
+  phone: string;
   image?: string;
   description: string;
 }
+
+export type Weekday =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
+
+export interface DailyHours {
+  open: string;
+  close: string;
+  closed?: boolean;
+}
+
+export type RestaurantHours = Record<Weekday, DailyHours>;
 
 export type JsonRestaurantArray = JsonRestaurant[];
 
@@ -75,6 +80,7 @@ export type FoodCategory =
 export interface UserLocation {
   lat: number;
   lng: number;
+  region?: 'island' | 'mainland';
   address?: string;
 }
 
@@ -89,7 +95,7 @@ export type MealTime = 'breakfast' | 'lunch' | 'dinner' | 'none';
 export interface UserPreferences {
   selectedCategories: FoodCategory[];
   maxDistance: number; // in km
-  priceRange?: ('$' | '$$' | '$$$' | '$$$$')[];
+  priceRange?: ('$' | '$$' | '$$$')[];
 }
 
 export interface SubscriptionTier {

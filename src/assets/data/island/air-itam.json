@@ -1,0 +1,96 @@
+[
+  {
+    "name": "Foong Wei Heong (Air Itam)",
+    "category": [
+      "chinese",
+      "seafood",
+      "rice"
+    ],
+    "address": "Air Itam, Penang",
+    "coordinates": {
+      "lat": 5.394,
+      "lng": 100.278
+    },
+    "hours": {
+      "monday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "tuesday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "wednesday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "thursday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "friday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "saturday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "sunday": {
+        "open": "11:45",
+        "close": "14:15"
+      }
+    },
+    "rating": 4.4,
+    "priceRange": "$$$",
+    "phone": "+60 4-261 1918",
+    "description": "High-quality Cantonese banquet dishes perfect for group lunch."
+  },
+  {
+    "name": "Tho Yuen Restaurant (Air Itam)",
+    "category": [
+      "chinese",
+      "chicken",
+      "breakfast"
+    ],
+    "address": "Air Itam, Penang",
+    "coordinates": {
+      "lat": 5.404,
+      "lng": 100.288
+    },
+    "hours": {
+      "monday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "wednesday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "06:00",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.0,
+    "priceRange": "$",
+    "phone": "+60 4-261 4672",
+    "description": "Long-standing shop famous for Hainanese chicken rice."
+  }
+]

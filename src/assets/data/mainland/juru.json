@@ -1,0 +1,96 @@
+[
+  {
+    "name": "Fu Er Dai (Juru)",
+    "category": [
+      "chinese",
+      "breakfast",
+      "seafood"
+    ],
+    "address": "Juru, Penang",
+    "coordinates": {
+      "lat": 5.329,
+      "lng": 100.443
+    },
+    "hours": {
+      "monday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "tuesday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "wednesday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "thursday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "friday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "saturday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "sunday": {
+        "open": "06:30",
+        "close": "14:00"
+      }
+    },
+    "rating": 4.1,
+    "priceRange": "$$",
+    "phone": "+60 11-5505 5778",
+    "description": "Large outdoor dim sum spot with high-quality dumplings."
+  },
+  {
+    "name": "L Kitchen (Juru)",
+    "category": [
+      "chinese",
+      "rice",
+      "soup"
+    ],
+    "address": "Juru, Penang",
+    "coordinates": {
+      "lat": 5.339,
+      "lng": 100.453
+    },
+    "hours": {
+      "monday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "11:00",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.4,
+    "priceRange": "$$",
+    "phone": "+60 4-261 2282",
+    "description": "Home-style Chinese dishes serving hearty lunches."
+  }
+]

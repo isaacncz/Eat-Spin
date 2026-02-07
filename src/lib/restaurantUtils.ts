@@ -57,15 +57,40 @@ export const filterByRadius = (
     return restaurants;
   }
 
-  return restaurants.filter((restaurant) => {
+  return restaurants
+  .map((restaurant) => {
     const distance = calculateDistance(
       userLocation.lat,
       userLocation.lng,
       restaurant.coordinates.lat,
       restaurant.coordinates.lng
     );
-    return distance <= radiusKm;
-  });
+    return { ...restaurant, distance };
+  })
+  .filter((restaurant) => restaurant.distance <= radiusKm);
+};
+
+export const isRestaurantOpenNow = (hours: Restaurant['hours']): boolean => {
+  const dayOrder: Array<keyof Restaurant['hours']> = [
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
+  ];
+  const now = new Date();
+  const dayKey = dayOrder[now.getDay() === 0 ? 6 : now.getDay() - 1];
+  const selectedHours = hours[dayKey];
+  if (!selectedHours || selectedHours.closed) return false;
+
+  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now
+    .getMinutes()
+    .toString()
+    .padStart(2, '0')}`;
+
+  return currentTime >= selectedHours.open && currentTime <= selectedHours.close;
 };
 
 /**
@@ -103,6 +128,9 @@ export const enhancedFilterRestaurants = (
   
   // Then filter by radius
   filtered = filterByRadius(filtered, userLocation, radiusKm);
+
+  // Finally, keep only restaurants that are currently open
+  filtered = filtered.filter((restaurant) => isRestaurantOpenNow(restaurant.hours));
   
   return filtered;
 };

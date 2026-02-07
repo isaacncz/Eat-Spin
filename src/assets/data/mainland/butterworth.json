@@ -1,0 +1,96 @@
+[
+  {
+    "name": "Goh Thew Chik Chicken Rice (Butterworth)",
+    "category": [
+      "chinese",
+      "chicken",
+      "rice"
+    ],
+    "address": "Butterworth, Penang",
+    "coordinates": {
+      "lat": 5.401,
+      "lng": 100.363
+    },
+    "hours": {
+      "monday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "tuesday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "wednesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "thursday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "friday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "saturday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "sunday": {
+        "open": "10:30",
+        "close": "17:00"
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$",
+    "phone": "+60 4-261 8650",
+    "description": "Popular Hainanese chicken rice along Chulia Street."
+  },
+  {
+    "name": "Hon Kei Food Corner (Butterworth)",
+    "category": [
+      "chinese",
+      "soup",
+      "noodles"
+    ],
+    "address": "Butterworth, Penang",
+    "coordinates": {
+      "lat": 5.411,
+      "lng": 100.373
+    },
+    "hours": {
+      "monday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "friday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "09:00",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.3,
+    "priceRange": "$$",
+    "phone": "+60 4-261 2231",
+    "description": "Renowned for their pork soup and silky rice noodles."
+  }
+]

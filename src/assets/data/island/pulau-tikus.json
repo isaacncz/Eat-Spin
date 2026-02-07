@@ -1,0 +1,96 @@
+[
+  {
+    "name": "Tek Sen Restaurant (Pulau Tikus)",
+    "category": [
+      "chinese",
+      "rice",
+      "seafood"
+    ],
+    "address": "Pulau Tikus, Penang",
+    "coordinates": {
+      "lat": 5.433,
+      "lng": 100.311
+    },
+    "hours": {
+      "monday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "wednesday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "11:30",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.5,
+    "priceRange": "$$",
+    "phone": "+60 4-261 5282",
+    "description": "Iconic heritage spot famous for double-cooked roasted pork."
+  },
+  {
+    "name": "Tai Tong Restaurant (Pulau Tikus)",
+    "category": [
+      "chinese",
+      "breakfast",
+      "noodles"
+    ],
+    "address": "Pulau Tikus, Penang",
+    "coordinates": {
+      "lat": 5.443,
+      "lng": 100.321
+    },
+    "hours": {
+      "monday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "tuesday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "wednesday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "thursday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "friday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "saturday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "sunday": {
+        "open": "06:30",
+        "close": "14:30"
+      }
+    },
+    "rating": 4.1,
+    "priceRange": "$$",
+    "phone": "+60 4-263 6625",
+    "description": "Traditional push-cart dim sum and classic noodles."
+  }
+]

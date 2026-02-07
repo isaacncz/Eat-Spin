@@ -1,8 +1,15 @@
 import { z } from 'zod';
 
-import type { Restaurant, FoodCategory, FoodCategoryConfig, JsonRestaurant } from '@/types';
+import type {
+  Restaurant,
+  FoodCategory,
+  FoodCategoryConfig,
+  JsonRestaurant,
+  RestaurantHours,
+  Weekday,
+} from '@/types';
 import { generateRestaurantId } from '@/lib/restaurantUtils';
-import rawRestaurants from './restaurants.json';
+import { loadRestaurantsForRegions } from '@/assets/data/registry';
 
 const foodCategoryIds = [
   'soup',
@@ -26,17 +33,37 @@ const foodCategoryIds = [
   'breakfast',
 ] as const satisfies ReadonlyArray<FoodCategory>;
 
-const priceRangeSchema = z.enum(['$', '$$', '$$$', '$$$$']);
+const weekdayKeys = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+] as const satisfies ReadonlyArray<Weekday>;
+
+const hhmmRegex = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+const malaysiaPhoneRegex = /^\+60 1\d-\d{7}$/;
+
+const priceRangeSchema = z.enum(['$', '$$', '$$$']);
 const foodCategorySchema = z.enum(foodCategoryIds);
 
-const hoursSchema: z.ZodType<JsonRestaurant['hours']> = z.record(
-  z.string(),
-  z.object({
-    open: z.string(),
-    close: z.string(),
-    closed: z.boolean().optional(),
-  })
-);
+const dailyHoursSchema = z.object({
+  open: z.string().regex(hhmmRegex, 'Must be HH:mm'),
+  close: z.string().regex(hhmmRegex, 'Must be HH:mm'),
+  closed: z.boolean().optional(),
+});
+
+const hoursSchema: z.ZodType<RestaurantHours> = z.object({
+  monday: dailyHoursSchema,
+  tuesday: dailyHoursSchema,
+  wednesday: dailyHoursSchema,
+  thursday: dailyHoursSchema,
+  friday: dailyHoursSchema,
+  saturday: dailyHoursSchema,
+  sunday: dailyHoursSchema,
+});
 
 const jsonRestaurantSchema: z.ZodType<JsonRestaurant> = z.object({
   name: z.string().min(1),
@@ -47,27 +74,31 @@ const jsonRestaurantSchema: z.ZodType<JsonRestaurant> = z.object({
     lng: z.number(),
   }),
   hours: hoursSchema,
-  rating: z.number(),
+  rating: z.number().min(0).max(5),
   priceRange: priceRangeSchema,
-  phone: z.string().optional(),
+  phone: z.string().regex(malaysiaPhoneRegex, 'Invalid Malaysian phone format'),
   image: z.string().optional(),
-  description: z.string().min(1),
+  description: z.string().min(1).max(100),
 });
 
 const jsonRestaurantArraySchema: z.ZodType<JsonRestaurant[]> = z.array(jsonRestaurantSchema);
 
-const restaurantData = jsonRestaurantArraySchema.safeParse(rawRestaurants);
+export const loadPenangRestaurants = async (
+  regions: Array<'island' | 'mainland'> = ['island', 'mainland']
+): Promise<Restaurant[]> => {
+  const rawData = await loadRestaurantsForRegions(regions);
+  const restaurantData = jsonRestaurantArraySchema.safeParse(rawData);
 
-if (!restaurantData.success) {
-  console.error('Invalid restaurant data in restaurants.json', restaurantData.error.format());
-  throw new Error('Invalid restaurant data in restaurants.json');
-}
+  if (!restaurantData.success) {
+    console.error('Invalid restaurant data in area JSON files', restaurantData.error.format());
+    throw new Error('Invalid restaurant data in area JSON files');
+  }
 
-// Mock restaurant data for Penang, Malaysia
-export const penangRestaurants: Restaurant[] = restaurantData.data.map((restaurant, index) => ({
-  ...restaurant,
-  id: generateRestaurantId(index),
-}));
+  return restaurantData.data.map((restaurant, index) => ({
+    ...restaurant,
+    id: generateRestaurantId(index),
+  }));
+};
 
 export const foodCategories: FoodCategoryConfig[] = [
   { id: 'soup', name: 'Soup', icon: '🍲', color: '#FF6B6B' },
@@ -88,94 +119,18 @@ export const foodCategories: FoodCategoryConfig[] = [
   { id: 'thai', name: 'Thai', icon: '🌶️', color: '#FF7675' },
   { id: 'japanese', name: 'Japanese', icon: '🍣', color: '#74B9FF' },
   { id: 'korean', name: 'Korean', icon: '🔥', color: '#A29BFE' },
+  { id: 'breakfast', name: 'Breakfast', icon: '🍳', color: '#F7B267' },
 ];
 
-// Helper function to calculate distance between two coordinates in km
-export function calculateDistance(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
-  const R = 6371; // Radius of Earth in km
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLng = (lng2 - lng1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-// Helper function to check if restaurant is currently open
 export function isRestaurantOpen(hours: Restaurant['hours']): boolean {
-  const now = new Date();
-  const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][
-    now.getDay()
-  ];
-  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().
-    toString()
+  const dayOfWeek = weekdayKeys[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+  const currentTime = `${new Date().getHours().toString().padStart(2, '0')}:${new Date()
+    .getMinutes()
+    .toString()
     .padStart(2, '0')}`;
 
   const todayHours = hours[dayOfWeek];
   if (!todayHours || todayHours.closed) return false;
 
   return currentTime >= todayHours.open && currentTime <= todayHours.close;
-}
-
-// Helper function to get current meal time
-export function getCurrentMealTime(): 'breakfast' | 'lunch' | 'dinner' | 'none' {
-  const hour = new Date().getHours();
-  if (hour >= 7 && hour < 11) return 'breakfast';
-  if (hour >= 11 && hour < 15) return 'lunch';
-  if (hour >= 17 && hour < 22) return 'dinner';
-  return 'none';
-}
-
-// Filter restaurants by distance and category preferences
-export function filterRestaurants(
-  restaurants: Restaurant[],
-  userLocation: { lat: number; lng: number } | null,
-  selectedCategories: FoodCategory[],
-  maxDistance: number = 2
-): Restaurant[] {
-  return restaurants
-    .map((restaurant) => {
-      if (userLocation) {
-        const distance = calculateDistance(
-          userLocation.lat,
-          userLocation.lng,
-          restaurant.coordinates.lat,
-          restaurant.coordinates.lng
-        );
-        return { ...restaurant, distance };
-      }
-      return restaurant;
-    })
-    .filter((restaurant) => {
-      // Filter by distance
-      if (userLocation && restaurant.distance && restaurant.distance > maxDistance) {
-        return false;
-      }
-
-      // Filter by categories - restaurant must have at least one selected category
-      if (selectedCategories.length > 0) {
-        const hasMatchingCategory = restaurant.category.some((cat) => selectedCategories.includes(cat));
-        if (!hasMatchingCategory) return false;
-      }
-
-      // Filter by open status
-      return isRestaurantOpen(restaurant.hours);
-    })
-    .sort((a, b) => {
-      // Sort by distance if available
-      if (a.distance && b.distance) {
-        return a.distance - b.distance;
-      }
-      // Otherwise sort by rating
-      return b.rating - a.rating;
-    });
 }

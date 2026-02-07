@@ -1,0 +1,96 @@
+[
+  {
+    "name": "Hon Kei Food Corner (Seberang Jaya)",
+    "category": [
+      "chinese",
+      "soup",
+      "noodles"
+    ],
+    "address": "Seberang Jaya, Penang",
+    "coordinates": {
+      "lat": 5.39,
+      "lng": 100.397
+    },
+    "hours": {
+      "monday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "friday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "09:00",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.3,
+    "priceRange": "$$",
+    "phone": "+60 4-261 2231",
+    "description": "Renowned for their pork soup and silky rice noodles."
+  },
+  {
+    "name": "Tofu Village (Seberang Jaya)",
+    "category": [
+      "chinese",
+      "vegetarian",
+      "rice"
+    ],
+    "address": "Seberang Jaya, Penang",
+    "coordinates": {
+      "lat": 5.4,
+      "lng": 100.407
+    },
+    "hours": {
+      "monday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "tuesday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "wednesday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "thursday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "friday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "saturday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "sunday": {
+        "open": "11:30",
+        "close": "15:30"
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$$",
+    "phone": "+60 4-251 9512",
+    "description": "Traditional Hakka style cooking with many vegetarian options."
+  }
+]

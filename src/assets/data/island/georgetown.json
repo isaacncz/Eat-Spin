@@ -1,0 +1,1976 @@
+[
+  {
+    "name": "Tek Sen Restaurant",
+    "category": [
+      "chinese",
+      "rice",
+      "seafood"
+    ],
+    "address": "18-20 Lebuh Carnarvon, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4146,
+      "lng": 100.3296
+    },
+    "hours": {
+      "monday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "wednesday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "11:30",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.5,
+    "priceRange": "$$",
+    "phone": "+60 4-261 5282",
+    "description": "Iconic heritage spot famous for double-cooked roasted pork."
+  },
+  {
+    "name": "Tai Tong Restaurant",
+    "category": [
+      "chinese",
+      "breakfast",
+      "noodles"
+    ],
+    "address": "45 Lebuh Cintra, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4178,
+      "lng": 100.334
+    },
+    "hours": {
+      "monday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "tuesday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "wednesday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "thursday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "friday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "saturday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "sunday": {
+        "open": "06:30",
+        "close": "14:30"
+      }
+    },
+    "rating": 4.1,
+    "priceRange": "$$",
+    "phone": "+60 4-263 6625",
+    "description": "Traditional push-cart dim sum and classic noodles."
+  },
+  {
+    "name": "Foong Wei Heong",
+    "category": [
+      "chinese",
+      "seafood",
+      "rice"
+    ],
+    "address": "23-25 Jalan Sri Bahari, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4208,
+      "lng": 100.3321
+    },
+    "hours": {
+      "monday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "tuesday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "wednesday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "thursday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "friday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "saturday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "sunday": {
+        "open": "11:45",
+        "close": "14:15"
+      }
+    },
+    "rating": 4.4,
+    "priceRange": "$$$",
+    "phone": "+60 4-261 1918",
+    "description": "High-quality Cantonese banquet dishes perfect for group lunch."
+  },
+  {
+    "name": "Tho Yuen Restaurant",
+    "category": [
+      "chinese",
+      "chicken",
+      "breakfast"
+    ],
+    "address": "92 Campbell St, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4182,
+      "lng": 100.3333
+    },
+    "hours": {
+      "monday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "wednesday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "06:00",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.0,
+    "priceRange": "$",
+    "phone": "+60 4-261 4672",
+    "description": "Long-standing shop famous for Hainanese chicken rice."
+  },
+  {
+    "name": "Bee Hwa Cafe",
+    "category": [
+      "chinese",
+      "noodles",
+      "cafe"
+    ],
+    "address": "10 Lebuh Dickens, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4189,
+      "lng": 100.3312
+    },
+    "hours": {
+      "monday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "tuesday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "wednesday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "thursday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "friday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "saturday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "sunday": {
+        "open": "00:00",
+        "close": "00:00"
+      }
+    },
+    "rating": 4.3,
+    "priceRange": "$",
+    "phone": "+60 4-263 6092",
+    "description": "Famous pork-free Hainanese cafe serving authentic White Curry Mee."
+  },
+  {
+    "name": "Maple Palace Restaurant",
+    "category": [
+      "chinese",
+      "seafood",
+      "soup"
+    ],
+    "address": "47 Jalan Sultan Ahmad Shah, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4261,
+      "lng": 100.3229
+    },
+    "hours": {
+      "monday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "tuesday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "wednesday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "thursday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "friday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "saturday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "sunday": {
+        "open": "12:00",
+        "close": "14:30"
+      }
+    },
+    "rating": 4.6,
+    "priceRange": "$$$",
+    "phone": "+60 4-227 9690",
+    "description": "Upscale Cantonese fine dining with premium seafood."
+  },
+  {
+    "name": "Goh Thew Chik Chicken Rice",
+    "category": [
+      "chinese",
+      "chicken",
+      "rice"
+    ],
+    "address": "340 Chulia St, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.419,
+      "lng": 100.3325
+    },
+    "hours": {
+      "monday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "tuesday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "wednesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "thursday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "friday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "saturday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "sunday": {
+        "open": "10:30",
+        "close": "17:00"
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$",
+    "phone": "+60 4-261 8650",
+    "description": "Popular Hainanese chicken rice along Chulia Street."
+  },
+  {
+    "name": "Hon Kei Food Corner",
+    "category": [
+      "chinese",
+      "soup",
+      "noodles"
+    ],
+    "address": "45 Lebuh Kampung Malabar, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4189,
+      "lng": 100.3331
+    },
+    "hours": {
+      "monday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "friday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "09:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "09:00",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.3,
+    "priceRange": "$$",
+    "phone": "+60 4-261 2231",
+    "description": "Renowned for their pork soup and silky rice noodles."
+  },
+  {
+    "name": "Tofu Village",
+    "category": [
+      "chinese",
+      "vegetarian",
+      "rice"
+    ],
+    "address": "88 Lebuh Church, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4181,
+      "lng": 100.34
+    },
+    "hours": {
+      "monday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "tuesday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "wednesday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "thursday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "friday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "saturday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "sunday": {
+        "open": "11:30",
+        "close": "15:30"
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$$",
+    "phone": "+60 4-251 9512",
+    "description": "Traditional Hakka style cooking with many vegetarian options."
+  },
+  {
+    "name": "Fu Er Dai",
+    "category": [
+      "chinese",
+      "breakfast",
+      "seafood"
+    ],
+    "address": "7 Jalan Sultan Ahmad Shah, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4243,
+      "lng": 100.3298
+    },
+    "hours": {
+      "monday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "tuesday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "wednesday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "thursday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "friday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "saturday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "sunday": {
+        "open": "06:30",
+        "close": "14:00"
+      }
+    },
+    "rating": 4.1,
+    "priceRange": "$$",
+    "phone": "+60 11-5505 5778",
+    "description": "Large outdoor dim sum spot with high-quality dumplings."
+  },
+  {
+    "name": "L Kitchen",
+    "category": [
+      "chinese",
+      "rice",
+      "soup"
+    ],
+    "address": "131 Lebuh Campbell, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4185,
+      "lng": 100.3329
+    },
+    "hours": {
+      "monday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "11:00",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.4,
+    "priceRange": "$$",
+    "phone": "+60 4-261 2282",
+    "description": "Home-style Chinese dishes serving hearty lunches."
+  },
+  {
+    "name": "Restoran Zim Sum",
+    "category": [
+      "chinese",
+      "breakfast",
+      "noodles"
+    ],
+    "address": "62 Jalan Macalister, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4158,
+      "lng": 100.3289
+    },
+    "hours": {
+      "monday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "tuesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "wednesday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "thursday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "friday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "saturday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "sunday": {
+        "open": "06:30",
+        "close": "14:00"
+      }
+    },
+    "rating": 3.9,
+    "priceRange": "$$",
+    "phone": "+60 4-226 2575",
+    "description": "Casual, open-air dim sum restaurant with a large variety."
+  },
+  {
+    "name": "Hock Seng Lau Restaurant",
+    "category": [
+      "chinese",
+      "seafood",
+      "rice"
+    ],
+    "address": "15 Lebuh Kimberley, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4162,
+      "lng": 100.3325
+    },
+    "hours": {
+      "monday": {
+        "open": "11:30",
+        "close": "14:30"
+      },
+      "tuesday": {
+        "open": "11:30",
+        "close": "14:30"
+      },
+      "wednesday": {
+        "open": "11:30",
+        "close": "14:30"
+      },
+      "thursday": {
+        "open": "11:30",
+        "close": "14:30"
+      },
+      "friday": {
+        "open": "11:30",
+        "close": "14:30"
+      },
+      "saturday": {
+        "open": "11:30",
+        "close": "14:30"
+      },
+      "sunday": {
+        "open": "11:30",
+        "close": "14:30"
+      }
+    },
+    "rating": 4.1,
+    "priceRange": "$$",
+    "phone": "+60 4-261 4110",
+    "description": "Classic Hokkien-style dishes served in a heritage setting."
+  },
+  {
+    "name": "Kedai Kopi New Lane",
+    "category": [
+      "chinese",
+      "street food",
+      "noodles"
+    ],
+    "address": "Lorong Baru, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4147,
+      "lng": 100.3265
+    },
+    "hours": {
+      "monday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "thursday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "11:00",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.0,
+    "priceRange": "$",
+    "phone": "+60 10-1234567",
+    "description": "Known for various street food stalls operating during lunch hours."
+  },
+  {
+    "name": "Moh Teng Pheow Nyonya Koay",
+    "category": [
+      "chinese",
+      "dessert",
+      "rice"
+    ],
+    "address": "Jalan Masjid, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4194,
+      "lng": 100.3352
+    },
+    "hours": {
+      "monday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "tuesday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "wednesday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "thursday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "friday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "saturday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "sunday": {
+        "open": "10:30",
+        "close": "17:00"
+      }
+    },
+    "rating": 4.4,
+    "priceRange": "$$",
+    "phone": "+60 4-261 5832",
+    "description": "Authentic Nyonya kuih factory and restaurant."
+  },
+  {
+    "name": "Seng Thor Coffee Shop",
+    "category": [
+      "chinese",
+      "street food",
+      "seafood"
+    ],
+    "address": "160 Lebuh Carnarvon, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4152,
+      "lng": 100.3338
+    },
+    "hours": {
+      "monday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "07:30",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.1,
+    "priceRange": "$",
+    "phone": "+60 10-1234567",
+    "description": "Famous for oyster omelette and lor mee."
+  },
+  {
+    "name": "Hock Thai Coffee Shop",
+    "category": [
+      "chinese",
+      "noodles",
+      "soup"
+    ],
+    "address": "180 Lebuh Carnarvon, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4148,
+      "lng": 100.3335
+    },
+    "hours": {
+      "monday": {
+        "open": "07:00",
+        "close": "14:30"
+      },
+      "tuesday": {
+        "open": "07:00",
+        "close": "14:30"
+      },
+      "wednesday": {
+        "open": "07:00",
+        "close": "14:30"
+      },
+      "thursday": {
+        "open": "07:00",
+        "close": "14:30"
+      },
+      "friday": {
+        "open": "07:00",
+        "close": "14:30"
+      },
+      "saturday": {
+        "open": "07:00",
+        "close": "14:30"
+      },
+      "sunday": {
+        "open": "07:00",
+        "close": "14:30"
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$",
+    "phone": "+60 10-1234567",
+    "description": "Excellent spot for fish head noodles and herbal soup."
+  },
+  {
+    "name": "Joo Hooi Cafe",
+    "category": [
+      "chinese",
+      "street food",
+      "dessert"
+    ],
+    "address": "475 Jalan Penang, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4171,
+      "lng": 100.3311
+    },
+    "hours": {
+      "monday": {
+        "open": "11:00",
+        "close": "17:00"
+      },
+      "tuesday": {
+        "open": "11:00",
+        "close": "17:00"
+      },
+      "wednesday": {
+        "open": "11:00",
+        "close": "17:00"
+      },
+      "thursday": {
+        "open": "11:00",
+        "close": "17:00"
+      },
+      "friday": {
+        "open": "11:00",
+        "close": "17:00"
+      },
+      "saturday": {
+        "open": "11:00",
+        "close": "17:00"
+      },
+      "sunday": {
+        "open": "11:00",
+        "close": "17:00"
+      }
+    },
+    "rating": 3.8,
+    "priceRange": "$",
+    "phone": "+60 10-1234567",
+    "description": "Heritage cafe famous for Cendol and Assam Laksa."
+  },
+  {
+    "name": "Goh Huat Seng",
+    "category": [
+      "chinese",
+      "soup",
+      "seafood"
+    ],
+    "address": "59 Lebuh Kimberley, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4166,
+      "lng": 100.3323
+    },
+    "hours": {
+      "monday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "tuesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "wednesday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "thursday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "friday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "saturday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "sunday": {
+        "open": "12:00",
+        "close": "14:30"
+      }
+    },
+    "rating": 4.0,
+    "priceRange": "$$$",
+    "phone": "+60 4-261 1131",
+    "description": "Known for traditional Teochew Steamboat with charcoal fire."
+  },
+  {
+    "name": "Restoran Nasi Kandar Merlin",
+    "category": [
+      "chinese",
+      "rice",
+      "chicken"
+    ],
+    "address": "1A Union St, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4197,
+      "lng": 100.3425
+    },
+    "hours": {
+      "monday": {
+        "open": "08:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "08:00",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "08:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "08:00",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "08:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "08:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "00:00",
+        "close": "00:00"
+      }
+    },
+    "rating": 4.3,
+    "priceRange": "$",
+    "phone": "+60 10-1234567",
+    "description": "Unique Chinese-style influences in their curry rice."
+  },
+  {
+    "name": "Sichuan Dou Hua",
+    "category": [
+      "chinese",
+      "soup",
+      "rice"
+    ],
+    "address": "1 Jalan Penang, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4225,
+      "lng": 100.3355
+    },
+    "hours": {
+      "monday": {
+        "open": "11:30",
+        "close": "14:30"
+      },
+      "tuesday": {
+        "open": "11:30",
+        "close": "14:30"
+      },
+      "wednesday": {
+        "open": "11:30",
+        "close": "14:30"
+      },
+      "thursday": {
+        "open": "11:30",
+        "close": "14:30"
+      },
+      "friday": {
+        "open": "11:30",
+        "close": "14:30"
+      },
+      "saturday": {
+        "open": "11:30",
+        "close": "14:30"
+      },
+      "sunday": {
+        "open": "11:30",
+        "close": "14:30"
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$$$",
+    "phone": "+60 4-262 2622",
+    "description": "Authentic Sichuan and Cantonese fine dining."
+  },
+  {
+    "name": "Yat Ka Fatt Chicken Rice",
+    "category": [
+      "chinese",
+      "chicken",
+      "rice"
+    ],
+    "address": "Lebuh Kimberley, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4164,
+      "lng": 100.3327
+    },
+    "hours": {
+      "monday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "friday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "11:00",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.1,
+    "priceRange": "$",
+    "phone": "+60 10-1234567",
+    "description": "Delicious traditional Hainanese chicken rice."
+  },
+  {
+    "name": "Kedai Kopi Kong Thai Lay",
+    "category": [
+      "chinese",
+      "breakfast",
+      "cafe"
+    ],
+    "address": "60 Lebuh Hutton, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4201,
+      "lng": 100.3308
+    },
+    "hours": {
+      "monday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "07:30",
+        "close": "14:30"
+      },
+      "thursday": {
+        "open": "07:30",
+        "close": "14:30"
+      },
+      "friday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "00:00",
+        "close": "00:00"
+      }
+    },
+    "rating": 4.0,
+    "priceRange": "$",
+    "phone": "+60 11-1085 8972",
+    "description": "Famous old-school kopi and toast spot."
+  },
+  {
+    "name": "Sin Kheng Auch Restaurant",
+    "category": [
+      "chinese",
+      "rice",
+      "seafood"
+    ],
+    "address": "64 Jalan Pintal Tali, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4172,
+      "lng": 100.3345
+    },
+    "hours": {
+      "monday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "11:30",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$$",
+    "phone": "+60 4-261 4052",
+    "description": "Excellent traditional Cantonese stir-fry."
+  },
+  {
+    "name": "Ee Beng Vegetarian Food",
+    "category": [
+      "chinese",
+      "vegetarian",
+      "rice"
+    ],
+    "address": "20 Lebuh Dickens, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4191,
+      "lng": 100.3315
+    },
+    "hours": {
+      "monday": {
+        "open": "07:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "07:00",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "07:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "07:00",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "07:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "07:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "00:00",
+        "close": "00:00"
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$",
+    "phone": "+60 4-262 1320",
+    "description": "Wide variety of economy-style Chinese vegetarian dishes."
+  },
+  {
+    "name": "Tek Sen (Heritage Branch)",
+    "category": [
+      "chinese",
+      "rice",
+      "seafood"
+    ],
+    "address": "18 Lebuh Carnarvon, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4146,
+      "lng": 100.3296
+    },
+    "hours": {
+      "monday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "wednesday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "11:30",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.5,
+    "priceRange": "$$",
+    "phone": "+60 4-261 5282",
+    "description": "Homey atmosphere with traditional Chinese-Penang dishes."
+  },
+  {
+    "name": "Canton-i (Gurney Paragon)",
+    "category": [
+      "chinese",
+      "noodles",
+      "rice"
+    ],
+    "address": "Gurney Paragon, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4352,
+      "lng": 100.3112
+    },
+    "hours": {
+      "monday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "11:00",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.3,
+    "priceRange": "$$$",
+    "phone": "+60 4-228 9398",
+    "description": "Premium Hong Kong style roasting and noodles."
+  },
+  {
+    "name": "Heong Kee Bamboo Noodles",
+    "category": [
+      "chinese",
+      "noodles",
+      "street food"
+    ],
+    "address": "128 Lebuh Campbell, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4187,
+      "lng": 100.3326
+    },
+    "hours": {
+      "monday": {
+        "open": "08:30",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "08:30",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "08:30",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "08:30",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "08:30",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "08:30",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "00:00",
+        "close": "00:00"
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$",
+    "phone": "+60 16-455 3855",
+    "description": "Traditional bamboo-pressed wanton noodles with authentic texture."
+  },
+  {
+    "name": "Seng Kee Chicken Rice",
+    "category": [
+      "chinese",
+      "chicken",
+      "rice"
+    ],
+    "address": "Lebuh Kimberley, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4165,
+      "lng": 100.3328
+    },
+    "hours": {
+      "monday": {
+        "open": "10:30",
+        "close": "15:30"
+      },
+      "tuesday": {
+        "open": "10:30",
+        "close": "15:30"
+      },
+      "wednesday": {
+        "open": "10:30",
+        "close": "15:30"
+      },
+      "thursday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "friday": {
+        "open": "10:30",
+        "close": "15:30"
+      },
+      "saturday": {
+        "open": "10:30",
+        "close": "15:30"
+      },
+      "sunday": {
+        "open": "10:30",
+        "close": "15:30"
+      }
+    },
+    "rating": 4.1,
+    "priceRange": "$",
+    "phone": "+60 10-1234567",
+    "description": "Famous for their tender roasted chicken and fragrant rice."
+  },
+  {
+    "name": "Wan Dao Tou (Ocean-Front)",
+    "category": [
+      "chinese",
+      "seafood",
+      "soup"
+    ],
+    "address": "8A Pengkalan Weld, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4128,
+      "lng": 100.3421
+    },
+    "hours": {
+      "monday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "11:30",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.0,
+    "priceRange": "$$",
+    "phone": "+60 4-261 2282",
+    "description": "Fresh seafood and traditional fish head curry in a breezy setting."
+  },
+  {
+    "name": "Restoran Gou Lou",
+    "category": [
+      "chinese",
+      "noodles",
+      "soup"
+    ],
+    "address": "55 Lebuh Kimberley, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4167,
+      "lng": 100.3321
+    },
+    "hours": {
+      "monday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "07:30",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "00:00",
+        "close": "00:00"
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$",
+    "phone": "+60 12-412 8816",
+    "description": "Popular for fish head bee hoon and herbal seafood soups."
+  },
+  {
+    "name": "Yee Heong Seafood",
+    "category": [
+      "chinese",
+      "seafood",
+      "rice"
+    ],
+    "address": "12 Lebuh Campbell, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4184,
+      "lng": 100.335
+    },
+    "hours": {
+      "monday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "11:30",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.3,
+    "priceRange": "$$",
+    "phone": "+60 4-261 6961",
+    "description": "Cantonese-style restaurant known for stir-fried lunch specials."
+  },
+  {
+    "name": "Seng Thor Lor Mee",
+    "category": [
+      "chinese",
+      "noodles",
+      "street food"
+    ],
+    "address": "160 Lebuh Carnarvon, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4153,
+      "lng": 100.3339
+    },
+    "hours": {
+      "monday": {
+        "open": "07:30",
+        "close": "14:30"
+      },
+      "tuesday": {
+        "open": "07:30",
+        "close": "14:30"
+      },
+      "wednesday": {
+        "open": "07:30",
+        "close": "14:30"
+      },
+      "thursday": {
+        "open": "07:30",
+        "close": "14:30"
+      },
+      "friday": {
+        "open": "07:30",
+        "close": "14:30"
+      },
+      "saturday": {
+        "open": "07:30",
+        "close": "14:30"
+      },
+      "sunday": {
+        "open": "07:30",
+        "close": "14:30"
+      }
+    },
+    "rating": 4.1,
+    "priceRange": "$",
+    "phone": "+60 10-1234567",
+    "description": "Famous for thick, savory Lor Mee and fresh oyster omelettes."
+  },
+  {
+    "name": "The Mugshot Cafe",
+    "category": [
+      "chinese",
+      "cafe",
+      "bakery"
+    ],
+    "address": "302 Chulia St, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4188,
+      "lng": 100.3364
+    },
+    "hours": {
+      "monday": {
+        "open": "08:00",
+        "close": "22:00"
+      },
+      "tuesday": {
+        "open": "08:00",
+        "close": "22:00"
+      },
+      "wednesday": {
+        "open": "08:00",
+        "close": "22:00"
+      },
+      "thursday": {
+        "open": "08:00",
+        "close": "22:00"
+      },
+      "friday": {
+        "open": "08:00",
+        "close": "22:00"
+      },
+      "saturday": {
+        "open": "08:00",
+        "close": "22:00"
+      },
+      "sunday": {
+        "open": "08:00",
+        "close": "22:00"
+      }
+    },
+    "rating": 4.3,
+    "priceRange": "$$",
+    "phone": "+60 12-405 6276",
+    "description": "Chinese-owned heritage cafe famous for yogurt and freshly baked bagels."
+  },
+  {
+    "name": "Weld Quay Tree Food",
+    "category": [
+      "chinese",
+      "street food",
+      "rice"
+    ],
+    "address": "Pengkalan Weld, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4132,
+      "lng": 100.3418
+    },
+    "hours": {
+      "monday": {
+        "open": "10:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "10:00",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "10:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "10:00",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "10:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "10:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "00:00",
+        "close": "00:00"
+      }
+    },
+    "rating": 4.1,
+    "priceRange": "$",
+    "phone": "+60 10-1234567",
+    "description": "Rustic stall under a tree serving excellent economy rice."
+  },
+  {
+    "name": "Hock Thai Herbal Soup",
+    "category": [
+      "chinese",
+      "soup",
+      "rice"
+    ],
+    "address": "180 Lebuh Carnarvon, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4147,
+      "lng": 100.3336
+    },
+    "hours": {
+      "monday": {
+        "open": "08:00",
+        "close": "14:00"
+      },
+      "tuesday": {
+        "open": "08:00",
+        "close": "14:00"
+      },
+      "wednesday": {
+        "open": "08:00",
+        "close": "14:00"
+      },
+      "thursday": {
+        "open": "08:00",
+        "close": "14:00"
+      },
+      "friday": {
+        "open": "08:00",
+        "close": "14:00"
+      },
+      "saturday": {
+        "open": "08:00",
+        "close": "14:00"
+      },
+      "sunday": {
+        "open": "08:00",
+        "close": "14:00"
+      }
+    },
+    "rating": 4.4,
+    "priceRange": "$$",
+    "phone": "+60 10-1234567",
+    "description": "Nourishing traditional Chinese herbal soups and steamed rice."
+  },
+  {
+    "name": "My Own Cafe",
+    "category": [
+      "chinese",
+      "noodles",
+      "cafe"
+    ],
+    "address": "2 Jalan Cannon, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4148,
+      "lng": 100.3361
+    },
+    "hours": {
+      "monday": {
+        "open": "10:00",
+        "close": "16:00"
+      },
+      "tuesday": {
+        "open": "10:00",
+        "close": "16:00"
+      },
+      "wednesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "thursday": {
+        "open": "10:00",
+        "close": "16:00"
+      },
+      "friday": {
+        "open": "10:00",
+        "close": "16:00"
+      },
+      "saturday": {
+        "open": "10:00",
+        "close": "16:00"
+      },
+      "sunday": {
+        "open": "10:00",
+        "close": "16:00"
+      }
+    },
+    "rating": 4.5,
+    "priceRange": "$",
+    "phone": "+60 16-477 7113",
+    "description": "Specializes in Asam Laksa and Nyonya-style noodles."
+  },
+  {
+    "name": "Junk Cafe",
+    "category": [
+      "chinese",
+      "western",
+      "cafe"
+    ],
+    "address": "401 Chulia St, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4191,
+      "lng": 100.3348
+    },
+    "hours": {
+      "monday": {
+        "open": "12:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "12:00",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "12:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "12:00",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "12:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "12:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "12:00",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$$",
+    "phone": "+60 4-263 8388",
+    "description": "Eclectic decor serving Chinese-Western fusion burgers."
+  },
+  {
+    "name": "Chulia Street Curry Mee",
+    "category": [
+      "chinese",
+      "street food",
+      "soup"
+    ],
+    "address": "Chulia St, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4184,
+      "lng": 100.3365
+    },
+    "hours": {
+      "monday": {
+        "open": "11:00",
+        "close": "16:00"
+      },
+      "tuesday": {
+        "open": "11:00",
+        "close": "16:00"
+      },
+      "wednesday": {
+        "open": "11:00",
+        "close": "16:00"
+      },
+      "thursday": {
+        "open": "11:00",
+        "close": "16:00"
+      },
+      "friday": {
+        "open": "11:00",
+        "close": "16:00"
+      },
+      "saturday": {
+        "open": "11:00",
+        "close": "16:00"
+      },
+      "sunday": {
+        "open": "11:00",
+        "close": "16:00"
+      }
+    },
+    "rating": 4.0,
+    "priceRange": "$",
+    "phone": "+60 10-1234567",
+    "description": "Legendary street stall serving creamy, spicy curry noodles."
+  },
+  {
+    "name": "Woodlands Vegetarian (Hutton)",
+    "category": [
+      "chinese",
+      "vegetarian",
+      "rice"
+    ],
+    "address": "67 Lebuh Penang, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4183,
+      "lng": 100.3404
+    },
+    "hours": {
+      "monday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "tuesday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "wednesday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "thursday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "friday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "saturday": {
+        "open": "11:30",
+        "close": "15:30"
+      },
+      "sunday": {
+        "open": "11:30",
+        "close": "15:30"
+      }
+    },
+    "rating": 4.4,
+    "priceRange": "$",
+    "phone": "+60 4-263 9764",
+    "description": "Excellent Chinese-Indian vegetarian dishes."
+  },
+  {
+    "name": "Tai Buan Porridge",
+    "category": [
+      "chinese",
+      "soup",
+      "rice"
+    ],
+    "address": "173 Lebuh Muntri, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4203,
+      "lng": 100.3355
+    },
+    "hours": {
+      "monday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "00:00",
+        "close": "00:00"
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$$",
+    "phone": "+60 12-474 4462",
+    "description": "Teochew-style porridge with a vast selection of side dishes."
+  },
+  {
+    "name": "China House (Library)",
+    "category": [
+      "chinese",
+      "cafe",
+      "dessert"
+    ],
+    "address": "153 Lebuh Pantai, Georgetown, Penang",
+    "coordinates": {
+      "lat": 5.4148,
+      "lng": 100.3387
+    },
+    "hours": {
+      "monday": {
+        "open": "09:00",
+        "close": "23:00"
+      },
+      "tuesday": {
+        "open": "09:00",
+        "close": "23:00"
+      },
+      "wednesday": {
+        "open": "09:00",
+        "close": "23:00"
+      },
+      "thursday": {
+        "open": "09:00",
+        "close": "23:00"
+      },
+      "friday": {
+        "open": "09:00",
+        "close": "23:00"
+      },
+      "saturday": {
+        "open": "09:00",
+        "close": "23:00"
+      },
+      "sunday": {
+        "open": "09:00",
+        "close": "23:00"
+      }
+    },
+    "rating": 4.1,
+    "priceRange": "$$$",
+    "phone": "+60 4-263 7299",
+    "description": "Iconic heritage building with a famous selection of cakes and fusion lunch."
+  }
+]

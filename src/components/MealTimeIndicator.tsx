@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Coffee, Sun, Moon, Clock } from 'lucide-react';
-import { getCurrentMealTime } from '@/data/restaurants';
+import { getCurrentMealTime } from '@/lib/utils';
 
 export function MealTimeIndicator() {
   const [currentTime, setCurrentTime] = useState(new Date());

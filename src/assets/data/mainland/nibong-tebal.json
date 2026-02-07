@@ -1,0 +1,96 @@
+[
+  {
+    "name": "Restoran Zim Sum (Nibong Tebal)",
+    "category": [
+      "chinese",
+      "breakfast",
+      "noodles"
+    ],
+    "address": "Nibong Tebal, Penang",
+    "coordinates": {
+      "lat": 5.165,
+      "lng": 100.487
+    },
+    "hours": {
+      "monday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "tuesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "wednesday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "thursday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "friday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "saturday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "sunday": {
+        "open": "06:30",
+        "close": "14:00"
+      }
+    },
+    "rating": 3.9,
+    "priceRange": "$$",
+    "phone": "+60 4-226 2575",
+    "description": "Casual, open-air dim sum restaurant with a large variety."
+  },
+  {
+    "name": "Tek Sen Restaurant (Nibong Tebal)",
+    "category": [
+      "chinese",
+      "rice",
+      "seafood"
+    ],
+    "address": "Nibong Tebal, Penang",
+    "coordinates": {
+      "lat": 5.175,
+      "lng": 100.497
+    },
+    "hours": {
+      "monday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "wednesday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "11:30",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "11:30",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.5,
+    "priceRange": "$$",
+    "phone": "+60 4-261 5282",
+    "description": "Iconic heritage spot famous for double-cooked roasted pork."
+  }
+]

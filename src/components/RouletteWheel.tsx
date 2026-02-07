@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown, Navigation } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
@@ -44,15 +44,22 @@ function getSegmentColor(index: number): string {
 
 
 const getOpeningHoursLabel = (restaurant: Restaurant): string => {
-  const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const dayOrder: Array<keyof Restaurant['hours']> = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   const dayKey = dayOrder[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
   const todayHours = restaurant.hours[dayKey];
-  const dailyHours = restaurant.hours.daily;
-  const fallbackHours = Object.values(restaurant.hours)[0];
-  const selectedHours = todayHours ?? dailyHours ?? fallbackHours;
+  const selectedHours = todayHours;
 
   if (!selectedHours || selectedHours.closed) return 'Closed today';
   return `Open ${selectedHours.open} • Close ${selectedHours.close}`;
+};
+
+const getMapsLinks = (restaurant: Restaurant) => {
+  const query = `${restaurant.coordinates.lat},${restaurant.coordinates.lng}`;
+  return {
+    googleApp: `comgooglemaps://?q=${query}`,
+    googleWeb: `https://www.google.com/maps?q=${query}`,
+    apple: `http://maps.apple.com/?q=${query}`,
+  };
 };
 
 export function RouletteWheel({
@@ -519,6 +526,24 @@ export function RouletteWheel({
             </div>
 
             <div className="mt-5 flex flex-wrap justify-center gap-3">
+              {!isManualResult && (
+                <>
+                  <a
+                    href={getMapsLinks(spinResult).googleApp}
+                    className="inline-flex items-center gap-2 rounded-md bg-brand-orange px-3 py-2 text-sm font-medium text-white"
+                  >
+                    <Navigation size={14} />
+                    Open in Google Maps
+                  </a>
+                  <a
+                    href={getMapsLinks(spinResult).apple}
+                    className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium"
+                  >
+                    <Navigation size={14} />
+                    Open in Apple Maps
+                  </a>
+                </>
+              )}
               {onEditList && (
                 <Button variant="outline" onClick={onEditList}>
                   Edit list

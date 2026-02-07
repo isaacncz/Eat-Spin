@@ -1,0 +1,96 @@
+[
+  {
+    "name": "Tai Tong Restaurant (Tanjung Bungah)",
+    "category": [
+      "chinese",
+      "breakfast",
+      "noodles"
+    ],
+    "address": "Tanjung Bungah, Penang",
+    "coordinates": {
+      "lat": 5.468,
+      "lng": 100.276
+    },
+    "hours": {
+      "monday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "tuesday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "wednesday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "thursday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "friday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "saturday": {
+        "open": "06:30",
+        "close": "14:30"
+      },
+      "sunday": {
+        "open": "06:30",
+        "close": "14:30"
+      }
+    },
+    "rating": 4.1,
+    "priceRange": "$$",
+    "phone": "+60 4-263 6625",
+    "description": "Traditional push-cart dim sum and classic noodles."
+  },
+  {
+    "name": "Foong Wei Heong (Tanjung Bungah)",
+    "category": [
+      "chinese",
+      "seafood",
+      "rice"
+    ],
+    "address": "Tanjung Bungah, Penang",
+    "coordinates": {
+      "lat": 5.478,
+      "lng": 100.286
+    },
+    "hours": {
+      "monday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "tuesday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "wednesday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "thursday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "friday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "saturday": {
+        "open": "11:45",
+        "close": "14:15"
+      },
+      "sunday": {
+        "open": "11:45",
+        "close": "14:15"
+      }
+    },
+    "rating": 4.4,
+    "priceRange": "$$$",
+    "phone": "+60 4-261 1918",
+    "description": "High-quality Cantonese banquet dishes perfect for group lunch."
+  }
+]

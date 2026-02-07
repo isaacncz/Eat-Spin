@@ -1,0 +1,96 @@
+[
+  {
+    "name": "Tho Yuen Restaurant (Gelugor)",
+    "category": [
+      "chinese",
+      "chicken",
+      "breakfast"
+    ],
+    "address": "Gelugor, Penang",
+    "coordinates": {
+      "lat": 5.363,
+      "lng": 100.302
+    },
+    "hours": {
+      "monday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "wednesday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "06:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "06:00",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.0,
+    "priceRange": "$",
+    "phone": "+60 4-261 4672",
+    "description": "Long-standing shop famous for Hainanese chicken rice."
+  },
+  {
+    "name": "Bee Hwa Cafe (Gelugor)",
+    "category": [
+      "chinese",
+      "noodles",
+      "cafe"
+    ],
+    "address": "Gelugor, Penang",
+    "coordinates": {
+      "lat": 5.373,
+      "lng": 100.312
+    },
+    "hours": {
+      "monday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "tuesday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "wednesday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "thursday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "friday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "saturday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "sunday": {
+        "open": "00:00",
+        "close": "00:00"
+      }
+    },
+    "rating": 4.3,
+    "priceRange": "$",
+    "phone": "+60 4-263 6092",
+    "description": "Famous pork-free Hainanese cafe serving authentic White Curry Mee."
+  }
+]

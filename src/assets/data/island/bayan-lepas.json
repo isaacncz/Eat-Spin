@@ -1,0 +1,96 @@
+[
+  {
+    "name": "Bee Hwa Cafe (Bayan Lepas)",
+    "category": [
+      "chinese",
+      "noodles",
+      "cafe"
+    ],
+    "address": "Bayan Lepas, Penang",
+    "coordinates": {
+      "lat": 5.324,
+      "lng": 100.284
+    },
+    "hours": {
+      "monday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "tuesday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "wednesday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "thursday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "friday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "saturday": {
+        "open": "07:00",
+        "close": "15:30"
+      },
+      "sunday": {
+        "open": "00:00",
+        "close": "00:00"
+      }
+    },
+    "rating": 4.3,
+    "priceRange": "$",
+    "phone": "+60 4-263 6092",
+    "description": "Famous pork-free Hainanese cafe serving authentic White Curry Mee."
+  },
+  {
+    "name": "Maple Palace Restaurant (Bayan Lepas)",
+    "category": [
+      "chinese",
+      "seafood",
+      "soup"
+    ],
+    "address": "Bayan Lepas, Penang",
+    "coordinates": {
+      "lat": 5.334,
+      "lng": 100.294
+    },
+    "hours": {
+      "monday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "tuesday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "wednesday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "thursday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "friday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "saturday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "sunday": {
+        "open": "12:00",
+        "close": "14:30"
+      }
+    },
+    "rating": 4.6,
+    "priceRange": "$$$",
+    "phone": "+60 4-227 9690",
+    "description": "Upscale Cantonese fine dining with premium seafood."
+  }
+]

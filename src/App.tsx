@@ -3,7 +3,8 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLocation } from '@/hooks/useLocation';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
-import { penangRestaurants } from '@/data/restaurants';
+import { loadPenangRestaurants } from '@/data/restaurants';
+import { getNearbyRegions } from '@/assets/data/registry';
 import { enhancedFilterRestaurants } from '@/lib/restaurantUtils';
 import { getCurrentMealTime } from '@/lib/utils';
 import { FoodCategorySelector } from '@/components/FoodCategorySelector';
@@ -48,10 +49,17 @@ const createManualRestaurant = (name: string): Restaurant => {
     address: 'Your custom pick',
     coordinates: { lat: 0, lng: 0 },
     hours: {
-      daily: { open: '00:00', close: '23:59' },
+      monday: { open: '00:00', close: '23:59' },
+      tuesday: { open: '00:00', close: '23:59' },
+      wednesday: { open: '00:00', close: '23:59' },
+      thursday: { open: '00:00', close: '23:59' },
+      friday: { open: '00:00', close: '23:59' },
+      saturday: { open: '00:00', close: '23:59' },
+      sunday: { open: '00:00', close: '23:59' },
     },
     rating: 5,
     priceRange: '$$',
+    phone: '+60 10-0000000',
     description: 'Added by you.',
   };
 };
@@ -145,6 +153,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<SpinTab>('auto');
   const [autoWheelKey, setAutoWheelKey] = useState(0);
   const [isReviewExpanded, setIsReviewExpanded] = useState(false);
+  const [areaRestaurants, setAreaRestaurants] = useState<Restaurant[]>([]);
 
   const [manualInput, setManualInput] = useState('');
   const [manualRestaurants, setManualRestaurants] = useState<Restaurant[]>(() => loadManualRestaurants());
@@ -159,7 +168,7 @@ function App() {
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
   const { canSpin, recordSpin } = useSpinTracker();
 
-  const priceOptions: Restaurant['priceRange'][] = ['$', '$$', '$$$', '$$$$'];
+  const priceOptions: Restaurant['priceRange'][] = ['$', '$$', '$$$'];
 
   const togglePriceRange = (price: Restaurant['priceRange']) => {
     setSelectedPriceRanges((prev) =>
@@ -179,16 +188,41 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRestaurants = async () => {
+      const regions: Array<'island' | 'mainland'> = location
+        ? getNearbyRegions(location)
+        : ['island', 'mainland'];
+      const loadedRestaurants = await loadPenangRestaurants(regions);
+      if (isMounted) {
+        setAreaRestaurants(loadedRestaurants);
+      }
+    };
+
+    loadRestaurants().catch((error) => {
+      console.error('Unable to load restaurant data', error);
+      if (isMounted) {
+        setAreaRestaurants([]);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [location]);
+
   const filteredRestaurants = useMemo(() => (
     enhancedFilterRestaurants(
-      penangRestaurants,
+      areaRestaurants,
       location,
       selectedCategories,
       radiusKm,
       selectedPriceRanges,
       nonHalalOnly
     )
-  ), [location, selectedCategories, radiusKm, selectedPriceRanges, nonHalalOnly]);
+  ), [areaRestaurants, location, selectedCategories, radiusKm, selectedPriceRanges, nonHalalOnly]);
 
   const roundRestaurants = useMemo(() => (
     filteredRestaurants.filter((restaurant) => !roundRemovedRestaurantIds.includes(restaurant.id))
@@ -196,7 +230,7 @@ function App() {
 
   // Handle spin complete
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
-    recordSpin(restaurant.id, currentMealTime);
+    recordSpin(restaurant, currentMealTime);
   }, [currentMealTime, recordSpin]);
 
   const handleManualSpinComplete = useCallback((restaurant: Restaurant) => {

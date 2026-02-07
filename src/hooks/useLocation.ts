@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { UserLocation } from '@/types';
+import { getRegionFromLongitude } from '@/assets/data/registry';
 
 interface UseLocationResult {
   location: UserLocation | null;
@@ -27,6 +28,7 @@ export function useLocation(): UseLocationResult {
         const userLocation: UserLocation = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
+          region: getRegionFromLongitude(position.coords.longitude),
         };
         setLocation(userLocation);
         setIsLoading(false);

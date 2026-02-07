@@ -1,0 +1,96 @@
+[
+  {
+    "name": "Maple Palace Restaurant (Balik Pulau)",
+    "category": [
+      "chinese",
+      "seafood",
+      "soup"
+    ],
+    "address": "Balik Pulau, Penang",
+    "coordinates": {
+      "lat": 5.35,
+      "lng": 100.235
+    },
+    "hours": {
+      "monday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "tuesday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "wednesday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "thursday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "friday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "saturday": {
+        "open": "12:00",
+        "close": "14:30"
+      },
+      "sunday": {
+        "open": "12:00",
+        "close": "14:30"
+      }
+    },
+    "rating": 4.6,
+    "priceRange": "$$$",
+    "phone": "+60 4-227 9690",
+    "description": "Upscale Cantonese fine dining with premium seafood."
+  },
+  {
+    "name": "Goh Thew Chik Chicken Rice (Balik Pulau)",
+    "category": [
+      "chinese",
+      "chicken",
+      "rice"
+    ],
+    "address": "Balik Pulau, Penang",
+    "coordinates": {
+      "lat": 5.36,
+      "lng": 100.245
+    },
+    "hours": {
+      "monday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "tuesday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "wednesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "thursday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "friday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "saturday": {
+        "open": "10:30",
+        "close": "17:00"
+      },
+      "sunday": {
+        "open": "10:30",
+        "close": "17:00"
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$",
+    "phone": "+60 4-261 8650",
+    "description": "Popular Hainanese chicken rice along Chulia Street."
+  }
+]

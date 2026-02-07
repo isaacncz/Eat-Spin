@@ -1,0 +1,96 @@
+[
+  {
+    "name": "L Kitchen (Batu Kawan)",
+    "category": [
+      "chinese",
+      "rice",
+      "soup"
+    ],
+    "address": "Batu Kawan, Penang",
+    "coordinates": {
+      "lat": 5.292,
+      "lng": 100.445
+    },
+    "hours": {
+      "monday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "tuesday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "wednesday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "thursday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "friday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "saturday": {
+        "open": "11:00",
+        "close": "15:00"
+      },
+      "sunday": {
+        "open": "11:00",
+        "close": "15:00"
+      }
+    },
+    "rating": 4.4,
+    "priceRange": "$$",
+    "phone": "+60 4-261 2282",
+    "description": "Home-style Chinese dishes serving hearty lunches."
+  },
+  {
+    "name": "Restoran Zim Sum (Batu Kawan)",
+    "category": [
+      "chinese",
+      "breakfast",
+      "noodles"
+    ],
+    "address": "Batu Kawan, Penang",
+    "coordinates": {
+      "lat": 5.302,
+      "lng": 100.455
+    },
+    "hours": {
+      "monday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "tuesday": {
+        "open": "00:00",
+        "close": "00:00"
+      },
+      "wednesday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "thursday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "friday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "saturday": {
+        "open": "06:30",
+        "close": "14:00"
+      },
+      "sunday": {
+        "open": "06:30",
+        "close": "14:00"
+      }
+    },
+    "rating": 3.9,
+    "priceRange": "$$",
+    "phone": "+60 4-226 2575",
+    "description": "Casual, open-air dim sum restaurant with a large variety."
+  }
+]

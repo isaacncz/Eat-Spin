@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+
 import { useLocation } from '@/hooks/useLocation';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';

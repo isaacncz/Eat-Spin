@@ -13,10 +13,58 @@ import {
 import { ShareResultCard } from '@/components/ShareResultCard';
 import { domToCanvas } from '@/lib/domToCanvas';
 
+type Html2CanvasFn = (element: HTMLElement, options?: {
+  scale?: number;
+  backgroundColor?: string;
+  useCORS?: boolean;
+}) => Promise<HTMLCanvasElement>;
+
+declare global {
+  interface Window {
+    html2canvas?: Html2CanvasFn;
+  }
+}
+
+let html2CanvasLoader: Promise<Html2CanvasFn | null> | null = null;
+
+async function loadHtml2Canvas(): Promise<Html2CanvasFn | null> {
+  if (window.html2canvas) return window.html2canvas;
+
+  if (!html2CanvasLoader) {
+    html2CanvasLoader = new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
+      script.async = true;
+      script.onload = () => resolve(window.html2canvas ?? null);
+      script.onerror = () => resolve(null);
+      document.head.appendChild(script);
+    });
+  }
+
+  return html2CanvasLoader;
+}
+
 export interface ShareModalProps {
   isOpen: boolean;
   onClose: () => void;
   restaurant: Restaurant;
+}
+
+async function waitForImages(container: HTMLElement) {
+  const images = Array.from(container.querySelectorAll('img'));
+  await Promise.all(
+    images.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete) {
+            resolve();
+            return;
+          }
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+        }),
+    ),
+  );
 }
 
 export function ShareModal({ isOpen, onClose, restaurant }: ShareModalProps) {
@@ -48,10 +96,18 @@ export function ShareModal({ isOpen, onClose, restaurant }: ShareModalProps) {
     setError(null);
 
     try {
-      const cardCanvas = await domToCanvas(shareCardRef.current, {
-        scale: 2,
-        backgroundColor: '#FFF9F4',
-      });
+      await waitForImages(shareCardRef.current);
+      const html2canvas = await loadHtml2Canvas();
+      const cardCanvas = html2canvas
+        ? await html2canvas(shareCardRef.current, {
+            scale: 2,
+            backgroundColor: '#FFF9F4',
+            useCORS: true,
+          })
+        : await domToCanvas(shareCardRef.current, {
+            scale: 2,
+            backgroundColor: '#FFF9F4',
+          });
       setShareImageUrl(cardCanvas.toDataURL('image/png'));
     } catch {
       setError('Could not generate your share image. Please try again.');
@@ -123,22 +179,16 @@ export function ShareModal({ isOpen, onClose, restaurant }: ShareModalProps) {
           </DialogHeader>
 
           <div className="space-y-4 px-6 pb-6">
-            <div className="flex min-h-[500px] items-center justify-center overflow-hidden rounded-xl border border-eatspin-peach bg-white p-4">
+            <div className="flex h-[560px] items-center justify-center overflow-hidden rounded-xl border border-eatspin-peach bg-white p-4">
               {isGenerating ? (
                 <div className="flex items-center justify-center gap-3 text-eatspin-gray-1">
                   <Loader2 className="h-6 w-6 animate-spin" />
                   Generating your share image...
                 </div>
+              ) : shareImageUrl ? (
+                <img src={shareImageUrl} alt="Generated share card preview" className="h-full w-auto rounded-lg border bg-[#FFF9F4] shadow-md" />
               ) : (
-                <div className="mx-auto w-full max-w-[440px] overflow-hidden rounded-lg border bg-[#FFF9F4] shadow-md">
-                  {shareImageUrl ? (
-                    <img src={shareImageUrl} alt="Generated share card preview" className="h-auto w-full" />
-                  ) : (
-                    <div className="origin-top-left scale-[0.38]" style={{ width: '1080px' }}>
-                      <ShareResultCard restaurant={restaurant} />
-                    </div>
-                  )}
-                </div>
+                <p className="text-sm text-red-500">Preview unavailable</p>
               )}
             </div>
 

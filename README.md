@@ -1,90 +1,72 @@
-# React + TypeScript + Vite
+# 🍽️ Eat-Spin
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> A fun and interactive food roulette app to help you decide what and where to eat!
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Overview
 
-## React Compiler
+Eat-Spin is a modern web app built with **React**, **TypeScript**, and **Vite**. It helps users break the cycle of indecision by spinning a roulette wheel to pick a restaurant or food category. Perfect for groups, families, or anyone who can't decide what to eat!
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## ✨ Features
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- 🎡 Roulette wheel for random food/restaurant selection
+- 📍 Location-based suggestions (with permission)
+- 🍽️ Food category filtering
+- ⏰ Meal time indicator
+- 🔄 Spin limit warning
+- 💎 Subscription modal for premium features
+- 📱 Mobile-friendly UI
+- ⚡ Fast, modern, and responsive
 
-````js
-export default defineConfig([
-  # 🍽️ Eat-Spin
+---
 
-  > A fun and interactive food roulette app to help you decide what and where to eat!
+## 🛠️ Tech Stack
 
-  ---
+- [React](https://react.dev/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Vite](https://vitejs.dev/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [ESLint](https://eslint.org/)
 
-  ## 🚀 Overview
+---
 
-  Eat-Spin is a modern web app built with **React**, **TypeScript**, and **Vite**. It helps users break the cycle of indecision by spinning a roulette wheel to pick a restaurant or food category. Perfect for groups, families, or anyone who can't decide what to eat!
+## 📦 Getting Started
 
-  ---
+1. **Clone the repo:**
+   ```sh
+   git clone https://github.com/isaacncz/Eat-Spin.git
+   cd Eat-Spin/app
+   ```
 
-  ## ✨ Features
+2. **Install dependencies:**
+   ```sh
+   npm install
+   ```
 
-  - 🎡 Roulette wheel for random food/restaurant selection
-  - 📍 Location-based suggestions (with permission)
-  - 🍽️ Food category filtering
-  - ⏰ Meal time indicator
-  - 🔄 Spin limit warning
-  - 💎 Subscription modal for premium features
-  - 📱 Mobile-friendly UI
-  - ⚡ Fast, modern, and responsive
+3. **Start the development server:**
+   ```sh
+   npm run dev
+   ```
 
-  ---
+4. **Open in browser:**
+   Visit [http://localhost:5173](http://localhost:5173)
 
-  ## 🛠️ Tech Stack
+---
 
-  - [React](https://react.dev/)
-  - [TypeScript](https://www.typescriptlang.org/)
-  - [Vite](https://vitejs.dev/)
-  - [Tailwind CSS](https://tailwindcss.com/)
-  - [ESLint](https://eslint.org/)
+## 📁 Project Structure
 
-  ---
-
-  ## 📦 Getting Started
-
-  1. **Clone the repo:**
-     ```sh
-     git clone https://github.com/isaacncz/Eat-Spin.git
-     cd Eat-Spin/app
-     ```
-  2. **Install dependencies:**
-     ```sh
-     npm install
-     ```
-  3. **Start the development server:**
-     ```sh
-     npm run dev
-     ```
-  4. **Open in browser:**
-     Visit [http://localhost:5173](http://localhost:5173)
-
-  ---
-
-  ## 📁 Project Structure
-
-````
-
+```
 app/
 src/
-components/ # UI components
-data/ # Restaurant/food data
-hooks/ # Custom React hooks
-lib/ # Utility functions
-sections/ # Page sections
-types/ # TypeScript types
-
+  components/ # UI components
+  data/       # Restaurant/food data
+  hooks/      # Custom React hooks
+  lib/        # Utility functions
+  sections/   # Page sections
+  types/      # TypeScript types
 ```
 
 ---
@@ -104,4 +86,3 @@ MIT
 ## 🙏 Credits
 
 Made with ❤️ by [isaacncz](https://github.com/isaacncz)
-```

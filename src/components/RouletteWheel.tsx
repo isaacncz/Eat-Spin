@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown, Share2 } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
@@ -90,6 +90,15 @@ export function RouletteWheel({
   const celebrationTimeoutsRef = useRef<number[]>([]);
   const celebrationElementsRef = useRef<HTMLElement[]>([]);
   const lastExternalSpinIdRef = useRef('');
+  const shareLink = `${window.location.origin}/share`;
+
+  const handleShareLink = useCallback(() => {
+    if (navigator.clipboard && window.isSecureContext) {
+      void navigator.clipboard.writeText(shareLink);
+      return;
+    }
+    window.open(shareLink, '_blank', 'noopener,noreferrer');
+  }, [shareLink]);
 
   const clearCelebrationEffects = useCallback(() => {
     celebrationTimeoutsRef.current.forEach((timeoutId) => {
@@ -465,6 +474,25 @@ export function RouletteWheel({
       {helperText && (
         <p className="text-sm text-eatspin-gray-1 text-center">{helperText}</p>
       )}
+
+      <div className="text-center space-y-3">
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-sm text-eatspin-gray-1">Can’t decide with friends? Spin together.</p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleShareLink}
+            className="border-eatspin-peach/60 text-eatspin-orange hover:bg-eatspin-peach/40"
+          >
+            <Share2 size={16} className="mr-2" />
+            Share Link
+          </Button>
+        </div>
+        <div className="space-y-1 text-xs text-eatspin-gray-2">
+          <p>🔥 Popular in Penang tonight</p>
+          <p>Recently spun 127 times today</p>
+        </div>
+      </div>
 
       {totalCount > restaurants.length && (
         <div className="text-center">

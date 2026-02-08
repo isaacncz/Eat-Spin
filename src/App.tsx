@@ -53,7 +53,7 @@ const createManualRestaurant = (name: string): Restaurant => {
     address: 'Your custom pick',
     coordinates: { lat: 0, lng: 0 },
     hours: {
-      daily: { open: '00:00', close: '23:59' },
+      daily: { windows: [{ open: '00:00', close: '23:59' }] },
     },
     rating: 5,
     priceRange: '$$',

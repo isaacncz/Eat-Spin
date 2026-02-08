@@ -7,13 +7,7 @@ export interface Restaurant {
     lat: number;
     lng: number;
   };
-  hours: {
-    [key: string]: {
-      open: string;
-      close: string;
-      closed?: boolean;
-    };
-  };
+  hours: Record<string, DailyHours>;
   rating: number;
   priceRange: '$' | '$$' | '$$$' | '$$$$';
   phone?: string;
@@ -32,13 +26,7 @@ export interface JsonRestaurant {
     lat: number;
     lng: number;
   };
-  hours: {
-    [key: string]: {
-      open: string;
-      close: string;
-      closed?: boolean;
-    };
-  };
+  hours: Record<string, DailyHours>;
   rating: number;
   priceRange: Restaurant['priceRange'];
   phone?: string;
@@ -50,6 +38,16 @@ export type JsonRestaurantArray = JsonRestaurant[];
 
 // Type for restaurant with generated ID
 export type RestaurantWithId = JsonRestaurant & { id: string };
+
+export interface TimeWindow {
+  open: string;
+  close: string;
+}
+
+export interface DailyHours {
+  windows: TimeWindow[];
+  closed?: boolean;
+}
 
 export type FoodCategory = 
   | 'soup'

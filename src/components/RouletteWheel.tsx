@@ -58,8 +58,12 @@ const getOpeningHoursLabel = (restaurant: Restaurant): string => {
   const fallbackHours = Object.values(restaurant.hours)[0];
   const selectedHours = todayHours ?? dailyHours ?? fallbackHours;
 
-  if (!selectedHours || selectedHours.closed) return 'Closed today';
-  return `Open ${selectedHours.open} • Close ${selectedHours.close}`;
+  if (!selectedHours || selectedHours.closed || selectedHours.windows.length === 0) {
+    return 'Closed today';
+  }
+
+  const windowsLabel = selectedHours.windows.map((window) => `${window.open}-${window.close}`).join(', ');
+  return `Open ${windowsLabel}`;
 };
 
 export function RouletteWheel({

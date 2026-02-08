@@ -157,7 +157,7 @@ export function filterRestaurants(
     })
     .filter((restaurant) => {
       // Filter by distance
-      if (userLocation && restaurant.distance && restaurant.distance > maxDistance) {
+      if (userLocation && restaurant.distance !== undefined && restaurant.distance > maxDistance) {
         return false;
       }
 
@@ -172,7 +172,7 @@ export function filterRestaurants(
     })
     .sort((a, b) => {
       // Sort by distance if available
-      if (a.distance && b.distance) {
+      if (a.distance !== undefined && b.distance !== undefined) {
         return a.distance - b.distance;
       }
       // Otherwise sort by rating

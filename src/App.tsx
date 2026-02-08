@@ -19,6 +19,7 @@ import { Features } from '@/sections/Features';
 import { Testimonials } from '@/sections/Testimonials';
 import { CTA } from '@/sections/CTA';
 import { Footer } from '@/sections/Footer';
+import { GroupSpin } from '@/sections/GroupSpin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
@@ -368,12 +369,19 @@ function App() {
         onUpgradeClick={() => setShowSubscription(true)}
       />
 
-      <Hero onGetStarted={() => {
-        const appSection = document.getElementById('app');
-        appSection?.scrollIntoView({ behavior: 'smooth' });
-      }} />
+      <Hero
+        onGetStarted={() => {
+          const appSection = document.getElementById('app');
+          appSection?.scrollIntoView({ behavior: 'smooth' });
+        }}
+        onGroupSpin={() => {
+          const groupSpinSection = document.getElementById('group-spin');
+          groupSpinSection?.scrollIntoView({ behavior: 'smooth' });
+        }}
+      />
 
       <HowItWorks />
+      <GroupSpin />
       <Features />
 
       <section id="app" className="py-16 px-4 sm:px-6 lg:px-8 bg-white">

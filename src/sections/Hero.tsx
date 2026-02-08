@@ -5,9 +5,10 @@ import gsap from 'gsap';
 
 interface HeroProps {
   onGetStarted: () => void;
+  onGroupSpin: () => void;
 }
 
-export function Hero({ onGetStarted }: HeroProps) {
+export function Hero({ onGetStarted, onGroupSpin }: HeroProps) {
   const heroRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
@@ -100,9 +101,12 @@ export function Hero({ onGetStarted }: HeroProps) {
               <span className="text-brand-orange">Let's EatSpin!</span>
             </h1>
 
-            <p className="text-base sm:text-lg text-eatspin-gray-1 mb-8 max-w-lg">
+            <p className="text-base sm:text-lg text-eatspin-gray-1 mb-4 max-w-lg">
               Can't decide what to eat? Let our magical roulette wheel choose for you! 
               Discover amazing restaurants in Penang based on your preferences and location.
+            </p>
+            <p className="text-sm sm:text-base text-brand-black/70 mb-8 max-w-lg">
+              New: Group Spin lets everyone join one room, tap ready, and share the exact same result.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
@@ -116,6 +120,14 @@ export function Hero({ onGetStarted }: HeroProps) {
                   size={20}
                   className="ml-2 group-hover:translate-x-1 transition-transform"
                 />
+              </Button>
+              <Button
+                onClick={onGroupSpin}
+                size="lg"
+                variant="outline"
+                className="w-full sm:w-auto border-brand-orange text-brand-orange font-heading text-base sm:text-lg font-bold px-6 sm:px-8 py-5 sm:py-6 rounded-full shadow-sm hover:bg-brand-orange/10 transition-all duration-300"
+              >
+                Start Group Spin
               </Button>
             </div>
 

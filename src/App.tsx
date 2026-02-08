@@ -606,30 +606,6 @@ function App() {
       />
 
       <HowItWorks />
-      <GroupSpin
-        isFirebaseConfigured={isFirebaseConfigured}
-        firebaseConfigError={firebaseConfigError}
-        authLoading={groupAuthLoading}
-        authError={groupAuthError}
-        authUid={groupAuthUid}
-        displayName={groupDisplayName}
-        resolvedDisplayName={groupResolvedDisplayName}
-        setDisplayName={setGroupDisplayName}
-        roomId={groupRoomId}
-        hostUid={groupHostUid}
-        roomLink={groupRoomLink}
-        isHost={isGroupHost}
-        isCohost={isGroupCohost}
-        cohostUids={groupCohostUids}
-        isBusy={groupRoomBusy}
-        roomError={groupRoomError}
-        participants={groupParticipants}
-        onCreateRoom={handleCreateGroupRoom}
-        onJoinRoom={handleJoinGroupRoom}
-        onLeaveRoom={leaveGroupRoom}
-        onSetParticipantCohost={setParticipantCohost}
-        onClearRoomError={clearGroupRoomError}
-      />
       <Features />
 
       <section id="app" className="py-8 sm:py-10 px-4 sm:px-6 lg:px-8 bg-white">
@@ -1083,6 +1059,31 @@ function App() {
           )}
         </div>
       </section>
+
+      <GroupSpin
+        isFirebaseConfigured={isFirebaseConfigured}
+        firebaseConfigError={firebaseConfigError}
+        authLoading={groupAuthLoading}
+        authError={groupAuthError}
+        authUid={groupAuthUid}
+        displayName={groupDisplayName}
+        resolvedDisplayName={groupResolvedDisplayName}
+        setDisplayName={setGroupDisplayName}
+        roomId={groupRoomId}
+        hostUid={groupHostUid}
+        roomLink={groupRoomLink}
+        isHost={isGroupHost}
+        isCohost={isGroupCohost}
+        cohostUids={groupCohostUids}
+        isBusy={groupRoomBusy}
+        roomError={groupRoomError}
+        participants={groupParticipants}
+        onCreateRoom={handleCreateGroupRoom}
+        onJoinRoom={handleJoinGroupRoom}
+        onLeaveRoom={leaveGroupRoom}
+        onSetParticipantCohost={setParticipantCohost}
+        onClearRoomError={clearGroupRoomError}
+      />
 
       {activeTab === 'auto' && showWheelSection && location && roundRestaurants.length > 0 && (
         <section id="wheel" className="py-16 px-4 sm:px-6 lg:px-8 bg-brand-linen">

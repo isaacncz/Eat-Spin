@@ -219,7 +219,12 @@ function App() {
   const handleManualSpinStart = useCallback(() => {
     if (!pendingManualRemovalId) return null;
 
+    const shouldRemove = window.confirm('Remove the last picked restaurant from the wheel?');
     setPendingManualRemovalId(null);
+    if (!shouldRemove) {
+      return manualRestaurants;
+    }
+
     setManualRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== pendingManualRemovalId));
     return manualRestaurants.filter((restaurant) => restaurant.id !== pendingManualRemovalId);
   }, [manualRestaurants, pendingManualRemovalId]);

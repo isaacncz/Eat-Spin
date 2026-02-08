@@ -196,17 +196,23 @@ function App() {
     filteredRestaurants.filter((restaurant) => !roundRemovedRestaurantIds.includes(restaurant.id))
   ), [filteredRestaurants, roundRemovedRestaurantIds]);
 
-  const removeRestaurantForRound = (restaurantId: string) => {
+  const removeRestaurantForRound = (
+    restaurantId: string,
+    options?: { bumpKey?: boolean },
+  ) => {
+    const { bumpKey = true } = options ?? {};
     setRoundRemovedRestaurantIds((prev) => (prev.includes(restaurantId) ? prev : [...prev, restaurantId]));
     setWheelRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== restaurantId));
-    setAutoWheelKey((prev) => prev + 1);
+    if (bumpKey) {
+      setAutoWheelKey((prev) => prev + 1);
+    }
   };
 
   const handleAutoSpinStart = useCallback(() => {
     if (!pendingAutoRemovalId) return null;
 
     setPendingAutoRemovalId(null);
-    removeRestaurantForRound(pendingAutoRemovalId);
+    removeRestaurantForRound(pendingAutoRemovalId, { bumpKey: false });
     return wheelRestaurants.filter((restaurant) => restaurant.id !== pendingAutoRemovalId);
   }, [pendingAutoRemovalId, removeRestaurantForRound, wheelRestaurants]);
 
@@ -215,7 +221,6 @@ function App() {
 
     setPendingManualRemovalId(null);
     setManualRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== pendingManualRemovalId));
-    setManualWheelKey((prev) => prev + 1);
     return manualRestaurants.filter((restaurant) => restaurant.id !== pendingManualRemovalId);
   }, [manualRestaurants, pendingManualRemovalId]);
 

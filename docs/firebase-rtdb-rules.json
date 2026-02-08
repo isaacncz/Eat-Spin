@@ -13,8 +13,14 @@
             ".validate": "newData.hasChildren(['name','joinedAt','lastSeenAt','ready']) && newData.child('name').isString() && newData.child('joinedAt').isNumber() && newData.child('lastSeenAt').isNumber() && newData.child('ready').isBoolean()"
           }
         },
+        "cohosts": {
+          "$uid": {
+            ".write": "auth != null && root.child('rooms/'+$roomId+'/meta/hostUid').val() === auth.uid",
+            ".validate": "newData.val() === true || !newData.exists()"
+          }
+        },
         "list": {
-          ".write": "auth != null && root.child('rooms/'+$roomId+'/meta/hostUid').val() === auth.uid"
+          ".write": "auth != null && (root.child('rooms/'+$roomId+'/meta/hostUid').val() === auth.uid || root.child('rooms/'+$roomId+'/cohosts/'+auth.uid).val() === true)"
         },
         "spin": {
           ".write": "auth != null && root.child('rooms/'+$roomId+'/meta/hostUid').val() === auth.uid",

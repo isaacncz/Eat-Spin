@@ -208,6 +208,14 @@ const parseSpin = (raw: unknown): GroupRoomSpin | null => {
   };
 };
 
+const parseCohostUids = (raw: unknown) => {
+  if (!raw || typeof raw !== 'object') return [] as string[];
+
+  return Object.entries(raw as Record<string, unknown>)
+    .filter(([, value]) => value === true)
+    .map(([uid]) => uid);
+};
+
 const normalizeListNames = (names: string[]) =>
   names
     .map((name) => normalizeDisplayName(name))
@@ -255,7 +263,9 @@ export function useFirebaseGroupRoom() {
   const [authError, setAuthError] = useState<string | null>(firebaseConfigError);
   const [displayName, setDisplayNameState] = useState(() => getStoredDisplayName());
   const [roomId, setRoomId] = useState('');
+  const [hostUid, setHostUid] = useState('');
   const [isHost, setIsHost] = useState(false);
+  const [cohostUids, setCohostUids] = useState<string[]>([]);
   const [participants, setParticipants] = useState<GroupRoomParticipant[]>([]);
   const [roomListNames, setRoomListNames] = useState<string[]>([]);
   const [currentSpin, setCurrentSpin] = useState<GroupRoomSpin | null>(null);
@@ -267,6 +277,7 @@ export function useFirebaseGroupRoom() {
   const disconnectRef = useRef<OnDisconnect | null>(null);
   const roomIdRef = useRef('');
   const isHostRef = useRef(false);
+  const isCohostRef = useRef(false);
   const lastStaleCleanupRef = useRef(0);
   const lastSyncedListRef = useRef('');
   const autoJoinAttemptedRef = useRef(false);
@@ -279,6 +290,11 @@ export function useFirebaseGroupRoom() {
   }, [displayName, authUid]);
 
   const roomLink = useMemo(() => buildRoomLink(roomId), [roomId]);
+  const isCohost = useMemo(() => {
+    if (!authUid || isHost) return false;
+    return cohostUids.includes(authUid);
+  }, [authUid, cohostUids, isHost]);
+  const canEditList = isHost || isCohost;
 
   const clearRoomListeners = useCallback(() => {
     unsubscribersRef.current.forEach((unsubscribe) => unsubscribe());
@@ -311,12 +327,15 @@ export function useFirebaseGroupRoom() {
 
   const clearRoomState = useCallback(() => {
     setRoomId('');
+    setHostUid('');
     setIsHost(false);
+    setCohostUids([]);
     setParticipants([]);
     setRoomListNames([]);
     setCurrentSpin(null);
     roomIdRef.current = '';
     isHostRef.current = false;
+    isCohostRef.current = false;
     lastSyncedListRef.current = '';
   }, []);
 
@@ -347,6 +366,7 @@ export function useFirebaseGroupRoom() {
     if (!db || !authUid) return;
 
     const participantsRef = ref(db, `rooms/${targetRoomId}/participants`);
+    const cohostsRef = ref(db, `rooms/${targetRoomId}/cohosts`);
     const listRef = ref(db, `rooms/${targetRoomId}/list`);
     const spinRef = ref(db, `rooms/${targetRoomId}/spin`);
     const metaRef = ref(db, `rooms/${targetRoomId}/meta`);
@@ -385,13 +405,24 @@ export function useFirebaseGroupRoom() {
       }
 
       const shouldBeHost = parsedMeta.hostUid === authUid;
+      setHostUid(parsedMeta.hostUid);
       if (shouldBeHost !== isHostRef.current) {
         isHostRef.current = shouldBeHost;
         setIsHost(shouldBeHost);
+        if (shouldBeHost) {
+          isCohostRef.current = false;
+        }
       }
     });
 
-    unsubscribersRef.current.push(unsubscribeParticipants, unsubscribeList, unsubscribeSpin, unsubscribeMeta);
+    const unsubscribeCohosts = onValue(cohostsRef, (snapshot) => {
+      const parsedUids = parseCohostUids(snapshot.val());
+      setCohostUids(parsedUids);
+      const nextIsCohost = Boolean(authUid && parsedUids.includes(authUid) && !isHostRef.current);
+      isCohostRef.current = nextIsCohost;
+    });
+
+    unsubscribersRef.current.push(unsubscribeParticipants, unsubscribeList, unsubscribeSpin, unsubscribeMeta, unsubscribeCohosts);
   }, [authUid, cleanupStaleParticipants, leaveRoom]);
 
   const writePresenceHeartbeat = useCallback(async (targetRoomId: string) => {
@@ -501,8 +532,11 @@ export function useFirebaseGroupRoom() {
 
       roomIdRef.current = parsedRoomCode;
       isHostRef.current = nextHost;
+      isCohostRef.current = false;
       setRoomId(parsedRoomCode);
+      setHostUid(nextHost ? authUid : (existingMeta?.hostUid ?? ''));
       setIsHost(nextHost);
+      setCohostUids([]);
       setParticipants([]);
       setRoomListNames([]);
       setCurrentSpin(null);
@@ -556,7 +590,7 @@ export function useFirebaseGroupRoom() {
 
   const syncHostList = useCallback(async (names: string[]) => {
     const activeRoomId = roomIdRef.current;
-    if (!firebaseDb || !authUid || !activeRoomId || !isHostRef.current) return;
+    if (!firebaseDb || !authUid || !activeRoomId || (!isHostRef.current && !isCohostRef.current)) return;
 
     const normalizedNames = normalizeListNames(names);
     const listSignature = JSON.stringify(normalizedNames);
@@ -584,6 +618,35 @@ export function useFirebaseGroupRoom() {
       setRoomError(extractErrorMessage(error));
     }
   }, [authUid]);
+
+  const setParticipantCohost = useCallback(async (targetUid: string, shouldBeCohost: boolean) => {
+    const activeRoomId = roomIdRef.current;
+    if (!firebaseDb || !authUid || !activeRoomId) {
+      setRoomError('Join a room first.');
+      return;
+    }
+
+    if (!isHostRef.current) {
+      setRoomError('Only the host can assign co-hosts.');
+      return;
+    }
+
+    if (!targetUid || targetUid === authUid || targetUid === hostUid) {
+      return;
+    }
+
+    const targetRef = ref(firebaseDb, `rooms/${activeRoomId}/cohosts/${targetUid}`);
+
+    try {
+      if (shouldBeCohost) {
+        await set(targetRef, true);
+      } else {
+        await remove(targetRef);
+      }
+    } catch (error: unknown) {
+      setRoomError(extractErrorMessage(error));
+    }
+  }, [authUid, hostUid]);
 
   const requestHostSpin = useCallback(async (candidateNames: string[]) => {
     const activeRoomId = roomIdRef.current;
@@ -714,8 +777,12 @@ export function useFirebaseGroupRoom() {
     resolvedDisplayName,
     setDisplayName,
     roomId,
+    hostUid,
     roomLink,
     isHost,
+    isCohost,
+    canEditList,
+    cohostUids,
     isBusy,
     roomError,
     clearRoomError,
@@ -726,6 +793,7 @@ export function useFirebaseGroupRoom() {
     joinRoom,
     leaveRoom,
     syncHostList,
+    setParticipantCohost,
     requestHostSpin,
   };
 }

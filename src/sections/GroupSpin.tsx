@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Link2, CheckCircle2, Sparkles, Trophy, Copy, Check, ShieldCheck, LogOut } from 'lucide-react';
+import { Users, Link2, CheckCircle2, Sparkles, Trophy, Copy, Check, ShieldCheck, LogOut, UserPlus, UserMinus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,18 +11,23 @@ interface GroupSpinProps {
   firebaseConfigError: string | null;
   authLoading: boolean;
   authError: string | null;
+  authUid: string | null;
   displayName: string;
   resolvedDisplayName: string;
   setDisplayName: (value: string) => void;
   roomId: string;
+  hostUid: string;
   roomLink: string;
   isHost: boolean;
+  isCohost: boolean;
+  cohostUids: string[];
   isBusy: boolean;
   roomError: string | null;
   participants: GroupRoomParticipant[];
   onCreateRoom: () => Promise<void>;
   onJoinRoom: (value: string) => Promise<void>;
   onLeaveRoom: () => Promise<void>;
+  onSetParticipantCohost: (uid: string, shouldBeCohost: boolean) => Promise<void>;
   onClearRoomError: () => void;
 }
 
@@ -31,22 +36,28 @@ export function GroupSpin({
   firebaseConfigError,
   authLoading,
   authError,
+  authUid,
   displayName,
   resolvedDisplayName,
   setDisplayName,
   roomId,
+  hostUid,
   roomLink,
   isHost,
+  isCohost,
+  cohostUids,
   isBusy,
   roomError,
   participants,
   onCreateRoom,
   onJoinRoom,
   onLeaveRoom,
+  onSetParticipantCohost,
   onClearRoomError,
 }: GroupSpinProps) {
   const [joinValue, setJoinValue] = useState('');
   const [hasCopied, setHasCopied] = useState(false);
+  const [cohostPendingUid, setCohostPendingUid] = useState<string | null>(null);
 
   const canInteract = isFirebaseConfigured && !authLoading;
   const hasRoom = Boolean(roomId);
@@ -72,6 +83,12 @@ export function GroupSpin({
   const handleLeaveRoom = async () => {
     setHasCopied(false);
     await onLeaveRoom();
+  };
+
+  const handleToggleCohost = async (uid: string, shouldBeCohost: boolean) => {
+    setCohostPendingUid(uid);
+    await onSetParticipantCohost(uid, shouldBeCohost);
+    setCohostPendingUid(null);
   };
 
   return (
@@ -205,6 +222,12 @@ export function GroupSpin({
                       Host
                     </span>
                   )}
+                  {!isHost && isCohost && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-orange/10 px-2 py-0.5 text-xs font-semibold text-brand-orange">
+                      <ShieldCheck size={12} />
+                      Co-host
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-eatspin-gray-1">
                   {participants.length} / {GROUP_ROOM_MAX_PARTICIPANTS} participants active
@@ -236,8 +259,26 @@ export function GroupSpin({
                     key={participant.uid}
                     className="flex items-center justify-between rounded-lg border border-eatspin-peach/60 bg-brand-linen/50 px-3 py-2"
                   >
-                    <span className="text-sm font-medium text-brand-black">{participant.name}</span>
-                    <span className="text-xs text-eatspin-gray-1">{participant.ready ? 'Ready' : 'Idle'}</span>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-brand-black">
+                        {participant.name} {participant.uid === authUid ? '(You)' : ''}
+                      </span>
+                      <span className="text-xs text-eatspin-gray-1">
+                        {participant.uid === hostUid ? 'Host' : cohostUids.includes(participant.uid) ? 'Co-host' : 'Participant'} • {participant.ready ? 'Ready' : 'Idle'}
+                      </span>
+                    </div>
+                    {isHost && participant.uid !== hostUid && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 border-brand-orange text-brand-orange hover:bg-brand-orange/10"
+                        disabled={cohostPendingUid === participant.uid}
+                        onClick={() => void handleToggleCohost(participant.uid, !cohostUids.includes(participant.uid))}
+                      >
+                        {cohostUids.includes(participant.uid) ? <UserMinus size={14} /> : <UserPlus size={14} />}
+                        {cohostUids.includes(participant.uid) ? 'Remove co-host' : 'Make co-host'}
+                      </Button>
+                    )}
                   </div>
                 ))
               )}

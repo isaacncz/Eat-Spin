@@ -40,6 +40,7 @@ interface ManualPreset {
 
 const MANUAL_RESTAURANTS_STORAGE_KEY = 'eatspin:manual-restaurants';
 const MANUAL_PRESETS_STORAGE_KEY = 'eatspin:manual-presets';
+const ROOM_LIST_SYNC_GRACE_MS = 2_500;
 
 const createManualRestaurant = (name: string): Restaurant => {
   const now = Date.now();
@@ -166,12 +167,14 @@ function App() {
   const [presetMealTimeInput, setPresetMealTimeInput] = useState<PresetMealTime>(() => getPresetMealTime());
   const [manualPresets, setManualPresets] = useState<ManualPreset[]>(() => loadManualPresets());
   const autoLoadedMealTimeRef = useRef<PresetMealTime>(null);
-  const lastAppliedRoomListRef = useRef('');
+  const seededRoomSyncIdRef = useRef('');
+  const pendingRoomListSyncRef = useRef<{ roomId: string; signature: string; startedAt: number } | null>(null);
 
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
   const { canSpin, recordSpin } = useSpinTracker();
   const {
+    authUid: groupAuthUid,
     isFirebaseConfigured,
     firebaseConfigError,
     authLoading: groupAuthLoading,
@@ -180,8 +183,12 @@ function App() {
     resolvedDisplayName: groupResolvedDisplayName,
     setDisplayName: setGroupDisplayName,
     roomId: groupRoomId,
+    hostUid: groupHostUid,
     roomLink: groupRoomLink,
     isHost: isGroupHost,
+    isCohost: isGroupCohost,
+    canEditList: canEditGroupList,
+    cohostUids: groupCohostUids,
     isBusy: groupRoomBusy,
     roomError: groupRoomError,
     clearRoomError: clearGroupRoomError,
@@ -192,12 +199,13 @@ function App() {
     joinRoom: joinGroupRoom,
     leaveRoom: leaveGroupRoom,
     syncHostList,
+    setParticipantCohost,
     requestHostSpin,
   } = useFirebaseGroupRoom();
 
   const priceOptions: Restaurant['priceRange'][] = ['$', '$$', '$$$', '$$$$'];
   const isGroupRoomActive = Boolean(groupRoomId);
-  const isManualListReadOnly = isGroupRoomActive && !isGroupHost;
+  const isManualListReadOnly = isGroupRoomActive && !canEditGroupList;
 
   const togglePriceRange = (price: Restaurant['priceRange']) => {
     setSelectedPriceRanges((prev) =>
@@ -290,9 +298,21 @@ function App() {
     }
   };
 
+  const syncGroupListFromRestaurants = useCallback((restaurants: Restaurant[]) => {
+    if (!isGroupRoomActive || !canEditGroupList || !groupRoomId) return;
+    const normalizedNames = normalizeManualNames(restaurants.map((restaurant) => restaurant.name));
+    const signature = JSON.stringify(normalizedNames);
+    pendingRoomListSyncRef.current = {
+      roomId: groupRoomId,
+      signature,
+      startedAt: Date.now(),
+    };
+    void syncHostList(normalizedNames);
+  }, [canEditGroupList, groupRoomId, isGroupRoomActive, syncHostList]);
+
   const addManualRestaurant = () => {
     if (isManualListReadOnly) {
-      toast.info('Only the room host can edit the shared list.');
+      toast.info('Only the host or co-host can edit the shared list.');
       return;
     }
 
@@ -308,7 +328,9 @@ function App() {
       return;
     }
 
-    setManualRestaurants((prev) => [...prev, createManualRestaurant(name)]);
+    const nextRestaurants = [...manualRestaurants, createManualRestaurant(name)];
+    setManualRestaurants(nextRestaurants);
+    syncGroupListFromRestaurants(nextRestaurants);
     setManualInput('');
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
@@ -325,15 +347,16 @@ function App() {
 
   const loadPresetRestaurants = useCallback((preset: ManualPreset) => {
     if (isManualListReadOnly) {
-      toast.info('Only the room host can edit the shared list.');
+      toast.info('Only the host or co-host can edit the shared list.');
       return;
     }
 
     const restaurants = buildRestaurantsFromNames(preset.restaurants);
     setManualRestaurants(restaurants);
+    syncGroupListFromRestaurants(restaurants);
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
-  }, [buildRestaurantsFromNames, isManualListReadOnly]);
+  }, [buildRestaurantsFromNames, isManualListReadOnly, syncGroupListFromRestaurants]);
 
   const saveCurrentAsPreset = () => {
     const trimmedName = presetNameInput.trim();
@@ -362,39 +385,52 @@ function App() {
 
   const removeManualRestaurant = (id: string) => {
     if (isManualListReadOnly) {
-      toast.info('Only the room host can edit the shared list.');
+      toast.info('Only the host or co-host can edit the shared list.');
       return;
     }
 
-    setManualRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== id));
+    const nextRestaurants = manualRestaurants.filter((restaurant) => restaurant.id !== id);
+    setManualRestaurants(nextRestaurants);
+    syncGroupListFromRestaurants(nextRestaurants);
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
   };
 
   const clearManualRestaurants = () => {
     if (isManualListReadOnly) {
-      toast.info('Only the room host can edit the shared list.');
+      toast.info('Only the host or co-host can edit the shared list.');
       return;
     }
 
     if (!window.confirm('Clear all restaurants?')) return;
     setManualRestaurants([]);
+    syncGroupListFromRestaurants([]);
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
   };
 
   const manualHelperText = useMemo(() => {
-    if (isGroupRoomActive && !isGroupHost) return 'Waiting for host to update list and start the spin';
+    if (isGroupRoomActive && !canEditGroupList) return 'Waiting for host or co-host to update list and start the spin';
     if (isGroupRoomActive && isGroupHost) return 'Host mode: your list changes sync to everyone in the room';
+    if (isGroupRoomActive && isGroupCohost) return 'Co-host mode: your list changes sync to everyone in the room';
     if (manualRestaurants.length === 0) return 'Add restaurants to start';
     if (manualRestaurants.length === 1) return 'Add at least 2 restaurants to spin';
     return undefined;
-  }, [isGroupHost, isGroupRoomActive, manualRestaurants.length]);
+  }, [canEditGroupList, isGroupCohost, isGroupHost, isGroupRoomActive, manualRestaurants.length]);
 
   const manualRestaurantNames = useMemo(
     () => normalizeManualNames(manualRestaurants.map((restaurant) => restaurant.name)),
     [manualRestaurants],
   );
+
+  const shuffleManualRestaurants = useCallback(() => {
+    if (isManualListReadOnly) return;
+    const shuffledRestaurants = [...manualRestaurants].sort(() => Math.random() - 0.5);
+    setManualRestaurants(shuffledRestaurants);
+    syncGroupListFromRestaurants(shuffledRestaurants);
+    setManualSpinResult(null);
+    setManualWheelKey((prev) => prev + 1);
+  }, [isManualListReadOnly, manualRestaurants, syncGroupListFromRestaurants]);
 
   const manualExternalSpin = useMemo(() => {
     if (!isGroupRoomActive || !groupCurrentSpin) return null;
@@ -438,31 +474,63 @@ function App() {
   }, [joinGroupRoom]);
 
   useEffect(() => {
-    if (!isGroupRoomActive || !isGroupHost) return;
+    if (!isGroupRoomActive || !canEditGroupList || !groupRoomId) return;
+    if (seededRoomSyncIdRef.current === groupRoomId) return;
+
+    seededRoomSyncIdRef.current = groupRoomId;
+    const normalizedRemoteNames = normalizeManualNames(groupRoomListNames);
+    if (normalizedRemoteNames.length > 0 || manualRestaurantNames.length === 0) return;
+
+    const signature = JSON.stringify(manualRestaurantNames);
+    pendingRoomListSyncRef.current = {
+      roomId: groupRoomId,
+      signature,
+      startedAt: Date.now(),
+    };
     void syncHostList(manualRestaurantNames);
-  }, [isGroupHost, isGroupRoomActive, manualRestaurantNames, syncHostList]);
+  }, [canEditGroupList, groupRoomId, groupRoomListNames, isGroupRoomActive, manualRestaurantNames, syncHostList]);
 
   useEffect(() => {
-    if (!isGroupRoomActive || isGroupHost) {
-      lastAppliedRoomListRef.current = '';
+    if (!isGroupRoomActive) {
+      seededRoomSyncIdRef.current = '';
+      pendingRoomListSyncRef.current = null;
       return;
     }
 
-    const listSignature = JSON.stringify(groupRoomListNames);
-    if (listSignature === lastAppliedRoomListRef.current) return;
-    lastAppliedRoomListRef.current = listSignature;
+    const normalizedRemoteNames = normalizeManualNames(groupRoomListNames);
+    const remoteSignature = JSON.stringify(normalizedRemoteNames);
+    const localSignature = JSON.stringify(manualRestaurantNames);
 
-    const timeoutId = window.setTimeout(() => {
-      const syncedRestaurants = buildRestaurantsFromNames(groupRoomListNames);
-      setManualRestaurants(syncedRestaurants);
-      setManualSpinResult(null);
-      setManualWheelKey((prev) => prev + 1);
-    }, 0);
+    const pendingSync = pendingRoomListSyncRef.current;
+    if (pendingSync) {
+      if (pendingSync.roomId !== groupRoomId) {
+        pendingRoomListSyncRef.current = null;
+      } else if (remoteSignature === pendingSync.signature) {
+        pendingRoomListSyncRef.current = null;
+      } else if (canEditGroupList && Date.now() - pendingSync.startedAt < ROOM_LIST_SYNC_GRACE_MS) {
+        return;
+      } else {
+        pendingRoomListSyncRef.current = null;
+      }
+    }
 
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [buildRestaurantsFromNames, groupRoomListNames, isGroupHost, isGroupRoomActive]);
+    if (remoteSignature === localSignature) return;
+
+    // Protect editable clients from being wiped by an initial empty list until room seed runs.
+    if (
+      canEditGroupList
+      && seededRoomSyncIdRef.current !== groupRoomId
+      && normalizedRemoteNames.length === 0
+      && manualRestaurantNames.length > 0
+    ) {
+      return;
+    }
+
+    const syncedRestaurants = buildRestaurantsFromNames(normalizedRemoteNames);
+    setManualRestaurants(syncedRestaurants);
+    setManualSpinResult(null);
+    setManualWheelKey((prev) => prev + 1);
+  }, [buildRestaurantsFromNames, canEditGroupList, groupRoomId, groupRoomListNames, isGroupRoomActive, manualRestaurantNames]);
 
   useEffect(() => {
     window.localStorage.setItem(MANUAL_RESTAURANTS_STORAGE_KEY, JSON.stringify(manualRestaurants));
@@ -520,18 +588,23 @@ function App() {
         firebaseConfigError={firebaseConfigError}
         authLoading={groupAuthLoading}
         authError={groupAuthError}
+        authUid={groupAuthUid}
         displayName={groupDisplayName}
         resolvedDisplayName={groupResolvedDisplayName}
         setDisplayName={setGroupDisplayName}
         roomId={groupRoomId}
+        hostUid={groupHostUid}
         roomLink={groupRoomLink}
         isHost={isGroupHost}
+        isCohost={isGroupCohost}
+        cohostUids={groupCohostUids}
         isBusy={groupRoomBusy}
         roomError={groupRoomError}
         participants={groupParticipants}
         onCreateRoom={handleCreateGroupRoom}
         onJoinRoom={handleJoinGroupRoom}
         onLeaveRoom={leaveGroupRoom}
+        onSetParticipantCohost={setParticipantCohost}
         onClearRoomError={clearGroupRoomError}
       />
       <Features />
@@ -824,12 +897,14 @@ function App() {
               {isGroupRoomActive && (
                 <div className="mb-4 rounded-xl border border-brand-orange/30 bg-brand-linen px-4 py-3 text-sm text-eatspin-gray-1">
                   <p className="font-semibold text-brand-black">
-                    Room {groupRoomId} {isGroupHost ? '(Host)' : '(Participant)'}
+                    Room {groupRoomId} {isGroupHost ? '(Host)' : isGroupCohost ? '(Co-host)' : '(Participant)'}
                   </p>
                   <p>
                     {isGroupHost
                       ? 'Your list edits sync to everyone in this room.'
-                      : 'List editing is host-only in v1. You will receive live list and spin updates.'}
+                      : isGroupCohost
+                        ? 'You can edit the shared list as co-host. Only host can start spins.'
+                        : 'List editing is host/co-host only. You will receive live list and spin updates.'}
                   </p>
                 </div>
               )}
@@ -846,9 +921,7 @@ function App() {
                 isSpinning={isSpinning}
                 setIsSpinning={setIsSpinning}
                 onShuffle={() => {
-                  if (isManualListReadOnly) return;
-                  setManualRestaurants((prev) => [...prev].sort(() => Math.random() - 0.5));
-                  setManualWheelKey((prev) => prev + 1);
+                  shuffleManualRestaurants();
                 }}
                 canSpin={manualRestaurants.length >= 2 && (!isGroupRoomActive || isGroupHost)}
                 helperText={manualHelperText}

@@ -100,9 +100,27 @@ export const enhancedFilterRestaurants = (
   if (nonHalalOnly) {
     filtered = filtered.filter(isNonHalalRestaurant);
   }
-  
+
+  const withDistance = userLocation
+    ? filtered.map((restaurant) => ({
+        ...restaurant,
+        distance: calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          restaurant.coordinates.lat,
+          restaurant.coordinates.lng
+        ),
+      }))
+    : filtered;
+
   // Then filter by radius
-  filtered = filterByRadius(filtered, userLocation, radiusKm);
-  
-  return filtered;
+  const withinRadius = userLocation
+    ? withDistance.filter((restaurant) => (restaurant.distance ?? 0) <= radiusKm)
+    : filterByRadius(withDistance, userLocation, radiusKm);
+
+  if (!userLocation) {
+    return withinRadius;
+  }
+
+  return [...withinRadius].sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
 };

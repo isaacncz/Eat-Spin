@@ -253,7 +253,11 @@ function App() {
   // Shuffle wheel restaurants
   const shuffleWheel = () => {
     const shuffled = [...roundRestaurants].sort(() => Math.random() - 0.5);
-    setWheelRestaurants(shuffled.slice(0, 12));
+    const sliced = shuffled.slice(0, 12);
+    const sortedByDistance = location
+      ? [...sliced].sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
+      : sliced;
+    setWheelRestaurants(sortedByDistance);
   };
 
   const switchTab = (tab: SpinTab) => {
@@ -592,7 +596,7 @@ function App() {
                                 </span>
                               ))}
                               <span className="rounded-full bg-white px-2 py-0.5">{restaurant.priceRange}</span>
-                              {restaurant.distance && (
+                              {restaurant.distance !== undefined && (
                                 <span className="rounded-full bg-white px-2 py-0.5">{restaurant.distance.toFixed(1)} km</span>
                               )}
                             </div>

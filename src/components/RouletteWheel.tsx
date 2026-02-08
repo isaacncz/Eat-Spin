@@ -380,7 +380,7 @@ export function RouletteWheel({
                   >
                     {displayName}
                   </span>
-                  {restaurant.distance && (
+                  {restaurant.distance !== undefined && (
                     <span 
                       className="text-[8px] sm:text-[10px] font-semibold whitespace-nowrap"
                       style={{
@@ -389,7 +389,7 @@ export function RouletteWheel({
                         opacity: 0.9,
                       }}
                     >
-                      {restaurant.distance.toFixed(1)}km
+                      {restaurant.distance.toFixed(1)} km
                     </span>
                   )}
                 </div>
@@ -483,7 +483,7 @@ export function RouletteWheel({
                 <span className="text-eatspin-orange font-medium">{spinResult.priceRange}</span>
               </div>
               
-              {spinResult.distance && (
+              {spinResult.distance !== undefined && (
                 <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
                   <Clock3 size={16} className="text-[#F4C430] flex-shrink-0" />
                   <span>{spinResult.distance.toFixed(1)} km away</span>

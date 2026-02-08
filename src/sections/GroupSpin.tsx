@@ -1,10 +1,34 @@
-import { Users, Link2, CheckCircle2, Sparkles, Trophy } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Users, Link2, CheckCircle2, Sparkles, Trophy, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 
 export function GroupSpin() {
+  const [roomCode, setRoomCode] = useState('');
+  const [roomLink, setRoomLink] = useState('');
+  const [hasCopied, setHasCopied] = useState(false);
+
+  const baseUrl = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}${window.location.pathname}`;
+  }, []);
+
+  const handleCreateRoom = () => {
+    const nextCode = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const nextLink = baseUrl ? `${baseUrl}?room=${nextCode}` : `?room=${nextCode}`;
+    setRoomCode(nextCode);
+    setRoomLink(nextLink);
+    setHasCopied(false);
+  };
+
+  const handleCopyLink = async () => {
+    if (!roomLink || typeof navigator === 'undefined' || !navigator.clipboard) return;
+    await navigator.clipboard.writeText(roomLink);
+    setHasCopied(true);
+  };
+
   return (
     <section id="group-spin" className="py-16 px-4 sm:px-6 lg:px-8 bg-brand-linen">
       <div className="max-w-6xl mx-auto">
@@ -35,11 +59,33 @@ export function GroupSpin() {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <Button className="w-full bg-brand-orange hover:bg-brand-orange/90 text-white font-heading">
+              <Button
+                className="w-full bg-brand-orange hover:bg-brand-orange/90 text-white font-heading"
+                onClick={handleCreateRoom}
+              >
                 Create room link
               </Button>
               <div className="rounded-xl border border-dashed border-brand-orange/30 bg-white/70 px-4 py-3 text-sm text-eatspin-gray-1">
-                Room code will appear here once created.
+                {roomCode ? (
+                  <div className="space-y-2">
+                    <p className="text-xs uppercase tracking-wide text-brand-black/60">Room code</p>
+                    <p className="font-heading text-base text-brand-black">{roomCode}</p>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <span className="truncate text-xs text-brand-black/70">{roomLink}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-brand-orange text-brand-orange hover:bg-brand-orange/10"
+                        onClick={handleCopyLink}
+                      >
+                        {hasCopied ? <Check size={16} /> : <Copy size={16} />}
+                        {hasCopied ? 'Copied' : 'Copy link'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  'Room code will appear here once created.'
+                )}
               </div>
             </CardContent>
           </Card>

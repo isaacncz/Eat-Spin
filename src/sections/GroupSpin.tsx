@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Users, Link2, CheckCircle2, Sparkles, Trophy, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,18 +9,40 @@ export function GroupSpin() {
   const [roomCode, setRoomCode] = useState('');
   const [roomLink, setRoomLink] = useState('');
   const [hasCopied, setHasCopied] = useState(false);
+  const [joinValue, setJoinValue] = useState('');
+  const [joinedRoom, setJoinedRoom] = useState('');
 
   const baseUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
     return `${window.location.origin}${window.location.pathname}`;
   }, []);
 
-  const handleCreateRoom = () => {
-    const nextCode = Math.random().toString(36).slice(2, 8).toUpperCase();
-    const nextLink = baseUrl ? `${baseUrl}?room=${nextCode}` : `?room=${nextCode}`;
-    setRoomCode(nextCode);
+  const normalizeRoomCode = (value: string) => value.replace(/[^a-z0-9]/gi, '').slice(0, 6).toUpperCase();
+
+  const buildRoomLink = (code: string) => {
+    if (!baseUrl) return `?room=${code}`;
+    const url = new URL(baseUrl);
+    url.searchParams.set('room', code);
+    return url.toString();
+  };
+
+  const updateRoomState = (code: string) => {
+    const normalized = normalizeRoomCode(code);
+    if (!normalized) return;
+    const nextLink = buildRoomLink(normalized);
+    setRoomCode(normalized);
     setRoomLink(nextLink);
     setHasCopied(false);
+    setJoinedRoom(normalized);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('room', normalized);
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
+  const handleCreateRoom = () => {
+    updateRoomState(Math.random().toString(36).slice(2, 8));
   };
 
   const handleCopyLink = async () => {
@@ -28,6 +50,33 @@ export function GroupSpin() {
     await navigator.clipboard.writeText(roomLink);
     setHasCopied(true);
   };
+
+  const extractRoomCode = (value: string) => {
+    if (value.includes('room=')) {
+      try {
+        return new URL(value).searchParams.get('room') ?? '';
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  };
+
+  const handleJoinRoom = () => {
+    if (!joinValue.trim()) return;
+    const code = extractRoomCode(joinValue);
+    updateRoomState(code);
+    setJoinValue('');
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const paramRoom = params.get('room');
+    if (paramRoom) {
+      updateRoomState(paramRoom);
+    }
+  }, []);
 
   return (
     <section id="group-spin" className="py-16 px-4 sm:px-6 lg:px-8 bg-brand-linen">
@@ -106,13 +155,41 @@ export function GroupSpin() {
               <Input
                 placeholder="Paste room link or enter code"
                 className="h-12 rounded-xl border-eatspin-peach/60 bg-white"
+                value={joinValue}
+                onChange={(event) => setJoinValue(event.target.value)}
               />
-              <Button variant="outline" className="w-full border-brand-orange text-brand-orange hover:bg-brand-orange/10">
+              <Button
+                variant="outline"
+                className="w-full border-brand-orange text-brand-orange hover:bg-brand-orange/10"
+                onClick={handleJoinRoom}
+              >
                 Join room
               </Button>
             </CardContent>
           </Card>
         </div>
+
+        {joinedRoom && (
+          <div className="mt-10 rounded-2xl border border-brand-orange/30 bg-white px-6 py-5 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-brand-black/60">Joined room</p>
+                <p className="font-heading text-lg text-brand-black">{joinedRoom}</p>
+                <p className="text-sm text-eatspin-gray-1">Invite others with your link or let them paste the code.</p>
+              </div>
+              {roomLink && (
+                <Button
+                  variant="outline"
+                  className="border-brand-orange text-brand-orange hover:bg-brand-orange/10"
+                  onClick={handleCopyLink}
+                >
+                  {hasCopied ? <Check size={16} /> : <Copy size={16} />}
+                  {hasCopied ? 'Copied' : 'Copy room link'}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="mt-12 grid gap-4 sm:grid-cols-3">
           {[

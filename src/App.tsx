@@ -142,6 +142,7 @@ function App() {
   const [showWheelSection, setShowWheelSection] = useState(false);
   const [wheelRestaurants, setWheelRestaurants] = useState<Restaurant[]>([]);
   const [roundRemovedRestaurantIds, setRoundRemovedRestaurantIds] = useState<string[]>([]);
+  const [pendingAutoRemovalId, setPendingAutoRemovalId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<SpinTab>('auto');
   const [autoWheelKey, setAutoWheelKey] = useState(0);
   const [isReviewExpanded, setIsReviewExpanded] = useState(false);
@@ -150,6 +151,7 @@ function App() {
   const [manualRestaurants, setManualRestaurants] = useState<Restaurant[]>(() => loadManualRestaurants());
   const [manualWheelKey, setManualWheelKey] = useState(0);
   const [manualSpinResult, setManualSpinResult] = useState<Restaurant | null>(null);
+  const [pendingManualRemovalId, setPendingManualRemovalId] = useState<string | null>(null);
   const [presetNameInput, setPresetNameInput] = useState('');
   const [presetMealTimeInput, setPresetMealTimeInput] = useState<PresetMealTime>(() => getPresetMealTime());
   const [manualPresets, setManualPresets] = useState<ManualPreset[]>(() => loadManualPresets());
@@ -200,16 +202,32 @@ function App() {
     setAutoWheelKey((prev) => prev + 1);
   };
 
+  const handleAutoSpinStart = useCallback(() => {
+    if (!pendingAutoRemovalId) return null;
+
+    setPendingAutoRemovalId(null);
+    removeRestaurantForRound(pendingAutoRemovalId);
+    return wheelRestaurants.filter((restaurant) => restaurant.id !== pendingAutoRemovalId);
+  }, [pendingAutoRemovalId, removeRestaurantForRound, wheelRestaurants]);
+
+  const handleManualSpinStart = useCallback(() => {
+    if (!pendingManualRemovalId) return null;
+
+    setPendingManualRemovalId(null);
+    setManualRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== pendingManualRemovalId));
+    setManualWheelKey((prev) => prev + 1);
+    return manualRestaurants.filter((restaurant) => restaurant.id !== pendingManualRemovalId);
+  }, [manualRestaurants, pendingManualRemovalId]);
+
   // Handle spin complete
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
     recordSpin(restaurant.id, currentMealTime);
-    removeRestaurantForRound(restaurant.id);
-  }, [currentMealTime, recordSpin, removeRestaurantForRound]);
+    setPendingAutoRemovalId(restaurant.id);
+  }, [currentMealTime, recordSpin]);
 
   const handleManualSpinComplete = useCallback((restaurant: Restaurant) => {
     setManualSpinResult(restaurant);
-    setManualRestaurants((prev) => prev.filter((item) => item.id !== restaurant.id));
-    setManualWheelKey((prev) => prev + 1);
+    setPendingManualRemovalId(restaurant.id);
   }, []);
 
   // Handle spin attempt
@@ -231,6 +249,7 @@ function App() {
   const resetAutoWheel = () => {
     setShowSpinLimitWarning(false);
     setRoundRemovedRestaurantIds([]);
+    setPendingAutoRemovalId(null);
     setShowWheelSection(false);
     setWheelRestaurants([]);
     setAutoWheelKey((prev) => prev + 1);
@@ -248,9 +267,11 @@ function App() {
       setWheelRestaurants([]);
       setShowWheelSection(false);
       setRoundRemovedRestaurantIds([]);
+      setPendingAutoRemovalId(null);
       setAutoWheelKey((prev) => prev + 1);
     } else {
       setManualSpinResult(null);
+      setPendingManualRemovalId(null);
       setManualWheelKey((prev) => prev + 1);
     }
   };
@@ -685,6 +706,7 @@ function App() {
                 spinButtonLabel="Spin the Wheel!"
                 emptyStateTitle="Add restaurants to start"
                 emptyStateSubtitle="Type any restaurant you like…"
+                onSpinStart={handleManualSpinStart}
               />
 
                 <div id="manual-input" className="mt-8 max-w-xl mx-auto">
@@ -850,6 +872,7 @@ function App() {
               isSpinning={isSpinning}
               setIsSpinning={setIsSpinning}
               onShuffle={shuffleWheel}
+              onSpinStart={handleAutoSpinStart}
             />
           </div>
         </section>

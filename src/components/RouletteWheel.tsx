@@ -18,6 +18,7 @@ interface RouletteWheelProps {
   emptyStateTitle?: string;
   emptyStateSubtitle?: string;
   onEditList?: () => void;
+  onSpinStart?: () => Restaurant[] | null;
 }
 
 // Vibrant appetizing color palette
@@ -68,6 +69,7 @@ export function RouletteWheel({
   emptyStateTitle = 'No restaurants match your criteria',
   emptyStateSubtitle = 'Try selecting different categories or check back during meal hours',
   onEditList,
+  onSpinStart,
 }: RouletteWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
   const wheelScrollRef = useRef<HTMLDivElement>(null);
@@ -160,7 +162,9 @@ export function RouletteWheel({
   };
 
   const handleSpin = () => {
-    if (isSpinning || restaurants.length === 0 || !canSpin) return;
+    if (isSpinning || !canSpin) return;
+    const spinRestaurants = onSpinStart?.() ?? restaurants;
+    if (spinRestaurants.length < 2) return;
 
     // Re-center the wheel in view when starting a spin (especially useful on mobile).
     recenterWheel();
@@ -172,10 +176,10 @@ export function RouletteWheel({
     const additionalRotation = 1440 + Math.random() * 720;
     const targetRotation = currentRotation + additionalRotation;
     
-    const segmentAngle = 360 / restaurants.length;
+    const segmentAngle = 360 / spinRestaurants.length;
     const finalRotation = targetRotation % 360;
-    const selectedIndex = Math.floor((360 - finalRotation) / segmentAngle) % restaurants.length;
-    const result = restaurants[selectedIndex];
+    const selectedIndex = Math.floor((360 - finalRotation) / segmentAngle) % spinRestaurants.length;
+    const result = spinRestaurants[selectedIndex];
 
     gsap.to(wheelRef.current, {
       rotation: targetRotation,

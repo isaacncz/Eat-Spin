@@ -151,8 +151,6 @@ function App() {
   const [manualRestaurants, setManualRestaurants] = useState<Restaurant[]>(() => loadManualRestaurants());
   const [manualWheelKey, setManualWheelKey] = useState(0);
   const [manualSpinResult, setManualSpinResult] = useState<Restaurant | null>(null);
-  const [pendingManualRemovalId, setPendingManualRemovalId] = useState<string | null>(null);
-  const [manualRespinChoice, setManualRespinChoice] = useState<'keep' | 'remove' | null>(null);
   const [presetNameInput, setPresetNameInput] = useState('');
   const [presetMealTimeInput, setPresetMealTimeInput] = useState<PresetMealTime>(() => getPresetMealTime());
   const [manualPresets, setManualPresets] = useState<ManualPreset[]>(() => loadManualPresets());
@@ -217,20 +215,6 @@ function App() {
     return wheelRestaurants.filter((restaurant) => restaurant.id !== pendingAutoRemovalId);
   }, [pendingAutoRemovalId, removeRestaurantForRound, wheelRestaurants]);
 
-  const handleManualSpinStart = useCallback(() => {
-    if (!pendingManualRemovalId) return null;
-
-    setPendingManualRemovalId(null);
-    const shouldRemove = manualRespinChoice === 'remove';
-    setManualRespinChoice(null);
-    if (!shouldRemove) {
-      return manualRestaurants;
-    }
-
-    setManualRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== pendingManualRemovalId));
-    return manualRestaurants.filter((restaurant) => restaurant.id !== pendingManualRemovalId);
-  }, [manualRespinChoice, manualRestaurants, pendingManualRemovalId]);
-
   // Handle spin complete
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
     recordSpin(restaurant.id, currentMealTime);
@@ -239,8 +223,6 @@ function App() {
 
   const handleManualSpinComplete = useCallback((restaurant: Restaurant) => {
     setManualSpinResult(restaurant);
-    setPendingManualRemovalId(restaurant.id);
-    setManualRespinChoice(null);
   }, []);
 
   // Handle spin attempt
@@ -284,8 +266,6 @@ function App() {
       setAutoWheelKey((prev) => prev + 1);
     } else {
       setManualSpinResult(null);
-      setPendingManualRemovalId(null);
-      setManualRespinChoice(null);
       setManualWheelKey((prev) => prev + 1);
     }
   };
@@ -306,7 +286,6 @@ function App() {
     setManualRestaurants((prev) => [...prev, createManualRestaurant(name)]);
     setManualInput('');
     setManualSpinResult(null);
-    setManualRespinChoice(null);
     setManualWheelKey((prev) => prev + 1);
   };
 
@@ -323,7 +302,6 @@ function App() {
     const restaurants = buildRestaurantsFromNames(preset.restaurants);
     setManualRestaurants(restaurants);
     setManualSpinResult(null);
-    setManualRespinChoice(null);
     setManualWheelKey((prev) => prev + 1);
   }, [buildRestaurantsFromNames]);
 
@@ -355,7 +333,6 @@ function App() {
   const removeManualRestaurant = (id: string) => {
     setManualRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== id));
     setManualSpinResult(null);
-    setManualRespinChoice(null);
     setManualWheelKey((prev) => prev + 1);
   };
 
@@ -363,18 +340,14 @@ function App() {
     if (!window.confirm('Clear all restaurants?')) return;
     setManualRestaurants([]);
     setManualSpinResult(null);
-    setManualRespinChoice(null);
     setManualWheelKey((prev) => prev + 1);
   };
 
   const manualHelperText = useMemo(() => {
     if (manualRestaurants.length === 0) return 'Add restaurants to start';
     if (manualRestaurants.length === 1) return 'Add at least 2 restaurants to spin';
-    if (pendingManualRemovalId && !manualRespinChoice) {
-      return 'Choose whether to remove the last pick before spinning again';
-    }
     return undefined;
-  }, [manualRestaurants.length, manualRespinChoice, pendingManualRemovalId]);
+  }, [manualRestaurants.length]);
 
   useEffect(() => {
     window.localStorage.setItem(MANUAL_RESTAURANTS_STORAGE_KEY, JSON.stringify(manualRestaurants));
@@ -722,42 +695,12 @@ function App() {
                   setManualRestaurants((prev) => [...prev].sort(() => Math.random() - 0.5));
                   setManualWheelKey((prev) => prev + 1);
                 }}
-                canSpin={manualRestaurants.length >= 2 && !(pendingManualRemovalId && !manualRespinChoice)}
+                canSpin={manualRestaurants.length >= 2}
                 helperText={manualHelperText}
                 spinButtonLabel="Spin the Wheel!"
                 emptyStateTitle="Add restaurants to start"
                 emptyStateSubtitle="Type any restaurant you like…"
-                onSpinStart={handleManualSpinStart}
               />
-
-                {pendingManualRemovalId && (
-                  <div className="mt-4 rounded-2xl border border-eatspin-peach/60 bg-white p-4 text-center shadow-sm">
-                    <p className="text-sm font-medium text-brand-black">
-                      Keep the last pick on the wheel?
-                    </p>
-                    <p className="mt-1 text-xs text-eatspin-gray-1">
-                      Choose to keep it or remove it before your next spin.
-                    </p>
-                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-center">
-                      <Button
-                        type="button"
-                        variant={manualRespinChoice === 'keep' ? 'default' : 'outline'}
-                        className={manualRespinChoice === 'keep' ? 'bg-brand-orange hover:bg-brand-orange/90' : ''}
-                        onClick={() => setManualRespinChoice('keep')}
-                      >
-                        Keep it
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={manualRespinChoice === 'remove' ? 'default' : 'outline'}
-                        className={manualRespinChoice === 'remove' ? 'bg-brand-orange hover:bg-brand-orange/90' : ''}
-                        onClick={() => setManualRespinChoice('remove')}
-                      >
-                        Remove it
-                      </Button>
-                    </div>
-                  </div>
-                )}
 
                 <div id="manual-input" className="mt-8 max-w-xl mx-auto">
                   {manualSpinResult && (

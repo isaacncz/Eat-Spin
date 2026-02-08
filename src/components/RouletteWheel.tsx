@@ -74,6 +74,7 @@ export function RouletteWheel({
   const wheelRef = useRef<HTMLDivElement>(null);
   const wheelScrollRef = useRef<HTMLDivElement>(null);
   const wheelContainerRef = useRef<HTMLDivElement>(null);
+  const previousRestaurantsRef = useRef(restaurants);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
   const currentRotationRef = useRef(0);
   const [wheelSize, setWheelSize] = useState(320);
@@ -210,6 +211,9 @@ export function RouletteWheel({
 
   // Reset wheel position when restaurants change
   useEffect(() => {
+    const restaurantsChanged = previousRestaurantsRef.current !== restaurants;
+    previousRestaurantsRef.current = restaurants;
+    if (!restaurantsChanged) return;
     if (isSpinning) return;
     if (wheelRef.current) {
       gsap.set(wheelRef.current, { rotation: 0 });

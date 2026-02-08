@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Link2, CheckCircle2, Sparkles, Trophy, Copy, Check, ShieldCheck, LogOut, UserPlus, UserMinus } from 'lucide-react';
+import { Users, Link2, Sparkles, Trophy, Copy, Check, ShieldCheck, LogOut, UserPlus, UserMinus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -102,8 +102,7 @@ export function GroupSpin({
             Group Spin makes deciding effortless
           </h2>
           <p className="mx-auto max-w-2xl text-eatspin-gray-1">
-            Real rooms now sync through Firebase so participants, list updates, and spin results work across browsers
-            and devices.
+            Firebase-powered rooms keep participants, shared lists, and spin outcomes synced across browsers and devices.
           </p>
         </div>
 
@@ -289,11 +288,6 @@ export function GroupSpin({
         <div className="mt-12 grid gap-4 sm:grid-cols-3">
           {[
             {
-              icon: <CheckCircle2 size={20} className="text-brand-orange" />,
-              title: 'Everyone taps Ready',
-              copy: 'Presence is synced in Realtime Database for true multi-device rooms.',
-            },
-            {
               icon: <Sparkles size={20} className="text-brand-orange" />,
               title: 'Host spins once',
               copy: 'Host writes one winner index, then every joined client animates to that result.',
@@ -302,6 +296,11 @@ export function GroupSpin({
               icon: <Trophy size={20} className="text-brand-orange" />,
               title: 'Shared final result',
               copy: 'No local-only randomness in room mode, so everyone sees the same winner.',
+            },
+            {
+              icon: <ShieldCheck size={20} className="text-brand-orange" />,
+              title: 'Fair for everyone',
+              copy: 'One committed result drives every client, so no one gets a different outcome.',
             },
           ].map((item) => (
             <div key={item.title} className="rounded-2xl border border-eatspin-peach/50 bg-white px-5 py-4 shadow-sm">

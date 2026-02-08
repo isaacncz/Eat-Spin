@@ -891,18 +891,6 @@ function App() {
                 </div>
               )}
 
-              {!isPremium && (
-                <div className="text-center">
-                  <button
-                    onClick={() => setShowSubscription(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full text-sm font-medium hover:shadow-lg transition-all duration-300 hover:scale-105"
-                  >
-                    <Crown size={16} />
-                    Upgrade to Premium for unlimited spins
-                  </button>
-                </div>
-              )}
-
               {isPremium && (
                 <div className="text-center">
                   <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full text-sm font-medium">

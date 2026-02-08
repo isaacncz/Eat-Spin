@@ -142,6 +142,7 @@ function App() {
   const [showWheelSection, setShowWheelSection] = useState(false);
   const [wheelRestaurants, setWheelRestaurants] = useState<Restaurant[]>([]);
   const [roundRemovedRestaurantIds, setRoundRemovedRestaurantIds] = useState<string[]>([]);
+  const [pendingAutoRemovalId, setPendingAutoRemovalId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<SpinTab>('auto');
   const [autoWheelKey, setAutoWheelKey] = useState(0);
   const [isReviewExpanded, setIsReviewExpanded] = useState(false);
@@ -194,9 +195,30 @@ function App() {
     filteredRestaurants.filter((restaurant) => !roundRemovedRestaurantIds.includes(restaurant.id))
   ), [filteredRestaurants, roundRemovedRestaurantIds]);
 
+  const removeRestaurantForRound = (
+    restaurantId: string,
+    options?: { bumpKey?: boolean },
+  ) => {
+    const { bumpKey = true } = options ?? {};
+    setRoundRemovedRestaurantIds((prev) => (prev.includes(restaurantId) ? prev : [...prev, restaurantId]));
+    setWheelRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== restaurantId));
+    if (bumpKey) {
+      setAutoWheelKey((prev) => prev + 1);
+    }
+  };
+
+  const handleAutoSpinStart = useCallback(() => {
+    if (!pendingAutoRemovalId) return null;
+
+    setPendingAutoRemovalId(null);
+    removeRestaurantForRound(pendingAutoRemovalId, { bumpKey: false });
+    return wheelRestaurants.filter((restaurant) => restaurant.id !== pendingAutoRemovalId);
+  }, [pendingAutoRemovalId, removeRestaurantForRound, wheelRestaurants]);
+
   // Handle spin complete
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
     recordSpin(restaurant.id, currentMealTime);
+    setPendingAutoRemovalId(restaurant.id);
   }, [currentMealTime, recordSpin]);
 
   const handleManualSpinComplete = useCallback((restaurant: Restaurant) => {
@@ -222,6 +244,7 @@ function App() {
   const resetAutoWheel = () => {
     setShowSpinLimitWarning(false);
     setRoundRemovedRestaurantIds([]);
+    setPendingAutoRemovalId(null);
     setShowWheelSection(false);
     setWheelRestaurants([]);
     setAutoWheelKey((prev) => prev + 1);
@@ -233,18 +256,13 @@ function App() {
     setWheelRestaurants(shuffled.slice(0, 12));
   };
 
-  const removeRestaurantForRound = (restaurantId: string) => {
-    setRoundRemovedRestaurantIds((prev) => (prev.includes(restaurantId) ? prev : [...prev, restaurantId]));
-    setWheelRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== restaurantId));
-    setAutoWheelKey((prev) => prev + 1);
-  };
-
   const switchTab = (tab: SpinTab) => {
     setActiveTab(tab);
     if (tab === 'auto') {
       setWheelRestaurants([]);
       setShowWheelSection(false);
       setRoundRemovedRestaurantIds([]);
+      setPendingAutoRemovalId(null);
       setAutoWheelKey((prev) => prev + 1);
     } else {
       setManualSpinResult(null);
@@ -847,6 +865,7 @@ function App() {
               isSpinning={isSpinning}
               setIsSpinning={setIsSpinning}
               onShuffle={shuffleWheel}
+              onSpinStart={handleAutoSpinStart}
             />
           </div>
         </section>

@@ -194,13 +194,22 @@ function App() {
     filteredRestaurants.filter((restaurant) => !roundRemovedRestaurantIds.includes(restaurant.id))
   ), [filteredRestaurants, roundRemovedRestaurantIds]);
 
+  const removeRestaurantForRound = (restaurantId: string) => {
+    setRoundRemovedRestaurantIds((prev) => (prev.includes(restaurantId) ? prev : [...prev, restaurantId]));
+    setWheelRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== restaurantId));
+    setAutoWheelKey((prev) => prev + 1);
+  };
+
   // Handle spin complete
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
     recordSpin(restaurant.id, currentMealTime);
-  }, [currentMealTime, recordSpin]);
+    removeRestaurantForRound(restaurant.id);
+  }, [currentMealTime, recordSpin, removeRestaurantForRound]);
 
   const handleManualSpinComplete = useCallback((restaurant: Restaurant) => {
     setManualSpinResult(restaurant);
+    setManualRestaurants((prev) => prev.filter((item) => item.id !== restaurant.id));
+    setManualWheelKey((prev) => prev + 1);
   }, []);
 
   // Handle spin attempt
@@ -231,12 +240,6 @@ function App() {
   const shuffleWheel = () => {
     const shuffled = [...roundRestaurants].sort(() => Math.random() - 0.5);
     setWheelRestaurants(shuffled.slice(0, 12));
-  };
-
-  const removeRestaurantForRound = (restaurantId: string) => {
-    setRoundRemovedRestaurantIds((prev) => (prev.includes(restaurantId) ? prev : [...prev, restaurantId]));
-    setWheelRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== restaurantId));
-    setAutoWheelKey((prev) => prev + 1);
   };
 
   const switchTab = (tab: SpinTab) => {

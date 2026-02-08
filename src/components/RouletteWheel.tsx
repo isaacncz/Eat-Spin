@@ -74,6 +74,7 @@ export function RouletteWheel({
   const wheelRef = useRef<HTMLDivElement>(null);
   const wheelScrollRef = useRef<HTMLDivElement>(null);
   const wheelContainerRef = useRef<HTMLDivElement>(null);
+  const previousRestaurantsRef = useRef(restaurants);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
   const currentRotationRef = useRef(0);
   const [wheelSize, setWheelSize] = useState(320);

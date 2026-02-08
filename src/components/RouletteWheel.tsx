@@ -24,6 +24,7 @@ interface RouletteWheelProps {
   } | null;
   onRequestSpin?: () => void | Promise<void>;
   canRequestSpin?: boolean;
+  onSpinStart?: () => Restaurant[] | null;
 }
 
 // Vibrant appetizing color palette
@@ -77,10 +78,12 @@ export function RouletteWheel({
   externalSpin = null,
   onRequestSpin,
   canRequestSpin = true,
+  onSpinStart,
 }: RouletteWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
   const wheelScrollRef = useRef<HTMLDivElement>(null);
   const wheelContainerRef = useRef<HTMLDivElement>(null);
+  const previousRestaurantsRef = useRef(restaurants);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
   const currentRotationRef = useRef(0);
   const [wheelSize, setWheelSize] = useState(320);
@@ -169,12 +172,13 @@ export function RouletteWheel({
     });
   }, []);
 
-  const animateSpinToIndex = useCallback((index: number) => {
-    if (restaurants.length === 0) return;
+  const animateSpinToIndex = useCallback((index: number, sourceRestaurants?: Restaurant[]) => {
+    const targetRestaurants = sourceRestaurants ?? restaurants;
+    if (targetRestaurants.length === 0) return;
 
-    const selectedIndex = ((Math.floor(index) % restaurants.length) + restaurants.length) % restaurants.length;
-    const result = restaurants[selectedIndex];
-    const segmentAngle = 360 / restaurants.length;
+    const selectedIndex = ((Math.floor(index) % targetRestaurants.length) + targetRestaurants.length) % targetRestaurants.length;
+    const result = targetRestaurants[selectedIndex];
+    const segmentAngle = 360 / targetRestaurants.length;
     const currentRotation = ((currentRotationRef.current % 360) + 360) % 360;
     const desiredFinalRotation = ((360 - (selectedIndex + 0.5) * segmentAngle) % 360 + 360) % 360;
     // Use whole-turn randomness so all clients can end on the exact same visual angle.
@@ -217,8 +221,10 @@ export function RouletteWheel({
 
   const handleLocalSpin = () => {
     if (isSpinning || restaurants.length === 0 || !canSpin) return;
-    const randomIndex = Math.floor(Math.random() * restaurants.length);
-    animateSpinToIndex(randomIndex);
+    const spinRestaurants = onSpinStart?.() ?? restaurants;
+    if (spinRestaurants.length < 2) return;
+    const randomIndex = Math.floor(Math.random() * spinRestaurants.length);
+    animateSpinToIndex(randomIndex, spinRestaurants);
   };
 
   const handleSpinClick = () => {
@@ -233,11 +239,15 @@ export function RouletteWheel({
 
   // Reset wheel position when restaurants change
   useEffect(() => {
+    const restaurantsChanged = previousRestaurantsRef.current !== restaurants;
+    previousRestaurantsRef.current = restaurants;
+    if (!restaurantsChanged) return;
+    if (isSpinning) return;
     if (wheelRef.current) {
       gsap.set(wheelRef.current, { rotation: 0 });
       currentRotationRef.current = 0;
     }
-  }, [restaurants]);
+  }, [isSpinning, restaurants]);
 
   useEffect(() => {
     if (!externalSpin || restaurants.length === 0) return;
@@ -405,7 +415,7 @@ export function RouletteWheel({
                   >
                     {displayName}
                   </span>
-                  {restaurant.distance && (
+                  {restaurant.distance !== undefined && (
                     <span 
                       className="text-[8px] sm:text-[10px] font-semibold whitespace-nowrap"
                       style={{
@@ -414,7 +424,7 @@ export function RouletteWheel({
                         opacity: 0.9,
                       }}
                     >
-                      {restaurant.distance.toFixed(1)}km
+                      {restaurant.distance.toFixed(1)} km
                     </span>
                   )}
                 </div>
@@ -508,7 +518,7 @@ export function RouletteWheel({
                 <span className="text-eatspin-orange font-medium">{spinResult.priceRange}</span>
               </div>
               
-              {spinResult.distance && (
+              {spinResult.distance !== undefined && (
                 <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
                   <Clock3 size={16} className="text-[#F4C430] flex-shrink-0" />
                   <span>{spinResult.distance.toFixed(1)} km away</span>

@@ -152,6 +152,7 @@ function App() {
   const [showWheelSection, setShowWheelSection] = useState(false);
   const [wheelRestaurants, setWheelRestaurants] = useState<Restaurant[]>([]);
   const [roundRemovedRestaurantIds, setRoundRemovedRestaurantIds] = useState<string[]>([]);
+  const [pendingAutoRemovalId, setPendingAutoRemovalId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<SpinTab>(() => {
     if (typeof window === 'undefined') return 'auto';
     return new URLSearchParams(window.location.search).get('room') ? 'manual' : 'auto';
@@ -240,9 +241,30 @@ function App() {
     filteredRestaurants.filter((restaurant) => !roundRemovedRestaurantIds.includes(restaurant.id))
   ), [filteredRestaurants, roundRemovedRestaurantIds]);
 
+  const removeRestaurantForRound = (
+    restaurantId: string,
+    options?: { bumpKey?: boolean },
+  ) => {
+    const { bumpKey = true } = options ?? {};
+    setRoundRemovedRestaurantIds((prev) => (prev.includes(restaurantId) ? prev : [...prev, restaurantId]));
+    setWheelRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== restaurantId));
+    if (bumpKey) {
+      setAutoWheelKey((prev) => prev + 1);
+    }
+  };
+
+  const handleAutoSpinStart = useCallback(() => {
+    if (!pendingAutoRemovalId) return null;
+
+    setPendingAutoRemovalId(null);
+    removeRestaurantForRound(pendingAutoRemovalId, { bumpKey: false });
+    return wheelRestaurants.filter((restaurant) => restaurant.id !== pendingAutoRemovalId);
+  }, [pendingAutoRemovalId, removeRestaurantForRound, wheelRestaurants]);
+
   // Handle spin complete
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
     recordSpin(restaurant.id, currentMealTime);
+    setPendingAutoRemovalId(restaurant.id);
   }, [currentMealTime, recordSpin]);
 
   const handleManualSpinComplete = useCallback((restaurant: Restaurant) => {
@@ -268,6 +290,7 @@ function App() {
   const resetAutoWheel = () => {
     setShowSpinLimitWarning(false);
     setRoundRemovedRestaurantIds([]);
+    setPendingAutoRemovalId(null);
     setShowWheelSection(false);
     setWheelRestaurants([]);
     setAutoWheelKey((prev) => prev + 1);
@@ -276,13 +299,11 @@ function App() {
   // Shuffle wheel restaurants
   const shuffleWheel = () => {
     const shuffled = [...roundRestaurants].sort(() => Math.random() - 0.5);
-    setWheelRestaurants(shuffled.slice(0, 12));
-  };
-
-  const removeRestaurantForRound = (restaurantId: string) => {
-    setRoundRemovedRestaurantIds((prev) => (prev.includes(restaurantId) ? prev : [...prev, restaurantId]));
-    setWheelRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== restaurantId));
-    setAutoWheelKey((prev) => prev + 1);
+    const sliced = shuffled.slice(0, 12);
+    const sortedByDistance = location
+      ? [...sliced].sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
+      : sliced;
+    setWheelRestaurants(sortedByDistance);
   };
 
   const switchTab = (tab: SpinTab) => {
@@ -291,6 +312,7 @@ function App() {
       setWheelRestaurants([]);
       setShowWheelSection(false);
       setRoundRemovedRestaurantIds([]);
+      setPendingAutoRemovalId(null);
       setAutoWheelKey((prev) => prev + 1);
     } else {
       setManualSpinResult(null);
@@ -795,7 +817,7 @@ function App() {
                       isReviewExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
                     }`}
                   >
-                    <ul className="overflow-hidden max-h-72 space-y-2 pr-1">
+                    <ul className="max-h-72 overflow-y-auto overscroll-contain space-y-2 pr-1">
                       {roundRestaurants.map((restaurant) => (
                         <li key={restaurant.id} className="flex items-start justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
                           <div>
@@ -807,7 +829,7 @@ function App() {
                                 </span>
                               ))}
                               <span className="rounded-full bg-white px-2 py-0.5">{restaurant.priceRange}</span>
-                              {restaurant.distance && (
+                              {restaurant.distance !== undefined && (
                                 <span className="rounded-full bg-white px-2 py-0.5">{restaurant.distance.toFixed(1)} km</span>
                               )}
                             </div>
@@ -1100,6 +1122,7 @@ function App() {
               isSpinning={isSpinning}
               setIsSpinning={setIsSpinning}
               onShuffle={shuffleWheel}
+              onSpinStart={handleAutoSpinStart}
             />
           </div>
         </section>

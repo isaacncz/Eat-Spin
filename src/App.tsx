@@ -1085,6 +1085,32 @@ function App() {
         </div>
       </section>
 
+      {activeTab === 'auto' && showWheelSection && location && roundRestaurants.length > 0 && (
+        <section id="wheel" className="py-10 sm:py-12 px-4 sm:px-6 lg:px-8 bg-brand-linen">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-5 sm:mb-6">
+              <h2 className="font-heading text-xl sm:text-2xl font-bold text-brand-black mb-1.5">
+                Spin the Wheel!
+              </h2>
+              <p className="text-sm sm:text-base text-eatspin-gray-1">
+                {roundRestaurants.length} restaurants ready for this round
+              </p>
+            </div>
+
+            <RouletteWheel
+              key={`auto-${autoWheelKey}`}
+              restaurants={wheelRestaurants}
+              totalCount={roundRestaurants.length}
+              onSpinComplete={handleSpinComplete}
+              isSpinning={isSpinning}
+              setIsSpinning={setIsSpinning}
+              onShuffle={shuffleWheel}
+              onSpinStart={handleAutoSpinStart}
+            />
+          </div>
+        </section>
+      )}
+
       <GroupSpin
         isFirebaseConfigured={isFirebaseConfigured}
         firebaseConfigError={firebaseConfigError}
@@ -1109,32 +1135,6 @@ function App() {
         onSetParticipantCohost={setParticipantCohost}
         onClearRoomError={clearGroupRoomError}
       />
-
-      {activeTab === 'auto' && showWheelSection && location && roundRestaurants.length > 0 && (
-        <section id="wheel" className="py-16 px-4 sm:px-6 lg:px-8 bg-brand-linen">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="font-heading text-2xl sm:text-3xl font-bold text-brand-black mb-2">
-                Spin the Wheel!
-              </h2>
-              <p className="text-eatspin-gray-1">
-                {roundRestaurants.length} restaurants ready for this round
-              </p>
-            </div>
-
-            <RouletteWheel
-              key={`auto-${autoWheelKey}`}
-              restaurants={wheelRestaurants}
-              totalCount={roundRestaurants.length}
-              onSpinComplete={handleSpinComplete}
-              isSpinning={isSpinning}
-              setIsSpinning={setIsSpinning}
-              onShuffle={shuffleWheel}
-              onSpinStart={handleAutoSpinStart}
-            />
-          </div>
-        </section>
-      )}
 
       <Testimonials />
       <CTA />

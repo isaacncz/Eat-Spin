@@ -95,6 +95,7 @@ export function RouletteWheel({
   const [wheelSize, setWheelSize] = useState(320);
   const celebrationTimeoutsRef = useRef<number[]>([]);
   const celebrationElementsRef = useRef<HTMLElement[]>([]);
+  const recenterTimeoutRef = useRef<number | null>(null);
   const lastExternalSpinIdRef = useRef('');
   const [winnerSliceIndex, setWinnerSliceIndex] = useState<number | null>(null);
   const [isWinnerSliceHighlighted, setIsWinnerSliceHighlighted] = useState(false);
@@ -169,16 +170,35 @@ export function RouletteWheel({
     return `conic-gradient(from 0deg, ${stops.join(', ')})`;
   }, [restaurants.length]);
 
-  const recenterWheel = useCallback(() => {
+  const scrollWheelIntoView = useCallback((behavior: ScrollBehavior) => {
     const target = wheelScrollRef.current ?? wheelContainerRef.current;
-    if (!target) return;
+    if (!target || typeof window === 'undefined') return;
 
-    // Some layouts reflow right after click; a second scroll on the next frame is more reliable on mobile.
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    requestAnimationFrame(() => {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
+    const navbarHeight = Number.parseInt(
+      window.getComputedStyle(document.documentElement).getPropertyValue('--navbar-height'),
+      10,
+    );
+    const offset = Number.isFinite(navbarHeight) ? navbarHeight : 72;
+    const targetTop = window.scrollY + target.getBoundingClientRect().top - offset - 8;
+    window.scrollTo({ top: Math.max(0, targetTop), behavior });
   }, []);
+
+  const recenterWheel = useCallback(() => {
+    // First pass: smooth scroll for expected UX.
+    scrollWheelIntoView('smooth');
+    window.requestAnimationFrame(() => {
+      scrollWheelIntoView('smooth');
+    });
+
+    // Correction pass: some browsers miss the smooth target during rapid reflow.
+    if (recenterTimeoutRef.current !== null) {
+      window.clearTimeout(recenterTimeoutRef.current);
+    }
+    recenterTimeoutRef.current = window.setTimeout(() => {
+      scrollWheelIntoView('auto');
+      recenterTimeoutRef.current = null;
+    }, 180);
+  }, [scrollWheelIntoView]);
 
   const animateSpinToIndex = useCallback((index: number, sourceRestaurants?: Restaurant[]) => {
     const targetRestaurants = sourceRestaurants ?? restaurants;
@@ -325,6 +345,9 @@ export function RouletteWheel({
   useEffect(() => {
     return () => {
       clearCelebrationEffects();
+      if (recenterTimeoutRef.current !== null) {
+        window.clearTimeout(recenterTimeoutRef.current);
+      }
       if (winnerPulseTimeoutRef.current !== null) {
         window.clearTimeout(winnerPulseTimeoutRef.current);
       }
@@ -359,9 +382,9 @@ export function RouletteWheel({
   );
 
   return (
-    <div className="flex flex-col items-center gap-8 py-8">
+    <div className="flex flex-col items-center gap-6 py-4 sm:py-5">
       {/* Roulette Wheel */}
-      <div ref={wheelScrollRef} className="relative mx-auto w-full max-w-[28rem] px-3 sm:px-4 overflow-hidden">
+      <div ref={wheelScrollRef} className="relative mx-auto w-full max-w-[32.5rem] px-2 sm:px-3 overflow-hidden">
         {/* Pointer */}
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
           <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[30px] border-t-eatspin-orange drop-shadow-lg" />
@@ -371,7 +394,7 @@ export function RouletteWheel({
         <div
           ref={wheelContainerRef}
           className="relative w-full aspect-square"
-          style={{ maxWidth: 'min(90vw, 28rem)' }}
+          style={{ maxWidth: 'min(85vw, 32.5rem)' }}
         >
           {/* Wheel */}
           <div

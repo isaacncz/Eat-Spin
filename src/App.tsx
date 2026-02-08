@@ -159,6 +159,7 @@ function App() {
   });
   const [autoWheelKey, setAutoWheelKey] = useState(0);
   const [isReviewExpanded, setIsReviewExpanded] = useState(false);
+  const [isMoreFiltersOpen, setIsMoreFiltersOpen] = useState(false);
 
   const [manualInput, setManualInput] = useState('');
   const [manualRestaurants, setManualRestaurants] = useState<Restaurant[]>(() => loadManualRestaurants());
@@ -631,27 +632,27 @@ function App() {
       />
       <Features />
 
-      <section id="app" className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+      <section id="app" className="py-8 sm:py-10 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-brand-black mb-4">
+          <div className="text-center mb-4">
+            <h2 className="font-heading text-2xl sm:text-4xl font-bold text-brand-black mb-2">
               Let's Find You Something to Eat!
             </h2>
-            <p className="text-eatspin-gray-1 max-w-lg mx-auto">
+            <p className="text-sm sm:text-base text-eatspin-gray-1 max-w-md mx-auto">
               Choose whether you want suggestions or already know your options
             </p>
           </div>
 
-          <div className="mb-6 flex justify-center">
+          <div className="mb-4 flex justify-center">
             <MealTimeIndicator />
           </div>
 
-          <div className="mb-8 flex justify-center">
-            <div className="inline-flex items-center justify-center p-1.5 bg-brand-black rounded-2xl border-2 border-brand-black shadow-lg">
+          <div className="mb-5 flex justify-center">
+            <div className="inline-flex items-center justify-center p-1 bg-brand-black rounded-2xl border-2 border-brand-black shadow-lg">
               <button
                 type="button"
                 onClick={() => switchTab('auto')}
-                className={`min-h-12 px-5 py-3 rounded-xl text-base font-heading font-bold transition-all duration-200 ${
+                className={`min-h-11 px-5 py-2.5 rounded-xl text-[0.95rem] font-heading font-bold transition-all duration-200 ${
                   activeTab === 'auto'
                     ? 'bg-brand-orange text-white shadow-lg'
                     : 'bg-white text-brand-black hover:bg-eatspin-peach/30'
@@ -662,7 +663,7 @@ function App() {
               <button
                 type="button"
                 onClick={() => switchTab('manual')}
-                className={`min-h-12 px-5 py-3 rounded-xl text-base font-heading font-bold transition-all duration-200 ${
+                className={`min-h-11 px-5 py-2.5 rounded-xl text-[0.95rem] font-heading font-bold transition-all duration-200 ${
                   activeTab === 'manual'
                     ? 'bg-brand-orange text-white shadow-lg'
                     : 'bg-white text-brand-black hover:bg-eatspin-peach/30'
@@ -676,7 +677,7 @@ function App() {
           {activeTab === 'auto' && (
             <>
               {!location && (
-                <div className="mb-8">
+                <div className="mb-6">
                   <LocationPermission
                     isLoading={locationLoading}
                     error={locationError}
@@ -687,47 +688,39 @@ function App() {
               )}
 
               {location && (
-                <div className="mb-6 flex items-center justify-center">
-                  <div className="flex items-center gap-2 px-4 py-2 bg-eatspin-success/10 rounded-full">
-                    <div className="w-2 h-2 bg-eatspin-success rounded-full animate-pulse" />
-                    <MapPin size={16} className="text-eatspin-success" />
-                    <span className="text-sm font-medium text-eatspin-success">
-                      Finding restaurants near you
-                    </span>
+                <div className="mb-6 rounded-2xl border border-eatspin-peach/60 bg-brand-linen/60 p-4 sm:p-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-eatspin-success/10 px-3 py-1.5">
+                      <div className="h-2 w-2 rounded-full bg-eatspin-success animate-pulse" />
+                      <MapPin size={15} className="text-eatspin-success" />
+                      <span className="text-sm font-medium text-eatspin-success">Finding restaurants near you</span>
+                    </div>
+                    <p className="text-sm text-eatspin-gray-1">
+                      <span className="font-semibold text-brand-orange">{roundRestaurants.length}</span> matches
+                    </p>
                   </div>
-                </div>
-              )}
 
-              {location && (
-                <div className="mb-6 max-w-md mx-auto">
-                  <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
-                    Search Radius: <span className="text-brand-orange font-bold">{radiusKm} km</span>
-                  </label>
-                  <input
-                    type="range"
-                    min="1"
-                    max="20"
-                    value={radiusKm}
-                    onChange={(e) => setRadiusKm(Number(e.target.value))}
-                    className="range-theme w-full"
-                  />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>1 km</span>
-                    <span>10 km</span>
-                    <span>20 km</span>
+                  <div className="mb-4">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Search radius: <span className="font-bold text-brand-orange">{radiusKm} km</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="20"
+                      value={radiusKm}
+                      onChange={(e) => setRadiusKm(Number(e.target.value))}
+                      className="range-theme w-full"
+                    />
+                    <div className="mt-1 flex justify-between text-xs text-gray-500">
+                      <span>1 km</span>
+                      <span>10 km</span>
+                      <span>20 km</span>
+                    </div>
                   </div>
-                </div>
-              )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div>
-                  <div className="mb-4 text-center">
-                    <h3 className="font-heading text-lg font-semibold text-brand-black mb-2">
-                      Price range
-                    </h3>
-                    <p className="text-sm text-eatspin-gray-1">Select any (optional)</p>
-                  </div>
-                  <div className="flex flex-wrap justify-center gap-2">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-eatspin-gray-1">Quick filters</span>
                     {priceOptions.map((price) => {
                       const isSelected = selectedPriceRanges.includes(price);
                       return (
@@ -735,56 +728,57 @@ function App() {
                           key={price}
                           type="button"
                           onClick={() => togglePriceRange(price)}
-                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                          className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
                             isSelected
-                              ? 'bg-brand-orange text-white shadow-lg'
-                              : 'bg-white text-brand-black border border-gray-200 hover:border-brand-orange hover:text-brand-orange'
+                              ? 'bg-brand-orange text-white shadow-md'
+                              : 'border border-gray-200 bg-white text-brand-black hover:border-brand-orange hover:text-brand-orange'
                           }`}
                         >
                           {price}
                         </button>
                       );
                     })}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mb-4 text-center">
-                    <h3 className="font-heading text-lg font-semibold text-brand-black mb-2">
-                      Dietary preference
-                    </h3>
-                    <p className="text-sm text-eatspin-gray-1">Show only non-halal options</p>
-                  </div>
-                  <div className="flex justify-center">
                     <button
                       type="button"
                       onClick={() => setNonHalalOnly((prev) => !prev)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                      className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
                         nonHalalOnly
-                          ? 'bg-brand-orange text-white shadow-lg'
-                          : 'bg-white text-brand-black border border-gray-200 hover:border-brand-orange hover:text-brand-orange'
+                          ? 'bg-brand-orange text-white shadow-md'
+                          : 'border border-gray-200 bg-white text-brand-black hover:border-brand-orange hover:text-brand-orange'
                       }`}
                     >
-                      Non-Halal Only
+                      Non-halal only
                     </button>
                   </div>
-                </div>
-              </div>
 
-              <div className="mb-8">
-                <FoodCategorySelector
-                  selectedCategories={selectedCategories}
-                  onCategoryChange={setSelectedCategories}
-                  maxSelection={3}
-                />
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMoreFiltersOpen((prev) => !prev)}
+                    className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-brand-black hover:text-brand-orange"
+                  >
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform duration-200 ${isMoreFiltersOpen ? 'rotate-180' : ''}`}
+                    />
+                    More filters
+                    <span className="rounded-full bg-white px-2 py-0.5 text-xs text-eatspin-gray-1">
+                      {selectedCategories.length}/3 cuisine tags
+                    </span>
+                  </button>
 
-              {location && (
-                <div className="text-center mb-6">
-                  <p className="text-sm text-eatspin-gray-1">
-                    <span className="font-semibold text-brand-orange">{roundRestaurants.length}</span>{' '}
-                    restaurants match your criteria
-                  </p>
+                  <div
+                    className={`grid overflow-hidden transition-[grid-template-rows] duration-300 ease-in-out ${
+                      isMoreFiltersOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                    }`}
+                  >
+                    <div className="min-h-0">
+                      <FoodCategorySelector
+                        selectedCategories={selectedCategories}
+                        onCategoryChange={setSelectedCategories}
+                        maxSelection={3}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 

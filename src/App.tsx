@@ -911,6 +911,17 @@ function App() {
                         ? 'You can edit the shared list as co-host. Only host can start spins.'
                         : 'List editing is host/co-host only. You will receive live list and spin updates.'}
                   </p>
+                  {!canEditGroupList && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void leaveGroupRoom();
+                      }}
+                      className="mt-2 inline-flex items-center rounded-full border border-brand-orange/40 bg-white px-3 py-1.5 text-xs font-semibold text-brand-black hover:bg-brand-linen"
+                    >
+                      Leave room to spin on your own
+                    </button>
+                  )}
                 </div>
               )}
               {/* <div className="text-center mb-5">
@@ -1004,80 +1015,82 @@ function App() {
                   )}
                 </div>
 
-                <div className="mt-4 bg-white rounded-xl border border-eatspin-peach/60 p-4 space-y-3">
-                  <div>
-                    <h4 className="font-heading font-semibold text-brand-black">Quick Presets</h4>
-                    <p className="text-xs text-eatspin-gray-1">Save this wheel and load it anytime. Meal presets auto-load by current time.</p>
-                  </div>
-
-                  <div className="grid sm:grid-cols-[1fr_auto_auto] gap-2">
-                    <Input
-                      value={presetNameInput}
-                      onChange={(e) => setPresetNameInput(e.target.value)}
-                      placeholder="Preset name (e.g. Lunch Nearby)"
-                      className="h-11"
-                    />
-                    <div className="relative">
-                      <select
-                        value={presetMealTimeInput ?? ''}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value === 'breakfast' || value === 'lunch' || value === 'dinner') {
-                            setPresetMealTimeInput(value);
-                            return;
-                          }
-                          setPresetMealTimeInput(null);
-                        }}
-                        className="preset-select h-11 w-full rounded-md border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
-                      >
-                        <option value="">🕒 No meal time</option>
-                        <option value="breakfast">🌅 Breakfast</option>
-                        <option value="lunch">☀️ Lunch</option>
-                        <option value="dinner">🌙 Dinner</option>
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
+                {!isManualListReadOnly && (
+                  <div className="mt-4 bg-white rounded-xl border border-eatspin-peach/60 p-4 space-y-3">
+                    <div>
+                      <h4 className="font-heading font-semibold text-brand-black">Quick Presets</h4>
+                      <p className="text-xs text-eatspin-gray-1">Save this wheel and load it anytime. Meal presets auto-load by current time.</p>
                     </div>
-                    <Button
-                      onClick={saveCurrentAsPreset}
-                      disabled={manualRestaurants.length === 0 || !presetNameInput.trim()}
-                      className="h-11 px-4 bg-brand-orange text-white font-semibold hover:bg-brand-orange/90"
-                    >
-                      Save Preset
-                    </Button>
-                  </div>
 
-                  {manualPresets.length === 0 ? (
-                    <p className="text-sm text-eatspin-gray-1">No saved presets yet.</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {manualPresets.map((preset) => (
-                        <li key={preset.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-linen px-3 py-2">
-                          <button
-                            type="button"
-                            onClick={() => loadPresetRestaurants(preset)}
-                            className="text-left flex-1"
-                            disabled={isManualListReadOnly}
-                          >
-                            <p className="text-sm font-medium text-brand-black">
-                              {preset.mealTime === 'breakfast' ? '🌅' : preset.mealTime === 'lunch' ? '☀️' : preset.mealTime === 'dinner' ? '🌙' : '🕒'} {preset.name}
-                            </p>
-                            <p className="text-xs text-eatspin-gray-1">
-                              {preset.restaurants.length} picks{preset.mealTime ? ` • ${presetMealTimeTimeToLabel(preset.mealTime)}` : ''}
-                            </p>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => deletePreset(preset.id)}
-                            className="text-eatspin-gray-1 hover:text-red-500"
-                            aria-label={`Delete preset ${preset.name}`}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+                    <div className="grid sm:grid-cols-[1fr_auto_auto] gap-2">
+                      <Input
+                        value={presetNameInput}
+                        onChange={(e) => setPresetNameInput(e.target.value)}
+                        placeholder="Preset name (e.g. Lunch Nearby)"
+                        className="h-11"
+                      />
+                      <div className="relative">
+                        <select
+                          value={presetMealTimeInput ?? ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === 'breakfast' || value === 'lunch' || value === 'dinner') {
+                              setPresetMealTimeInput(value);
+                              return;
+                            }
+                            setPresetMealTimeInput(null);
+                          }}
+                          className="preset-select h-11 w-full rounded-md border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
+                        >
+                          <option value="">🕒 No meal time</option>
+                          <option value="breakfast">🌅 Breakfast</option>
+                          <option value="lunch">☀️ Lunch</option>
+                          <option value="dinner">🌙 Dinner</option>
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
+                      </div>
+                      <Button
+                        onClick={saveCurrentAsPreset}
+                        disabled={manualRestaurants.length === 0 || !presetNameInput.trim()}
+                        className="h-11 px-4 bg-brand-orange text-white font-semibold hover:bg-brand-orange/90"
+                      >
+                        Save Preset
+                      </Button>
+                    </div>
+
+                    {manualPresets.length === 0 ? (
+                      <p className="text-sm text-eatspin-gray-1">No saved presets yet.</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {manualPresets.map((preset) => (
+                          <li key={preset.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-linen px-3 py-2">
+                            <button
+                              type="button"
+                              onClick={() => loadPresetRestaurants(preset)}
+                              className="text-left flex-1"
+                              disabled={isManualListReadOnly}
+                            >
+                              <p className="text-sm font-medium text-brand-black">
+                                {preset.mealTime === 'breakfast' ? '🌅' : preset.mealTime === 'lunch' ? '☀️' : preset.mealTime === 'dinner' ? '🌙' : '🕒'} {preset.name}
+                              </p>
+                              <p className="text-xs text-eatspin-gray-1">
+                                {preset.restaurants.length} picks{preset.mealTime ? ` • ${presetMealTimeTimeToLabel(preset.mealTime)}` : ''}
+                              </p>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deletePreset(preset.id)}
+                              className="text-eatspin-gray-1 hover:text-red-500"
+                              aria-label={`Delete preset ${preset.name}`}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
 
                 </div>
             </div>

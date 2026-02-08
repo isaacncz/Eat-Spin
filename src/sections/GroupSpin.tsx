@@ -1,10 +1,32 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Users, Link2, Sparkles, Trophy, Copy, Check, ShieldCheck, LogOut, UserPlus, UserMinus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { GROUP_ROOM_MAX_PARTICIPANTS, GROUP_ROOM_NAME_MAX_LENGTH, type GroupRoomParticipant } from '@/hooks/useFirebaseGroupRoom';
+
+const ROOM_CODE_LENGTH = 6;
+
+const normalizeRoomCode = (value: string) => (
+  value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, ROOM_CODE_LENGTH)
+);
+
+const extractRoomCode = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (trimmed.includes('room=')) {
+    try {
+      return normalizeRoomCode(new URL(trimmed).searchParams.get('room') ?? '');
+    } catch {
+      return normalizeRoomCode(trimmed);
+    }
+  }
+  return normalizeRoomCode(trimmed);
+};
 
 interface GroupSpinProps {
   isFirebaseConfigured: boolean;
@@ -68,6 +90,31 @@ export function GroupSpin({
     setHasCopied(true);
   };
 
+  const pasteRoomLinkToJoinInput = (value: string) => {
+    if (!value) return;
+    const normalizedRoomCode = extractRoomCode(value);
+    setJoinValue(normalizedRoomCode || value);
+    window.requestAnimationFrame(() => {
+      const joinInput = document.getElementById('group-room-join-input');
+      if (!(joinInput instanceof HTMLInputElement)) return;
+      joinInput.focus();
+      joinInput.select();
+    });
+  };
+
+  const handleUseRoomLink = async () => {
+    const valueToPaste = roomId || extractRoomCode(roomLink) || roomLink;
+    if (!valueToPaste) return;
+    pasteRoomLinkToJoinInput(valueToPaste);
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(roomLink);
+      setHasCopied(true);
+    } catch {
+      // Clipboard can fail on unsupported browsers or denied permission.
+    }
+  };
+
   const handleCreateRoom = async () => {
     setHasCopied(false);
     await onCreateRoom();
@@ -90,6 +137,15 @@ export function GroupSpin({
     await onSetParticipantCohost(uid, shouldBeCohost);
     setCohostPendingUid(null);
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const roomFromUrl = new URLSearchParams(window.location.search).get('room');
+    if (!roomFromUrl) return;
+    const normalizedRoomCode = normalizeRoomCode(roomFromUrl);
+    if (!normalizedRoomCode) return;
+    setJoinValue((previous) => previous || normalizedRoomCode);
+  }, []);
 
   return (
     <section id="group-spin" className="bg-brand-linen px-4 py-16 sm:px-6 lg:px-8">
@@ -146,7 +202,14 @@ export function GroupSpin({
                     <p className="text-xs uppercase tracking-wide text-brand-black/60">Room code</p>
                     <p className="text-base font-heading text-brand-black">{roomId}</p>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <span className="truncate text-xs text-brand-black/70">{roomLink}</span>
+                      <button
+                        type="button"
+                        onClick={() => void handleUseRoomLink()}
+                        className="truncate text-left text-xs text-brand-black/70 underline-offset-2 hover:underline"
+                        title="Click to auto-paste into join field"
+                      >
+                        {roomLink}
+                      </button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -186,6 +249,7 @@ export function GroupSpin({
               />
               <Input
                 placeholder="Paste room link or enter code"
+                id="group-room-join-input"
                 className="h-12 rounded-xl border-eatspin-peach/60 bg-white"
                 value={joinValue}
                 onChange={(event) => setJoinValue(event.target.value)}

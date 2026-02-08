@@ -172,6 +172,20 @@ function App() {
   const seededRoomSyncIdRef = useRef('');
   const pendingRoomListSyncRef = useRef<{ roomId: string; signature: string; startedAt: number } | null>(null);
 
+  const scrollToSection = useCallback((sectionId: string) => {
+    if (typeof window === 'undefined') return;
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    const navbarHeight = Number.parseInt(
+      window.getComputedStyle(document.documentElement).getPropertyValue('--navbar-height'),
+      10,
+    );
+    const offset = Number.isFinite(navbarHeight) ? navbarHeight : 72;
+    const targetTop = window.scrollY + section.getBoundingClientRect().top - offset - 8;
+    window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+  }, []);
+
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
   const { canSpin, recordSpin } = useSpinTracker();
@@ -586,6 +600,23 @@ function App() {
     };
   }, [manualPresets, loadPresetRestaurants, currentMealTime, isGroupRoomActive]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const roomFromUrl = new URLSearchParams(window.location.search).get('room');
+    if (!roomFromUrl) return;
+
+    const timeoutId = window.setTimeout(() => {
+      scrollToSection('group-spin');
+      window.requestAnimationFrame(() => {
+        scrollToSection('group-spin');
+      });
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [scrollToSection]);
+
 
   return (
     <div className="min-h-screen bg-brand-linen">
@@ -595,14 +626,8 @@ function App() {
       />
 
       <Hero
-        onGetStarted={() => {
-          const appSection = document.getElementById('app');
-          appSection?.scrollIntoView({ behavior: 'smooth' });
-        }}
-        onGroupSpin={() => {
-          const groupSpinSection = document.getElementById('group-spin');
-          groupSpinSection?.scrollIntoView({ behavior: 'smooth' });
-        }}
+        onGetStarted={() => scrollToSection('app')}
+        onGroupSpin={() => scrollToSection('group-spin')}
       />
 
       <HowItWorks />

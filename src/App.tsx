@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import { useLocation } from '@/hooks/useLocation';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
+import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
 import { penangRestaurants } from '@/data/restaurants';
 import { enhancedFilterRestaurants } from '@/lib/restaurantUtils';
@@ -129,6 +130,13 @@ const loadManualPresets = (): ManualPreset[] => {
   }
 };
 
+const normalizeManualNames = (names: string[]) => (
+  names
+    .map((name) => name.trim())
+    .filter(Boolean)
+    .filter((name, index, list) => list.findIndex((entry) => entry.toLowerCase() === name.toLowerCase()) === index)
+);
+
 function App() {
   // State management
   const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
@@ -143,7 +151,10 @@ function App() {
   const [showWheelSection, setShowWheelSection] = useState(false);
   const [wheelRestaurants, setWheelRestaurants] = useState<Restaurant[]>([]);
   const [roundRemovedRestaurantIds, setRoundRemovedRestaurantIds] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<SpinTab>('auto');
+  const [activeTab, setActiveTab] = useState<SpinTab>(() => {
+    if (typeof window === 'undefined') return 'auto';
+    return new URLSearchParams(window.location.search).get('room') ? 'manual' : 'auto';
+  });
   const [autoWheelKey, setAutoWheelKey] = useState(0);
   const [isReviewExpanded, setIsReviewExpanded] = useState(false);
 
@@ -155,12 +166,38 @@ function App() {
   const [presetMealTimeInput, setPresetMealTimeInput] = useState<PresetMealTime>(() => getPresetMealTime());
   const [manualPresets, setManualPresets] = useState<ManualPreset[]>(() => loadManualPresets());
   const autoLoadedMealTimeRef = useRef<PresetMealTime>(null);
+  const lastAppliedRoomListRef = useRef('');
 
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
   const { canSpin, recordSpin } = useSpinTracker();
+  const {
+    isFirebaseConfigured,
+    firebaseConfigError,
+    authLoading: groupAuthLoading,
+    authError: groupAuthError,
+    displayName: groupDisplayName,
+    resolvedDisplayName: groupResolvedDisplayName,
+    setDisplayName: setGroupDisplayName,
+    roomId: groupRoomId,
+    roomLink: groupRoomLink,
+    isHost: isGroupHost,
+    isBusy: groupRoomBusy,
+    roomError: groupRoomError,
+    clearRoomError: clearGroupRoomError,
+    participants: groupParticipants,
+    roomListNames: groupRoomListNames,
+    currentSpin: groupCurrentSpin,
+    createRoom: createGroupRoom,
+    joinRoom: joinGroupRoom,
+    leaveRoom: leaveGroupRoom,
+    syncHostList,
+    requestHostSpin,
+  } = useFirebaseGroupRoom();
 
   const priceOptions: Restaurant['priceRange'][] = ['$', '$$', '$$$', '$$$$'];
+  const isGroupRoomActive = Boolean(groupRoomId);
+  const isManualListReadOnly = isGroupRoomActive && !isGroupHost;
 
   const togglePriceRange = (price: Restaurant['priceRange']) => {
     setSelectedPriceRanges((prev) =>
@@ -254,6 +291,11 @@ function App() {
   };
 
   const addManualRestaurant = () => {
+    if (isManualListReadOnly) {
+      toast.info('Only the room host can edit the shared list.');
+      return;
+    }
+
     const name = manualInput.trim();
     if (!name) return;
 
@@ -282,11 +324,16 @@ function App() {
   }, []);
 
   const loadPresetRestaurants = useCallback((preset: ManualPreset) => {
+    if (isManualListReadOnly) {
+      toast.info('Only the room host can edit the shared list.');
+      return;
+    }
+
     const restaurants = buildRestaurantsFromNames(preset.restaurants);
     setManualRestaurants(restaurants);
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
-  }, [buildRestaurantsFromNames]);
+  }, [buildRestaurantsFromNames, isManualListReadOnly]);
 
   const saveCurrentAsPreset = () => {
     const trimmedName = presetNameInput.trim();
@@ -314,12 +361,22 @@ function App() {
   };
 
   const removeManualRestaurant = (id: string) => {
+    if (isManualListReadOnly) {
+      toast.info('Only the room host can edit the shared list.');
+      return;
+    }
+
     setManualRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== id));
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
   };
 
   const clearManualRestaurants = () => {
+    if (isManualListReadOnly) {
+      toast.info('Only the room host can edit the shared list.');
+      return;
+    }
+
     if (!window.confirm('Clear all restaurants?')) return;
     setManualRestaurants([]);
     setManualSpinResult(null);
@@ -327,10 +384,85 @@ function App() {
   };
 
   const manualHelperText = useMemo(() => {
+    if (isGroupRoomActive && !isGroupHost) return 'Waiting for host to update list and start the spin';
+    if (isGroupRoomActive && isGroupHost) return 'Host mode: your list changes sync to everyone in the room';
     if (manualRestaurants.length === 0) return 'Add restaurants to start';
     if (manualRestaurants.length === 1) return 'Add at least 2 restaurants to spin';
     return undefined;
-  }, [manualRestaurants.length]);
+  }, [isGroupHost, isGroupRoomActive, manualRestaurants.length]);
+
+  const manualRestaurantNames = useMemo(
+    () => normalizeManualNames(manualRestaurants.map((restaurant) => restaurant.name)),
+    [manualRestaurants],
+  );
+
+  const manualExternalSpin = useMemo(() => {
+    if (!isGroupRoomActive || !groupCurrentSpin) return null;
+
+    const normalizedWinner = groupCurrentSpin.winnerName.trim().toLowerCase();
+    const winnerIndexFromName = manualRestaurants.findIndex(
+      (restaurant) => restaurant.name.trim().toLowerCase() === normalizedWinner,
+    );
+
+    return {
+      spinId: groupCurrentSpin.spinId,
+      winnerIndex: winnerIndexFromName >= 0 ? winnerIndexFromName : groupCurrentSpin.winnerIndex,
+    };
+  }, [groupCurrentSpin, isGroupRoomActive, manualRestaurants]);
+
+  const handleRequestGroupSpin = useCallback(async () => {
+    if (!isGroupRoomActive) return;
+    if (!isGroupHost) {
+      toast.info('Only the room host can start the spin.');
+      return;
+    }
+
+    if (manualRestaurantNames.length < 2) {
+      toast.info('Add at least 2 restaurants before spinning.');
+      return;
+    }
+
+    const spinResult = await requestHostSpin(manualRestaurantNames);
+    if (!spinResult) return;
+    toast.success(`Room spin started: ${spinResult.winnerName}`);
+  }, [isGroupRoomActive, isGroupHost, manualRestaurantNames, requestHostSpin]);
+
+  const handleCreateGroupRoom = useCallback(async () => {
+    setActiveTab('manual');
+    await createGroupRoom();
+  }, [createGroupRoom]);
+
+  const handleJoinGroupRoom = useCallback(async (value: string) => {
+    setActiveTab('manual');
+    await joinGroupRoom(value);
+  }, [joinGroupRoom]);
+
+  useEffect(() => {
+    if (!isGroupRoomActive || !isGroupHost) return;
+    void syncHostList(manualRestaurantNames);
+  }, [isGroupHost, isGroupRoomActive, manualRestaurantNames, syncHostList]);
+
+  useEffect(() => {
+    if (!isGroupRoomActive || isGroupHost) {
+      lastAppliedRoomListRef.current = '';
+      return;
+    }
+
+    const listSignature = JSON.stringify(groupRoomListNames);
+    if (listSignature === lastAppliedRoomListRef.current) return;
+    lastAppliedRoomListRef.current = listSignature;
+
+    const timeoutId = window.setTimeout(() => {
+      const syncedRestaurants = buildRestaurantsFromNames(groupRoomListNames);
+      setManualRestaurants(syncedRestaurants);
+      setManualSpinResult(null);
+      setManualWheelKey((prev) => prev + 1);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [buildRestaurantsFromNames, groupRoomListNames, isGroupHost, isGroupRoomActive]);
 
   useEffect(() => {
     window.localStorage.setItem(MANUAL_RESTAURANTS_STORAGE_KEY, JSON.stringify(manualRestaurants));
@@ -341,6 +473,8 @@ function App() {
   }, [manualPresets]);
 
   useEffect(() => {
+    if (isGroupRoomActive) return;
+
     const currentPresetMealTime = getPresetMealTime();
 
     if (autoLoadedMealTimeRef.current === currentPresetMealTime) return;
@@ -359,7 +493,7 @@ function App() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [manualPresets, loadPresetRestaurants, currentMealTime]);
+  }, [manualPresets, loadPresetRestaurants, currentMealTime, isGroupRoomActive]);
 
 
   return (
@@ -381,7 +515,25 @@ function App() {
       />
 
       <HowItWorks />
-      <GroupSpin />
+      <GroupSpin
+        isFirebaseConfigured={isFirebaseConfigured}
+        firebaseConfigError={firebaseConfigError}
+        authLoading={groupAuthLoading}
+        authError={groupAuthError}
+        displayName={groupDisplayName}
+        resolvedDisplayName={groupResolvedDisplayName}
+        setDisplayName={setGroupDisplayName}
+        roomId={groupRoomId}
+        roomLink={groupRoomLink}
+        isHost={isGroupHost}
+        isBusy={groupRoomBusy}
+        roomError={groupRoomError}
+        participants={groupParticipants}
+        onCreateRoom={handleCreateGroupRoom}
+        onJoinRoom={handleJoinGroupRoom}
+        onLeaveRoom={leaveGroupRoom}
+        onClearRoomError={clearGroupRoomError}
+      />
       <Features />
 
       <section id="app" className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
@@ -669,25 +821,41 @@ function App() {
 
           {activeTab === 'manual' && (
             <div id="wheel" className="py-4 pb-36 sm:pb-8">
+              {isGroupRoomActive && (
+                <div className="mb-4 rounded-xl border border-brand-orange/30 bg-brand-linen px-4 py-3 text-sm text-eatspin-gray-1">
+                  <p className="font-semibold text-brand-black">
+                    Room {groupRoomId} {isGroupHost ? '(Host)' : '(Participant)'}
+                  </p>
+                  <p>
+                    {isGroupHost
+                      ? 'Your list edits sync to everyone in this room.'
+                      : 'List editing is host-only in v1. You will receive live list and spin updates.'}
+                  </p>
+                </div>
+              )}
               {/* <div className="text-center mb-5">
                 <h3 className="font-heading text-2xl font-bold text-brand-black mb-2">I know where</h3>
                 <p className="text-sm text-eatspin-gray-1">Add any restaurants you like and spin.</p>
               </div> */}
 
               <RouletteWheel
-                key={`manual-${manualWheelKey}-${manualRestaurants.length}`}
+                key={isGroupRoomActive ? `manual-room-${groupRoomId || 'none'}` : `manual-${manualWheelKey}-${manualRestaurants.length}`}
                 restaurants={manualRestaurants}
                 totalCount={manualRestaurants.length}
                 onSpinComplete={handleManualSpinComplete}
                 isSpinning={isSpinning}
                 setIsSpinning={setIsSpinning}
                 onShuffle={() => {
+                  if (isManualListReadOnly) return;
                   setManualRestaurants((prev) => [...prev].sort(() => Math.random() - 0.5));
                   setManualWheelKey((prev) => prev + 1);
                 }}
-                canSpin={manualRestaurants.length >= 2}
+                canSpin={manualRestaurants.length >= 2 && (!isGroupRoomActive || isGroupHost)}
                 helperText={manualHelperText}
-                spinButtonLabel="Spin the Wheel!"
+                spinButtonLabel={isGroupRoomActive ? (isGroupHost ? 'Spin for everyone' : 'Waiting for host spin') : 'Spin the Wheel!'}
+                externalSpin={manualExternalSpin}
+                onRequestSpin={isGroupRoomActive ? handleRequestGroupSpin : undefined}
+                canRequestSpin={!isGroupRoomActive || isGroupHost}
                 emptyStateTitle="Add restaurants to start"
                 emptyStateSubtitle="Type any restaurant you like…"
               />
@@ -713,8 +881,9 @@ function App() {
                     }}
                       placeholder="Type any restaurant you like…"
                       className="h-12 text-base"
+                      disabled={isManualListReadOnly}
                     />
-                    <Button onClick={addManualRestaurant} className="h-12 px-6 text-base font-heading font-bold bg-brand-orange hover:bg-brand-orange/90">
+                    <Button onClick={addManualRestaurant} disabled={isManualListReadOnly} className="h-12 px-6 text-base font-heading font-bold bg-brand-orange hover:bg-brand-orange/90">
                       <Plus size={18} className="mr-1" /> Add
                     </Button>
                   </div>
@@ -728,6 +897,7 @@ function App() {
                         type="button"
                         className="text-xs font-medium text-eatspin-orange hover:underline"
                         onClick={clearManualRestaurants}
+                        disabled={isManualListReadOnly}
                       >
                         Clear all
                       </button>
@@ -746,6 +916,7 @@ function App() {
                             onClick={() => removeManualRestaurant(restaurant.id)}
                             className="text-eatspin-gray-1 hover:text-red-500"
                             aria-label={`Remove ${restaurant.name}`}
+                            disabled={isManualListReadOnly}
                           >
                             <X size={16} />
                           </button>
@@ -807,6 +978,7 @@ function App() {
                             type="button"
                             onClick={() => loadPresetRestaurants(preset)}
                             className="text-left flex-1"
+                            disabled={isManualListReadOnly}
                           >
                             <p className="text-sm font-medium text-brand-black">
                               {preset.mealTime === 'breakfast' ? '🌅' : preset.mealTime === 'lunch' ? '☀️' : preset.mealTime === 'dinner' ? '🌙' : '🕒'} {preset.name}

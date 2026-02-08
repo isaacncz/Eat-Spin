@@ -18,6 +18,12 @@ interface RouletteWheelProps {
   emptyStateTitle?: string;
   emptyStateSubtitle?: string;
   onEditList?: () => void;
+  externalSpin?: {
+    spinId: string;
+    winnerIndex: number;
+  } | null;
+  onRequestSpin?: () => void | Promise<void>;
+  canRequestSpin?: boolean;
 }
 
 // Vibrant appetizing color palette
@@ -68,6 +74,9 @@ export function RouletteWheel({
   emptyStateTitle = 'No restaurants match your criteria',
   emptyStateSubtitle = 'Try selecting different categories or check back during meal hours',
   onEditList,
+  externalSpin = null,
+  onRequestSpin,
+  canRequestSpin = true,
 }: RouletteWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
   const wheelScrollRef = useRef<HTMLDivElement>(null);
@@ -77,6 +86,7 @@ export function RouletteWheel({
   const [wheelSize, setWheelSize] = useState(320);
   const celebrationTimeoutsRef = useRef<number[]>([]);
   const celebrationElementsRef = useRef<HTMLElement[]>([]);
+  const lastExternalSpinIdRef = useRef('');
 
   const clearCelebrationEffects = useCallback(() => {
     celebrationTimeoutsRef.current.forEach((timeoutId) => {
@@ -148,7 +158,7 @@ export function RouletteWheel({
     return `conic-gradient(from 0deg, ${stops.join(', ')})`;
   }, [restaurants.length]);
 
-  const recenterWheel = () => {
+  const recenterWheel = useCallback(() => {
     const target = wheelScrollRef.current ?? wheelContainerRef.current;
     if (!target) return;
 
@@ -157,25 +167,26 @@ export function RouletteWheel({
     requestAnimationFrame(() => {
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
-  };
+  }, []);
 
-  const handleSpin = () => {
-    if (isSpinning || restaurants.length === 0 || !canSpin) return;
+  const animateSpinToIndex = useCallback((index: number) => {
+    if (restaurants.length === 0) return;
 
-    // Re-center the wheel in view when starting a spin (especially useful on mobile).
+    const selectedIndex = ((Math.floor(index) % restaurants.length) + restaurants.length) % restaurants.length;
+    const result = restaurants[selectedIndex];
+    const segmentAngle = 360 / restaurants.length;
+    const currentRotation = ((currentRotationRef.current % 360) + 360) % 360;
+    const desiredFinalRotation = ((360 - (selectedIndex + 0.5) * segmentAngle) % 360 + 360) % 360;
+    // Use whole-turn randomness so all clients can end on the exact same visual angle.
+    const additionalTurns = 4 + Math.floor(Math.random() * 3);
+    const additionalRotation = additionalTurns * 360;
+    const delta = (desiredFinalRotation - currentRotation + 360) % 360;
+    const targetRotation = currentRotationRef.current + additionalRotation + delta;
+
     recenterWheel();
-
     setIsSpinning(true);
     setSpinResult(null);
-
-    const currentRotation = currentRotationRef.current;
-    const additionalRotation = 1440 + Math.random() * 720;
-    const targetRotation = currentRotation + additionalRotation;
-    
-    const segmentAngle = 360 / restaurants.length;
-    const finalRotation = targetRotation % 360;
-    const selectedIndex = Math.floor((360 - finalRotation) / segmentAngle) % restaurants.length;
-    const result = restaurants[selectedIndex];
+    gsap.killTweensOf(wheelRef.current);
 
     gsap.to(wheelRef.current, {
       rotation: targetRotation,
@@ -202,6 +213,22 @@ export function RouletteWheel({
         }, 100);
       },
     });
+  }, [onSpinComplete, recenterWheel, restaurants, setIsSpinning]);
+
+  const handleLocalSpin = () => {
+    if (isSpinning || restaurants.length === 0 || !canSpin) return;
+    const randomIndex = Math.floor(Math.random() * restaurants.length);
+    animateSpinToIndex(randomIndex);
+  };
+
+  const handleSpinClick = () => {
+    if (onRequestSpin) {
+      if (isSpinning || !canSpin || !canRequestSpin) return;
+      recenterWheel();
+      void onRequestSpin();
+      return;
+    }
+    handleLocalSpin();
   };
 
   // Reset wheel position when restaurants change
@@ -211,6 +238,13 @@ export function RouletteWheel({
       currentRotationRef.current = 0;
     }
   }, [restaurants]);
+
+  useEffect(() => {
+    if (!externalSpin || restaurants.length === 0) return;
+    if (externalSpin.spinId === lastExternalSpinIdRef.current) return;
+    lastExternalSpinIdRef.current = externalSpin.spinId;
+    animateSpinToIndex(externalSpin.winnerIndex);
+  }, [animateSpinToIndex, externalSpin, restaurants.length]);
 
   useEffect(() => {
     const container = wheelContainerRef.current;
@@ -404,8 +438,8 @@ export function RouletteWheel({
 
       {/* Spin Button */}
       <button
-        onClick={handleSpin}
-        disabled={isSpinning || !canSpin}
+        onClick={handleSpinClick}
+        disabled={isSpinning || !canSpin || (Boolean(onRequestSpin) && !canRequestSpin)}
         className="sticky bottom-3 sm:static z-30 relative overflow-hidden w-full max-w-sm px-8 sm:px-12 py-5 bg-brand-orange text-white font-heading text-xl font-bold rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
         <span className={`transition-opacity duration-300 ${isSpinning ? 'opacity-0' : 'opacity-100'}`}>

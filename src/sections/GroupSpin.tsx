@@ -1,49 +1,55 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Users, Link2, CheckCircle2, Sparkles, Trophy, Copy, Check } from 'lucide-react';
+import { useState } from 'react';
+import { Users, Link2, CheckCircle2, Sparkles, Trophy, Copy, Check, ShieldCheck, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { GROUP_ROOM_MAX_PARTICIPANTS, GROUP_ROOM_NAME_MAX_LENGTH, type GroupRoomParticipant } from '@/hooks/useFirebaseGroupRoom';
 
-export function GroupSpin() {
-  const [roomCode, setRoomCode] = useState('');
-  const [roomLink, setRoomLink] = useState('');
-  const [hasCopied, setHasCopied] = useState(false);
+interface GroupSpinProps {
+  isFirebaseConfigured: boolean;
+  firebaseConfigError: string | null;
+  authLoading: boolean;
+  authError: string | null;
+  displayName: string;
+  resolvedDisplayName: string;
+  setDisplayName: (value: string) => void;
+  roomId: string;
+  roomLink: string;
+  isHost: boolean;
+  isBusy: boolean;
+  roomError: string | null;
+  participants: GroupRoomParticipant[];
+  onCreateRoom: () => Promise<void>;
+  onJoinRoom: (value: string) => Promise<void>;
+  onLeaveRoom: () => Promise<void>;
+  onClearRoomError: () => void;
+}
+
+export function GroupSpin({
+  isFirebaseConfigured,
+  firebaseConfigError,
+  authLoading,
+  authError,
+  displayName,
+  resolvedDisplayName,
+  setDisplayName,
+  roomId,
+  roomLink,
+  isHost,
+  isBusy,
+  roomError,
+  participants,
+  onCreateRoom,
+  onJoinRoom,
+  onLeaveRoom,
+  onClearRoomError,
+}: GroupSpinProps) {
   const [joinValue, setJoinValue] = useState('');
-  const [joinedRoom, setJoinedRoom] = useState('');
+  const [hasCopied, setHasCopied] = useState(false);
 
-  const baseUrl = useMemo(() => {
-    if (typeof window === 'undefined') return '';
-    return `${window.location.origin}${window.location.pathname}`;
-  }, []);
-
-  const normalizeRoomCode = (value: string) => value.replace(/[^a-z0-9]/gi, '').slice(0, 6).toUpperCase();
-
-  const buildRoomLink = (code: string) => {
-    if (!baseUrl) return `?room=${code}`;
-    const url = new URL(baseUrl);
-    url.searchParams.set('room', code);
-    return url.toString();
-  };
-
-  const updateRoomState = (code: string) => {
-    const normalized = normalizeRoomCode(code);
-    if (!normalized) return;
-    const nextLink = buildRoomLink(normalized);
-    setRoomCode(normalized);
-    setRoomLink(nextLink);
-    setHasCopied(false);
-    setJoinedRoom(normalized);
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      url.searchParams.set('room', normalized);
-      window.history.replaceState({}, '', url.toString());
-    }
-  };
-
-  const handleCreateRoom = () => {
-    updateRoomState(Math.random().toString(36).slice(2, 8));
-  };
+  const canInteract = isFirebaseConfigured && !authLoading;
+  const hasRoom = Boolean(roomId);
 
   const handleCopyLink = async () => {
     if (!roomLink || typeof navigator === 'undefined' || !navigator.clipboard) return;
@@ -51,48 +57,53 @@ export function GroupSpin() {
     setHasCopied(true);
   };
 
-  const extractRoomCode = (value: string) => {
-    if (value.includes('room=')) {
-      try {
-        return new URL(value).searchParams.get('room') ?? '';
-      } catch {
-        return value;
-      }
-    }
-    return value;
+  const handleCreateRoom = async () => {
+    setHasCopied(false);
+    await onCreateRoom();
   };
 
-  const handleJoinRoom = () => {
+  const handleJoinRoom = async () => {
     if (!joinValue.trim()) return;
-    const code = extractRoomCode(joinValue);
-    updateRoomState(code);
+    setHasCopied(false);
+    await onJoinRoom(joinValue);
     setJoinValue('');
   };
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const paramRoom = params.get('room');
-    if (paramRoom) {
-      updateRoomState(paramRoom);
-    }
-  }, []);
+  const handleLeaveRoom = async () => {
+    setHasCopied(false);
+    await onLeaveRoom();
+  };
 
   return (
-    <section id="group-spin" className="py-16 px-4 sm:px-6 lg:px-8 bg-brand-linen">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <Badge className="bg-brand-orange/10 text-brand-orange border border-brand-orange/30 mb-4">
+    <section id="group-spin" className="bg-brand-linen px-4 py-16 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-12 text-center">
+          <Badge className="mb-4 border border-brand-orange/30 bg-brand-orange/10 text-brand-orange">
             Flagship Feature
           </Badge>
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-brand-black mb-4">
+          <h2 className="mb-4 font-heading text-3xl font-bold text-brand-black sm:text-4xl">
             Group Spin makes deciding effortless
           </h2>
-          <p className="text-eatspin-gray-1 max-w-2xl mx-auto">
-            Create a room, share the link, and spin together. Everyone sees the same result — even without
-            realtime sync — so it feels magical every time.
+          <p className="mx-auto max-w-2xl text-eatspin-gray-1">
+            Real rooms now sync through Firebase so participants, list updates, and spin results work across browsers
+            and devices.
           </p>
         </div>
+
+        {(!isFirebaseConfigured || authError || roomError) && (
+          <div className="mb-6 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {!isFirebaseConfigured && <p>{firebaseConfigError ?? 'Firebase configuration is missing.'}</p>}
+            {authError && <p>{authError}</p>}
+            {roomError && (
+              <div className="flex items-center justify-between gap-2">
+                <p>{roomError}</p>
+                <Button size="sm" variant="outline" className="h-8 border-red-300 text-red-700" onClick={onClearRoomError}>
+                  Dismiss
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="border-eatspin-peach/60 shadow-lg">
@@ -103,22 +114,21 @@ export function GroupSpin() {
                 </span>
                 Create a room
               </CardTitle>
-              <CardDescription>
-                Start a private spin room in seconds and invite everyone to join.
-              </CardDescription>
+              <CardDescription>Create one room code and invite everyone with the same link.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <Button
-                className="w-full bg-brand-orange hover:bg-brand-orange/90 text-white font-heading"
+                className="w-full bg-brand-orange font-heading text-white hover:bg-brand-orange/90"
                 onClick={handleCreateRoom}
+                disabled={!canInteract || isBusy}
               >
-                Create room link
+                {isBusy ? 'Working...' : 'Create room link'}
               </Button>
               <div className="rounded-xl border border-dashed border-brand-orange/30 bg-white/70 px-4 py-3 text-sm text-eatspin-gray-1">
-                {roomCode ? (
+                {hasRoom ? (
                   <div className="space-y-2">
                     <p className="text-xs uppercase tracking-wide text-brand-black/60">Room code</p>
-                    <p className="font-heading text-base text-brand-black">{roomCode}</p>
+                    <p className="text-base font-heading text-brand-black">{roomId}</p>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <span className="truncate text-xs text-brand-black/70">{roomLink}</span>
                       <Button
@@ -147,37 +157,61 @@ export function GroupSpin() {
                 </span>
                 Join the room
               </CardTitle>
-              <CardDescription>
-                Paste a room link or code and get ready to spin together.
-              </CardDescription>
+              <CardDescription>Set your display name, then join by code or room link.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
+              <Input
+                placeholder="Your name"
+                maxLength={GROUP_ROOM_NAME_MAX_LENGTH}
+                className="h-12 rounded-xl border-eatspin-peach/60 bg-white"
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                disabled={!canInteract || isBusy}
+              />
               <Input
                 placeholder="Paste room link or enter code"
                 className="h-12 rounded-xl border-eatspin-peach/60 bg-white"
                 value={joinValue}
                 onChange={(event) => setJoinValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter') return;
+                  event.preventDefault();
+                  void handleJoinRoom();
+                }}
+                disabled={!canInteract || isBusy}
               />
               <Button
                 variant="outline"
                 className="w-full border-brand-orange text-brand-orange hover:bg-brand-orange/10"
                 onClick={handleJoinRoom}
+                disabled={!canInteract || isBusy}
               >
-                Join room
+                {isBusy ? 'Joining...' : 'Join room'}
               </Button>
             </CardContent>
           </Card>
         </div>
 
-        {joinedRoom && (
+        {hasRoom && (
           <div className="mt-10 rounded-2xl border border-brand-orange/30 bg-white px-6 py-5 shadow-sm">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-wide text-brand-black/60">Joined room</p>
-                <p className="font-heading text-lg text-brand-black">{joinedRoom}</p>
-                <p className="text-sm text-eatspin-gray-1">Invite others with your link or let them paste the code.</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-lg font-heading text-brand-black">{roomId}</p>
+                  {isHost && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-orange/10 px-2 py-0.5 text-xs font-semibold text-brand-orange">
+                      <ShieldCheck size={12} />
+                      Host
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-eatspin-gray-1">
+                  {participants.length} / {GROUP_ROOM_MAX_PARTICIPANTS} participants active
+                </p>
+                <p className="text-xs text-eatspin-gray-1">Signed in as {resolvedDisplayName}</p>
               </div>
-              {roomLink && (
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   className="border-brand-orange text-brand-orange hover:bg-brand-orange/10"
@@ -186,6 +220,26 @@ export function GroupSpin() {
                   {hasCopied ? <Check size={16} /> : <Copy size={16} />}
                   {hasCopied ? 'Copied' : 'Copy room link'}
                 </Button>
+                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-100" onClick={handleLeaveRoom}>
+                  <LogOut size={16} />
+                  Leave room
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {participants.length === 0 ? (
+                <p className="text-sm text-eatspin-gray-1">No active participants yet.</p>
+              ) : (
+                participants.map((participant) => (
+                  <div
+                    key={participant.uid}
+                    className="flex items-center justify-between rounded-lg border border-eatspin-peach/60 bg-brand-linen/50 px-3 py-2"
+                  >
+                    <span className="text-sm font-medium text-brand-black">{participant.name}</span>
+                    <span className="text-xs text-eatspin-gray-1">{participant.ready ? 'Ready' : 'Idle'}</span>
+                  </div>
+                ))
               )}
             </div>
           </div>
@@ -196,24 +250,22 @@ export function GroupSpin() {
             {
               icon: <CheckCircle2 size={20} className="text-brand-orange" />,
               title: 'Everyone taps Ready',
-              copy: 'See who is in, who is hungry, and when to start.',
+              copy: 'Presence is synced in Realtime Database for true multi-device rooms.',
             },
             {
               icon: <Sparkles size={20} className="text-brand-orange" />,
-              title: 'Host (or anyone) spins',
-              copy: 'One tap triggers a shared result across all devices.',
+              title: 'Host spins once',
+              copy: 'Host writes one winner index, then every joined client animates to that result.',
             },
             {
               icon: <Trophy size={20} className="text-brand-orange" />,
-              title: 'Best of 3 mode',
-              copy: 'Run three spins to settle debates with a clear winner.',
+              title: 'Shared final result',
+              copy: 'No local-only randomness in room mode, so everyone sees the same winner.',
             },
           ].map((item) => (
-            <div key={item.title} className="rounded-2xl bg-white px-5 py-4 shadow-sm border border-eatspin-peach/50">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-orange/10">
-                  {item.icon}
-                </span>
+            <div key={item.title} className="rounded-2xl border border-eatspin-peach/50 bg-white px-5 py-4 shadow-sm">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-orange/10">{item.icon}</span>
                 <p className="font-heading font-semibold text-brand-black">{item.title}</p>
               </div>
               <p className="text-sm text-eatspin-gray-1">{item.copy}</p>

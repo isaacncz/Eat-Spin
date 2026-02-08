@@ -1,0 +1,26 @@
+{
+  "rules": {
+    "rooms": {
+      "$roomId": {
+        ".read": "auth != null",
+        "meta": {
+          ".write": "auth != null && ((!data.exists() && newData.child('hostUid').val() === auth.uid) || data.child('hostUid').val() === auth.uid)",
+          ".validate": "newData.hasChildren(['hostUid','status','createdAt','expiresAt','lastSpinAt']) && newData.child('hostUid').isString() && newData.child('status').val().matches(/^(waiting|spinning|completed)$/) && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber() && newData.child('lastSpinAt').isNumber()"
+        },
+        "participants": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['name','joinedAt','lastSeenAt','ready']) && newData.child('name').isString() && newData.child('joinedAt').isNumber() && newData.child('lastSeenAt').isNumber() && newData.child('ready').isBoolean()"
+          }
+        },
+        "list": {
+          ".write": "auth != null && root.child('rooms/'+$roomId+'/meta/hostUid').val() === auth.uid"
+        },
+        "spin": {
+          ".write": "auth != null && root.child('rooms/'+$roomId+'/meta/hostUid').val() === auth.uid",
+          ".validate": "!newData.exists() || (newData.hasChildren(['spinId','winnerIndex','winnerName','startedAt','completedAt','startedBy']) && newData.child('spinId').isString() && newData.child('winnerIndex').isNumber() && newData.child('winnerName').isString() && newData.child('startedAt').isNumber() && newData.child('completedAt').isNumber() && newData.child('startedBy').val() === auth.uid)"
+        }
+      }
+    }
+  }
+}

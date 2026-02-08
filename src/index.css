@@ -294,6 +294,34 @@
   filter: drop-shadow(0 4px 6px rgba(107, 71, 0, 0.35));
 }
 
+@keyframes winner-slice-pulse {
+  0% {
+    opacity: 0.35;
+    transform: scale(1);
+    filter: saturate(1);
+  }
+  55% {
+    opacity: 0.9;
+    transform: scale(1.018);
+    filter: saturate(1.2) brightness(1.06);
+  }
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+    filter: saturate(1.02);
+  }
+}
+
+.winner-slice-highlight {
+  mix-blend-mode: screen;
+  animation: winner-slice-pulse 0.9s ease-out 1;
+}
+
+.winner-slice-highlight-idle {
+  mix-blend-mode: screen;
+  opacity: 0.35;
+}
+
 /* Grain overlay */
 .grain-overlay::before {
   content: '';

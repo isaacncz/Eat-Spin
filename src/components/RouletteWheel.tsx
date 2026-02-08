@@ -80,16 +80,24 @@ export function RouletteWheel({
   canRequestSpin = true,
   onSpinStart,
 }: RouletteWheelProps) {
+  const ANTICIPATION_DURATION_S = 0.5;
+  const ANTICIPATION_DEG = 50;
+  const SPIN_DURATION_S = 5.8;
+  const WINNER_PULSE_DURATION_MS = 900;
+
   const wheelRef = useRef<HTMLDivElement>(null);
   const wheelScrollRef = useRef<HTMLDivElement>(null);
   const wheelContainerRef = useRef<HTMLDivElement>(null);
   const previousRestaurantsRef = useRef(restaurants);
+  const winnerPulseTimeoutRef = useRef<number | null>(null);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
   const currentRotationRef = useRef(0);
   const [wheelSize, setWheelSize] = useState(320);
   const celebrationTimeoutsRef = useRef<number[]>([]);
   const celebrationElementsRef = useRef<HTMLElement[]>([]);
   const lastExternalSpinIdRef = useRef('');
+  const [winnerSliceIndex, setWinnerSliceIndex] = useState<number | null>(null);
+  const [isWinnerSliceHighlighted, setIsWinnerSliceHighlighted] = useState(false);
 
   const clearCelebrationEffects = useCallback(() => {
     celebrationTimeoutsRef.current.forEach((timeoutId) => {
@@ -190,11 +198,29 @@ export function RouletteWheel({
     recenterWheel();
     setIsSpinning(true);
     setSpinResult(null);
+    setWinnerSliceIndex(null);
+    setIsWinnerSliceHighlighted(false);
+    if (winnerPulseTimeoutRef.current !== null) {
+      window.clearTimeout(winnerPulseTimeoutRef.current);
+      winnerPulseTimeoutRef.current = null;
+    }
     gsap.killTweensOf(wheelRef.current);
 
-    gsap.to(wheelRef.current, {
+    const timeline = gsap.timeline();
+    timeline.to(wheelRef.current, {
+      rotation: currentRotationRef.current - ANTICIPATION_DEG,
+      duration: ANTICIPATION_DURATION_S,
+      ease: 'back.inOut(1.2)',
+      onUpdate: () => {
+        if (wheelRef.current) {
+          currentRotationRef.current = gsap.getProperty(wheelRef.current, 'rotation') as number;
+        }
+      },
+    });
+
+    timeline.to(wheelRef.current, {
       rotation: targetRotation,
-      duration: 5,
+      duration: SPIN_DURATION_S,
       ease: 'power4.out',
       onUpdate: () => {
         if (wheelRef.current) {
@@ -204,6 +230,11 @@ export function RouletteWheel({
       onComplete: () => {
         setIsSpinning(false);
         setSpinResult(result);
+        setWinnerSliceIndex(selectedIndex);
+        setIsWinnerSliceHighlighted(true);
+        winnerPulseTimeoutRef.current = window.setTimeout(() => {
+          setIsWinnerSliceHighlighted(false);
+        }, WINNER_PULSE_DURATION_MS);
         onSpinComplete(result);
 
         setTimeout(() => {
@@ -294,6 +325,9 @@ export function RouletteWheel({
   useEffect(() => {
     return () => {
       clearCelebrationEffects();
+      if (winnerPulseTimeoutRef.current !== null) {
+        window.clearTimeout(winnerPulseTimeoutRef.current);
+      }
     };
   }, [clearCelebrationEffects]);
 
@@ -359,6 +393,20 @@ export function RouletteWheel({
               );
             })}
 
+            {winnerSliceIndex !== null && (
+              <div
+                className={`pointer-events-none absolute inset-0 rounded-full ${isWinnerSliceHighlighted ? 'winner-slice-highlight' : 'winner-slice-highlight-idle'}`}
+                style={{
+                  background: `conic-gradient(
+                    from 0deg,
+                    rgba(255, 215, 0, 0) 0deg ${(winnerSliceIndex * segmentAngle)}deg,
+                    rgba(255, 215, 0, 0.34) ${(winnerSliceIndex * segmentAngle)}deg ${((winnerSliceIndex + 1) * segmentAngle)}deg,
+                    rgba(255, 215, 0, 0) ${((winnerSliceIndex + 1) * segmentAngle)}deg 360deg
+                  )`,
+                }}
+              />
+            )}
+
             {/* Restaurant names positioned with polar coordinates */}
             {restaurants.map((restaurant, index) => {
               const startAngle = (360 / restaurants.length) * index;
@@ -378,9 +426,9 @@ export function RouletteWheel({
               
               const displayName = restaurant.name;
               const nameLength = displayName.length;
-              const maxFontSize = wheelSize * 0.045;
+              const maxFontSize = wheelSize * 0.054;
               const minFontSize = wheelSize * 0.022;
-              const lengthFactor = Math.min(Math.max((nameLength - 4) / 24, 0), 1);
+              const lengthFactor = Math.min(Math.max((nameLength - 5) / 30, 0), 1);
               const baseFontSize =
                 maxFontSize - (maxFontSize - minFontSize) * lengthFactor;
               const maxLabelWidth = wheelSize * 0.28;

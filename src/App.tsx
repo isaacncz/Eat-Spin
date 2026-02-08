@@ -271,6 +271,14 @@ function App() {
     setManualSpinResult(restaurant);
   }, []);
 
+  const handleAutoAlreadyAteThis = (restaurant: Restaurant) => {
+    removeRestaurantForRound(restaurant.id);
+  };
+
+  const handleManualAlreadyAteThis = (restaurant: Restaurant) => {
+    removeManualRestaurant(restaurant.id);
+  };
+
   // Handle spin attempt
   const handleSpinAttempt = () => {
     if (!canSpin(currentMealTime)) {
@@ -951,6 +959,7 @@ function App() {
                 externalSpin={manualExternalSpin}
                 onRequestSpin={isGroupRoomActive ? handleRequestGroupSpin : undefined}
                 canRequestSpin={!isGroupRoomActive || isGroupHost}
+                onAlreadyAteThis={handleManualAlreadyAteThis}
                 emptyStateTitle="Add restaurants to start"
                 emptyStateSubtitle="Type any restaurant you like…"
               />
@@ -1123,6 +1132,7 @@ function App() {
               setIsSpinning={setIsSpinning}
               onShuffle={shuffleWheel}
               onSpinStart={handleAutoSpinStart}
+              onAlreadyAteThis={handleAutoAlreadyAteThis}
             />
           </div>
         </section>

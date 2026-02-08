@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown, RotateCcw, Check } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,8 @@ interface RouletteWheelProps {
   emptyStateTitle?: string;
   emptyStateSubtitle?: string;
   onEditList?: () => void;
+  onAlreadyAteThis?: (restaurant: Restaurant) => void;
+  onSpinAgain?: () => boolean | void;
   externalSpin?: {
     spinId: string;
     winnerIndex: number;
@@ -75,6 +77,8 @@ export function RouletteWheel({
   emptyStateTitle = 'No restaurants match your criteria',
   emptyStateSubtitle = 'Try selecting different categories or check back during meal hours',
   onEditList,
+  onAlreadyAteThis,
+  onSpinAgain,
   externalSpin = null,
   onRequestSpin,
   canRequestSpin = true,
@@ -90,6 +94,7 @@ export function RouletteWheel({
   const celebrationTimeoutsRef = useRef<number[]>([]);
   const celebrationElementsRef = useRef<HTMLElement[]>([]);
   const lastExternalSpinIdRef = useRef('');
+  const [pendingAutoSpin, setPendingAutoSpin] = useState(false);
 
   const clearCelebrationEffects = useCallback(() => {
     celebrationTimeoutsRef.current.forEach((timeoutId) => {
@@ -292,6 +297,18 @@ export function RouletteWheel({
   }, [spinResult, triggerCelebration]);
 
   useEffect(() => {
+    if (!pendingAutoSpin) return;
+    if (isSpinning) return;
+    if (!canSpin || restaurants.length < 2) {
+      setPendingAutoSpin(false);
+      return;
+    }
+
+    setPendingAutoSpin(false);
+    handleSpinClick();
+  }, [canSpin, handleSpinClick, isSpinning, pendingAutoSpin, restaurants.length]);
+
+  useEffect(() => {
     return () => {
       clearCelebrationEffects();
     };
@@ -323,6 +340,7 @@ export function RouletteWheel({
         || spinResult.address === 'Your custom pick'
         || spinResult.description === 'Added by you.')
   );
+  const spinAgainDisabled = isSpinning || !canSpin || (Boolean(onRequestSpin) && !canRequestSpin);
 
   return (
     <div className="flex flex-col items-center gap-8 py-8">
@@ -449,7 +467,7 @@ export function RouletteWheel({
       {/* Spin Button */}
       <button
         onClick={handleSpinClick}
-        disabled={isSpinning || !canSpin || (Boolean(onRequestSpin) && !canRequestSpin)}
+        disabled={spinAgainDisabled}
         className="sticky bottom-3 sm:static z-30 relative overflow-hidden w-full max-w-sm px-8 sm:px-12 py-5 bg-brand-orange text-white font-heading text-xl font-bold rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
         <span className={`transition-opacity duration-300 ${isSpinning ? 'opacity-0' : 'opacity-100'}`}>
@@ -562,9 +580,39 @@ export function RouletteWheel({
               })}
             </div>
 
-            <div className="mt-5 flex flex-wrap justify-center gap-3">
+            <div className="mt-6 flex flex-col items-center gap-3">
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button
+                  onClick={() => {
+                    if (spinAgainDisabled) return;
+                    const shouldSpin = onSpinAgain?.();
+                    if (shouldSpin === false) return;
+                    handleSpinClick();
+                  }}
+                  className="bg-brand-orange text-white hover:bg-brand-orange/90"
+                  disabled={spinAgainDisabled}
+                  aria-label="Spin again"
+                >
+                  <RotateCcw size={16} className="mr-2" />
+                  Spin Again
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (!spinResult || isSpinning) return;
+                    const shouldContinue = onAlreadyAteThis?.(spinResult);
+                    if (shouldContinue === false) return;
+                    setPendingAutoSpin(true);
+                  }}
+                  disabled={isSpinning || !spinResult || !onAlreadyAteThis}
+                  aria-label={`Already ate ${spinResult.name}`}
+                >
+                  <Check size={16} className="mr-2" />
+                  Already ate this
+                </Button>
+              </div>
               {onEditList && (
-                <Button variant="outline" onClick={onEditList}>
+                <Button variant="outline" onClick={onEditList} size="sm">
                   Edit list
                 </Button>
               )}

@@ -562,7 +562,7 @@ function App() {
                       isReviewExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
                     }`}
                   >
-                    <ul className="overflow-hidden max-h-72 space-y-2 pr-1">
+                    <ul className="max-h-72 overflow-y-auto overscroll-contain space-y-2 pr-1">
                       {roundRestaurants.map((restaurant) => (
                         <li key={restaurant.id} className="flex items-start justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
                           <div>

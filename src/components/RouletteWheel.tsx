@@ -96,6 +96,7 @@ export function RouletteWheel({
   const celebrationTimeoutsRef = useRef<number[]>([]);
   const celebrationElementsRef = useRef<HTMLElement[]>([]);
   const recenterTimeoutRef = useRef<number | null>(null);
+  const resultScrollTimeoutRef = useRef<number | null>(null);
   const lastExternalSpinIdRef = useRef('');
   const [winnerSliceIndex, setWinnerSliceIndex] = useState<number | null>(null);
   const [isWinnerSliceHighlighted, setIsWinnerSliceHighlighted] = useState(false);
@@ -257,14 +258,20 @@ export function RouletteWheel({
         }, WINNER_PULSE_DURATION_MS);
         onSpinComplete(result);
 
-        setTimeout(() => {
+        if (resultScrollTimeoutRef.current !== null) {
+          window.clearTimeout(resultScrollTimeoutRef.current);
+        }
+        resultScrollTimeoutRef.current = window.setTimeout(() => {
           const resultCard = document.getElementById('spin-result-card');
           if (resultCard) {
-            resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            requestAnimationFrame(() => {
+            const cardRect = resultCard.getBoundingClientRect();
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+            const isFullyVisible = cardRect.top >= 0 && cardRect.bottom <= viewportHeight;
+            if (!isFullyVisible) {
               resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            });
+            }
           }
+          resultScrollTimeoutRef.current = null;
         }, 100);
       },
     });
@@ -347,6 +354,9 @@ export function RouletteWheel({
       clearCelebrationEffects();
       if (recenterTimeoutRef.current !== null) {
         window.clearTimeout(recenterTimeoutRef.current);
+      }
+      if (resultScrollTimeoutRef.current !== null) {
+        window.clearTimeout(resultScrollTimeoutRef.current);
       }
       if (winnerPulseTimeoutRef.current !== null) {
         window.clearTimeout(winnerPulseTimeoutRef.current);
@@ -523,13 +533,13 @@ export function RouletteWheel({
         disabled={isSpinning || !canSpin || (Boolean(onRequestSpin) && !canRequestSpin)}
         className="sticky bottom-3 sm:static z-30 relative overflow-hidden w-full max-w-sm px-8 sm:px-12 py-5 bg-brand-orange text-white font-heading text-xl font-bold rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
-        <span className={`transition-opacity duration-300 ${isSpinning ? 'opacity-0' : 'opacity-100'}`}>
-          {spinButtonLabel}
-        </span>
-        {isSpinning && (
-          <span className="absolute inset-0 flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin" />
+        {isSpinning ? (
+          <span className="inline-flex items-center justify-center gap-2" aria-live="polite">
+            <Loader2 className="h-6 w-6 animate-spin text-white" />
+            <span className="text-base sm:text-lg">Spinning...</span>
           </span>
+        ) : (
+          <span>{spinButtonLabel}</span>
         )}
       </button>
 

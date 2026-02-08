@@ -46,9 +46,11 @@ interface GroupSpinProps {
   isBusy: boolean;
   roomError: string | null;
   participants: GroupRoomParticipant[];
+  canStartRoomSpin: boolean;
   onCreateRoom: () => Promise<void>;
   onJoinRoom: (value: string) => Promise<void>;
   onLeaveRoom: () => Promise<void>;
+  onStartRoomSpin: () => Promise<void>;
   onSetParticipantCohost: (uid: string, shouldBeCohost: boolean) => Promise<void>;
   onClearRoomError: () => void;
 }
@@ -71,9 +73,11 @@ export function GroupSpin({
   isBusy,
   roomError,
   participants,
+  canStartRoomSpin,
   onCreateRoom,
   onJoinRoom,
   onLeaveRoom,
+  onStartRoomSpin,
   onSetParticipantCohost,
   onClearRoomError,
 }: GroupSpinProps) {
@@ -130,6 +134,11 @@ export function GroupSpin({
   const handleLeaveRoom = async () => {
     setHasCopied(false);
     await onLeaveRoom();
+  };
+
+  const handleStartRoomSpin = async () => {
+    if (!isHost) return;
+    await onStartRoomSpin();
   };
 
   const handleToggleCohost = async (uid: string, shouldBeCohost: boolean) => {
@@ -298,6 +307,17 @@ export function GroupSpin({
                 <p className="text-xs text-eatspin-gray-1">Signed in as {resolvedDisplayName}</p>
               </div>
               <div className="flex flex-wrap gap-2">
+                {isHost && (
+                  <Button
+                    className="bg-brand-orange text-white hover:bg-brand-orange/90"
+                    onClick={() => void handleStartRoomSpin()}
+                    disabled={!canStartRoomSpin || isBusy}
+                    title={canStartRoomSpin ? 'Start room spin for everyone' : 'Add at least 2 restaurants in the shared list to spin'}
+                  >
+                    <Sparkles size={16} />
+                    Start spin
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   className="border-brand-orange text-brand-orange hover:bg-brand-orange/10"

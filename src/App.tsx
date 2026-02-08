@@ -41,6 +41,8 @@ interface ManualPreset {
 const MANUAL_RESTAURANTS_STORAGE_KEY = 'eatspin:manual-restaurants';
 const MANUAL_PRESETS_STORAGE_KEY = 'eatspin:manual-presets';
 const ROOM_LIST_SYNC_GRACE_MS = 2_500;
+const GROUP_SPIN_REPLAY_WINDOW_MS = 30_000;
+const LATE_JOIN_NOTICE_MS = 5 * 60 * 1000;
 
 const createManualRestaurant = (name: string): Restaurant => {
   const now = Date.now();
@@ -55,7 +57,7 @@ const createManualRestaurant = (name: string): Restaurant => {
     },
     rating: 5,
     priceRange: '$$',
-    description: 'Added by you.',
+    description: 'Great choice. Your next food adventure starts here.',
   };
 };
 
@@ -138,6 +140,24 @@ const normalizeManualNames = (names: string[]) => (
     .filter((name, index, list) => list.findIndex((entry) => entry.toLowerCase() === name.toLowerCase()) === index)
 );
 
+const formatRelativeSpinTime = (ageMs: number) => {
+  const seconds = Math.max(0, Math.floor(ageMs / 1000));
+  if (seconds < 10) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+};
+
+const formatAbsoluteSpinTime = (timestamp: number) =>
+  new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
 function App() {
   // State management
   const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
@@ -164,10 +184,11 @@ function App() {
   const [manualInput, setManualInput] = useState('');
   const [manualRestaurants, setManualRestaurants] = useState<Restaurant[]>(() => loadManualRestaurants());
   const [manualWheelKey, setManualWheelKey] = useState(0);
-  const [manualSpinResult, setManualSpinResult] = useState<Restaurant | null>(null);
+  const [, setManualSpinResult] = useState<Restaurant | null>(null);
   const [presetNameInput, setPresetNameInput] = useState('');
   const [presetMealTimeInput, setPresetMealTimeInput] = useState<PresetMealTime>(() => getPresetMealTime());
   const [manualPresets, setManualPresets] = useState<ManualPreset[]>(() => loadManualPresets());
+  const [groupSpinNow, setGroupSpinNow] = useState(() => Date.now());
   const autoLoadedMealTimeRef = useRef<PresetMealTime>(null);
   const seededRoomSyncIdRef = useRef('');
   const pendingRoomListSyncRef = useRef<{ roomId: string; signature: string; startedAt: number } | null>(null);
@@ -460,6 +481,20 @@ function App() {
     [manualRestaurants],
   );
 
+  const groupSpinDisplay = useMemo(() => {
+    if (!isGroupRoomActive || !groupCurrentSpin) return null;
+
+    const ageMs = Math.max(0, groupSpinNow - groupCurrentSpin.startedAt);
+    return {
+      winnerName: groupCurrentSpin.winnerName,
+      startedAt: groupCurrentSpin.startedAt,
+      ageMs,
+      shouldReplay: ageMs <= GROUP_SPIN_REPLAY_WINDOW_MS,
+      relativeText: formatRelativeSpinTime(ageMs),
+      absoluteText: formatAbsoluteSpinTime(groupCurrentSpin.startedAt),
+    };
+  }, [groupCurrentSpin, groupSpinNow, isGroupRoomActive]);
+
   const shuffleManualRestaurants = useCallback(() => {
     if (isManualListReadOnly) return;
     const shuffledRestaurants = [...manualRestaurants].sort(() => Math.random() - 0.5);
@@ -470,7 +505,7 @@ function App() {
   }, [isManualListReadOnly, manualRestaurants, syncGroupListFromRestaurants]);
 
   const manualExternalSpin = useMemo(() => {
-    if (!isGroupRoomActive || !groupCurrentSpin) return null;
+    if (!isGroupRoomActive || !groupCurrentSpin || !groupSpinDisplay?.shouldReplay) return null;
 
     const normalizedWinner = groupCurrentSpin.winnerName.trim().toLowerCase();
     const winnerIndexFromName = manualRestaurants.findIndex(
@@ -481,7 +516,20 @@ function App() {
       spinId: groupCurrentSpin.spinId,
       winnerIndex: winnerIndexFromName >= 0 ? winnerIndexFromName : groupCurrentSpin.winnerIndex,
     };
-  }, [groupCurrentSpin, isGroupRoomActive, manualRestaurants]);
+  }, [groupCurrentSpin, groupSpinDisplay?.shouldReplay, isGroupRoomActive, manualRestaurants]);
+
+  useEffect(() => {
+    if (!isGroupRoomActive || !groupCurrentSpin) return;
+
+    setGroupSpinNow(Date.now());
+    const intervalId = window.setInterval(() => {
+      setGroupSpinNow(Date.now());
+    }, 30_000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [groupCurrentSpin, isGroupRoomActive]);
 
   const handleRequestGroupSpin = useCallback(async () => {
     if (!isGroupRoomActive) return;
@@ -898,7 +946,7 @@ function App() {
           )}
 
           {activeTab === 'manual' && (
-            <div id="wheel" className="py-4 pb-36 sm:pb-8">
+            <div id="wheel" className="py-4 pb-14 sm:pb-8">
               {isGroupRoomActive && (
                 <div className="mb-4 rounded-xl border border-brand-orange/30 bg-brand-linen px-4 py-3 text-sm text-eatspin-gray-1">
                   <p className="font-semibold text-brand-black">
@@ -911,6 +959,14 @@ function App() {
                         ? 'You can edit the shared list as co-host. Only host can start spins.'
                         : 'List editing is host/co-host only. You will receive live list and spin updates.'}
                   </p>
+                  <p className="mt-1 text-xs text-brand-black/80">
+                    {groupSpinDisplay
+                      ? `Last spin: ${groupSpinDisplay.relativeText} (${groupSpinDisplay.absoluteText})`
+                      : 'No spin yet.'}
+                  </p>
+                  {groupSpinDisplay && groupSpinDisplay.ageMs >= LATE_JOIN_NOTICE_MS && (
+                    <p className="mt-1 text-xs font-medium text-brand-black/80">Result was decided earlier.</p>
+                  )}
                   {!canEditGroupList && (
                     <button
                       type="button"
@@ -950,13 +1006,6 @@ function App() {
               />
 
                 <div id="manual-input" className="mt-8 max-w-xl mx-auto">
-                  {manualSpinResult && (
-                    <div className="mb-3 rounded-xl border border-eatspin-peach/60 bg-gradient-to-r from-white to-brand-linen px-4 py-3 text-center shadow-sm">
-                      <p className="text-xs uppercase tracking-[0.18em] text-eatspin-gray-1">Last result</p>
-                      <p className="font-heading text-lg text-brand-black">✨ {manualSpinResult.name}</p>
-                    </div>
-                  )}
-
                   <div className="sticky bottom-3 z-30 rounded-2xl border border-eatspin-peach/60 bg-white/95 p-3 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-white/85">
                   <div className="flex flex-col sm:flex-row gap-2">
                   <Input
@@ -1142,9 +1191,11 @@ function App() {
         isBusy={groupRoomBusy}
         roomError={groupRoomError}
         participants={groupParticipants}
+        canStartRoomSpin={isGroupRoomActive && isGroupHost && manualRestaurantNames.length >= 2}
         onCreateRoom={handleCreateGroupRoom}
         onJoinRoom={handleJoinGroupRoom}
         onLeaveRoom={leaveGroupRoom}
+        onStartRoomSpin={handleRequestGroupSpin}
         onSetParticipantCohost={setParticipantCohost}
         onClearRoomError={clearGroupRoomError}
       />

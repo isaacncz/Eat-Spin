@@ -81,6 +81,14 @@ export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
               How It Works
             </button>
             <button
+              onClick={() => scrollToSection('group-spin')}
+              className={`text-sm font-medium transition-colors duration-200 hover:text-eatspin-orange ${
+                isScrolled ? 'text-brand-black' : 'text-brand-black'
+              }`}
+            >
+              Group Spin
+            </button>
+            <button
               onClick={() => scrollToSection('features')}
               className={`text-sm font-medium transition-colors duration-200 hover:text-eatspin-orange ${
                 isScrolled ? 'text-brand-black' : 'text-brand-black'
@@ -146,6 +154,12 @@ export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
                 className="text-left text-brand-black font-medium hover:text-eatspin-orange transition-colors"
               >
                 How It Works
+              </button>
+              <button
+                onClick={() => scrollToSection('group-spin')}
+                className="text-left text-brand-black font-medium hover:text-eatspin-orange transition-colors"
+              >
+                Group Spin
               </button>
               <button
                 onClick={() => scrollToSection('features')}

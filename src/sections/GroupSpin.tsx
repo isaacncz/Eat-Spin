@@ -1,10 +1,32 @@
-import { useState } from 'react';
-import { Users, Link2, CheckCircle2, Sparkles, Trophy, Copy, Check, ShieldCheck, LogOut, UserPlus, UserMinus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Users, Link2, Sparkles, Trophy, Copy, Check, ShieldCheck, LogOut, UserPlus, UserMinus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { GROUP_ROOM_MAX_PARTICIPANTS, GROUP_ROOM_NAME_MAX_LENGTH, type GroupRoomParticipant } from '@/hooks/useFirebaseGroupRoom';
+
+const ROOM_CODE_LENGTH = 6;
+
+const normalizeRoomCode = (value: string) => (
+  value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, ROOM_CODE_LENGTH)
+);
+
+const extractRoomCode = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (trimmed.includes('room=')) {
+    try {
+      return normalizeRoomCode(new URL(trimmed).searchParams.get('room') ?? '');
+    } catch {
+      return normalizeRoomCode(trimmed);
+    }
+  }
+  return normalizeRoomCode(trimmed);
+};
 
 interface GroupSpinProps {
   isFirebaseConfigured: boolean;
@@ -24,9 +46,11 @@ interface GroupSpinProps {
   isBusy: boolean;
   roomError: string | null;
   participants: GroupRoomParticipant[];
+  canStartRoomSpin: boolean;
   onCreateRoom: () => Promise<void>;
   onJoinRoom: (value: string) => Promise<void>;
   onLeaveRoom: () => Promise<void>;
+  onStartRoomSpin: () => Promise<void>;
   onSetParticipantCohost: (uid: string, shouldBeCohost: boolean) => Promise<void>;
   onClearRoomError: () => void;
 }
@@ -49,9 +73,11 @@ export function GroupSpin({
   isBusy,
   roomError,
   participants,
+  canStartRoomSpin,
   onCreateRoom,
   onJoinRoom,
   onLeaveRoom,
+  onStartRoomSpin,
   onSetParticipantCohost,
   onClearRoomError,
 }: GroupSpinProps) {
@@ -66,6 +92,31 @@ export function GroupSpin({
     if (!roomLink || typeof navigator === 'undefined' || !navigator.clipboard) return;
     await navigator.clipboard.writeText(roomLink);
     setHasCopied(true);
+  };
+
+  const pasteRoomLinkToJoinInput = (value: string) => {
+    if (!value) return;
+    const normalizedRoomCode = extractRoomCode(value);
+    setJoinValue(normalizedRoomCode || value);
+    window.requestAnimationFrame(() => {
+      const joinInput = document.getElementById('group-room-join-input');
+      if (!(joinInput instanceof HTMLInputElement)) return;
+      joinInput.focus();
+      joinInput.select();
+    });
+  };
+
+  const handleUseRoomLink = async () => {
+    const valueToPaste = roomId || extractRoomCode(roomLink) || roomLink;
+    if (!valueToPaste) return;
+    pasteRoomLinkToJoinInput(valueToPaste);
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(roomLink);
+      setHasCopied(true);
+    } catch {
+      // Clipboard can fail on unsupported browsers or denied permission.
+    }
   };
 
   const handleCreateRoom = async () => {
@@ -85,11 +136,25 @@ export function GroupSpin({
     await onLeaveRoom();
   };
 
+  const handleStartRoomSpin = async () => {
+    if (!isHost) return;
+    await onStartRoomSpin();
+  };
+
   const handleToggleCohost = async (uid: string, shouldBeCohost: boolean) => {
     setCohostPendingUid(uid);
     await onSetParticipantCohost(uid, shouldBeCohost);
     setCohostPendingUid(null);
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const roomFromUrl = new URLSearchParams(window.location.search).get('room');
+    if (!roomFromUrl) return;
+    const normalizedRoomCode = normalizeRoomCode(roomFromUrl);
+    if (!normalizedRoomCode) return;
+    setJoinValue((previous) => previous || normalizedRoomCode);
+  }, []);
 
   return (
     <section id="group-spin" className="bg-brand-linen px-4 py-16 sm:px-6 lg:px-8">
@@ -102,8 +167,7 @@ export function GroupSpin({
             Group Spin makes deciding effortless
           </h2>
           <p className="mx-auto max-w-2xl text-eatspin-gray-1">
-            Real rooms now sync through Firebase so participants, list updates, and spin results work across browsers
-            and devices.
+            Firebase-powered rooms keep participants, shared lists, and spin outcomes synced across browsers and devices.
           </p>
         </div>
 
@@ -147,7 +211,14 @@ export function GroupSpin({
                     <p className="text-xs uppercase tracking-wide text-brand-black/60">Room code</p>
                     <p className="text-base font-heading text-brand-black">{roomId}</p>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <span className="truncate text-xs text-brand-black/70">{roomLink}</span>
+                      <button
+                        type="button"
+                        onClick={() => void handleUseRoomLink()}
+                        className="truncate text-left text-xs text-brand-black/70 underline-offset-2 hover:underline"
+                        title="Click to auto-paste into join field"
+                      >
+                        {roomLink}
+                      </button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -187,6 +258,7 @@ export function GroupSpin({
               />
               <Input
                 placeholder="Paste room link or enter code"
+                id="group-room-join-input"
                 className="h-12 rounded-xl border-eatspin-peach/60 bg-white"
                 value={joinValue}
                 onChange={(event) => setJoinValue(event.target.value)}
@@ -235,6 +307,17 @@ export function GroupSpin({
                 <p className="text-xs text-eatspin-gray-1">Signed in as {resolvedDisplayName}</p>
               </div>
               <div className="flex flex-wrap gap-2">
+                {isHost && (
+                  <Button
+                    className="bg-brand-orange text-white hover:bg-brand-orange/90"
+                    onClick={() => void handleStartRoomSpin()}
+                    disabled={!canStartRoomSpin || isBusy}
+                    title={canStartRoomSpin ? 'Start room spin for everyone' : 'Add at least 2 restaurants in the shared list to spin'}
+                  >
+                    <Sparkles size={16} />
+                    Start spin
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   className="border-brand-orange text-brand-orange hover:bg-brand-orange/10"
@@ -289,11 +372,6 @@ export function GroupSpin({
         <div className="mt-12 grid gap-4 sm:grid-cols-3">
           {[
             {
-              icon: <CheckCircle2 size={20} className="text-brand-orange" />,
-              title: 'Everyone taps Ready',
-              copy: 'Presence is synced in Realtime Database for true multi-device rooms.',
-            },
-            {
               icon: <Sparkles size={20} className="text-brand-orange" />,
               title: 'Host spins once',
               copy: 'Host writes one winner index, then every joined client animates to that result.',
@@ -302,6 +380,11 @@ export function GroupSpin({
               icon: <Trophy size={20} className="text-brand-orange" />,
               title: 'Shared final result',
               copy: 'No local-only randomness in room mode, so everyone sees the same winner.',
+            },
+            {
+              icon: <ShieldCheck size={20} className="text-brand-orange" />,
+              title: 'Fair for everyone',
+              copy: 'One committed result drives every client, so no one gets a different outcome.',
             },
           ].map((item) => (
             <div key={item.title} className="rounded-2xl border border-eatspin-peach/50 bg-white px-5 py-4 shadow-sm">

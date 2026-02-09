@@ -278,6 +278,7 @@ export function useFirebaseGroupRoom() {
   const roomIdRef = useRef('');
   const isHostRef = useRef(false);
   const isCohostRef = useRef(false);
+  const resolvedDisplayNameRef = useRef('Guest');
   const lastStaleCleanupRef = useRef(0);
   const lastSyncedListRef = useRef('');
   const autoJoinAttemptedRef = useRef(false);
@@ -429,11 +430,11 @@ export function useFirebaseGroupRoom() {
     if (!firebaseDb || !authUid || !targetRoomId) return;
 
     await update(ref(firebaseDb, `rooms/${targetRoomId}/participants/${authUid}`), {
-      name: resolvedDisplayName,
+      name: resolvedDisplayNameRef.current,
       lastSeenAt: Date.now(),
       ready: true,
     });
-  }, [authUid, resolvedDisplayName]);
+  }, [authUid]);
 
   const enterRoom = useCallback(async (input: string, createMode: boolean) => {
     if (!firebaseDb || !authUid) {
@@ -720,6 +721,16 @@ export function useFirebaseGroupRoom() {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(DISPLAY_NAME_KEY, resolvedDisplayName);
   }, [resolvedDisplayName]);
+
+  useEffect(() => {
+    resolvedDisplayNameRef.current = resolvedDisplayName;
+  }, [resolvedDisplayName]);
+
+  useEffect(() => {
+    const activeRoomId = roomIdRef.current;
+    if (!activeRoomId) return;
+    void writePresenceHeartbeat(activeRoomId);
+  }, [resolvedDisplayName, writePresenceHeartbeat]);
 
   useEffect(() => {
     if (!isFirebaseConfigured) {

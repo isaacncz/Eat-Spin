@@ -28,7 +28,14 @@ export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      const navbarHeight = Number.parseInt(
+        window.getComputedStyle(document.documentElement).getPropertyValue('--navbar-height'),
+        10,
+      );
+      const fallbackNavbarHeight = isScrolled || isMobileMenuOpen ? 64 : 80;
+      const offset = Number.isFinite(navbarHeight) ? navbarHeight : fallbackNavbarHeight;
+      const targetTop = window.scrollY + element.getBoundingClientRect().top - offset - 8;
+      window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
     }
     setIsMobileMenuOpen(false);
   };

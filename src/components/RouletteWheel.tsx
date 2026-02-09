@@ -60,8 +60,12 @@ const getOpeningHoursLabel = (restaurant: Restaurant): string => {
   const fallbackHours = Object.values(restaurant.hours)[0];
   const selectedHours = todayHours ?? dailyHours ?? fallbackHours;
 
-  if (!selectedHours || selectedHours.closed) return 'Closed today';
-  return `Open ${selectedHours.open} • Close ${selectedHours.close}`;
+  if (!selectedHours || selectedHours.closed || selectedHours.windows.length === 0) {
+    return 'Closed today';
+  }
+
+  const windowsLabel = selectedHours.windows.map((window) => `${window.open}-${window.close}`).join(', ');
+  return `Open ${windowsLabel}`;
 };
 
 export function RouletteWheel({
@@ -84,18 +88,28 @@ export function RouletteWheel({
   canRequestSpin = true,
   onSpinStart,
 }: RouletteWheelProps) {
+  const ANTICIPATION_DURATION_S = 0.5;
+  const ANTICIPATION_DEG = 50;
+  const SPIN_DURATION_S = 5.8;
+  const WINNER_PULSE_DURATION_MS = 900;
+
   const wheelRef = useRef<HTMLDivElement>(null);
   const wheelScrollRef = useRef<HTMLDivElement>(null);
   const wheelContainerRef = useRef<HTMLDivElement>(null);
   const previousRestaurantsRef = useRef(restaurants);
+  const winnerPulseTimeoutRef = useRef<number | null>(null);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
   const currentRotationRef = useRef(0);
   const [wheelSize, setWheelSize] = useState(320);
   const celebrationTimeoutsRef = useRef<number[]>([]);
   const celebrationElementsRef = useRef<HTMLElement[]>([]);
+  const recenterTimeoutRef = useRef<number | null>(null);
+  const resultScrollTimeoutRef = useRef<number | null>(null);
   const lastExternalSpinIdRef = useRef('');
   const [pendingAutoSpin, setPendingAutoSpin] = useState(false);
   const [showSkipReminder, setShowSkipReminder] = useState(false);
+  const [winnerSliceIndex, setWinnerSliceIndex] = useState<number | null>(null);
+  const [isWinnerSliceHighlighted, setIsWinnerSliceHighlighted] = useState(false);
 
   const clearCelebrationEffects = useCallback(() => {
     celebrationTimeoutsRef.current.forEach((timeoutId) => {
@@ -167,16 +181,35 @@ export function RouletteWheel({
     return `conic-gradient(from 0deg, ${stops.join(', ')})`;
   }, [restaurants.length]);
 
-  const recenterWheel = useCallback(() => {
+  const scrollWheelIntoView = useCallback((behavior: ScrollBehavior) => {
     const target = wheelScrollRef.current ?? wheelContainerRef.current;
-    if (!target) return;
+    if (!target || typeof window === 'undefined') return;
 
-    // Some layouts reflow right after click; a second scroll on the next frame is more reliable on mobile.
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    requestAnimationFrame(() => {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
+    const navbarHeight = Number.parseInt(
+      window.getComputedStyle(document.documentElement).getPropertyValue('--navbar-height'),
+      10,
+    );
+    const offset = Number.isFinite(navbarHeight) ? navbarHeight : 72;
+    const targetTop = window.scrollY + target.getBoundingClientRect().top - offset - 8;
+    window.scrollTo({ top: Math.max(0, targetTop), behavior });
   }, []);
+
+  const recenterWheel = useCallback(() => {
+    // First pass: smooth scroll for expected UX.
+    scrollWheelIntoView('smooth');
+    window.requestAnimationFrame(() => {
+      scrollWheelIntoView('smooth');
+    });
+
+    // Correction pass: some browsers miss the smooth target during rapid reflow.
+    if (recenterTimeoutRef.current !== null) {
+      window.clearTimeout(recenterTimeoutRef.current);
+    }
+    recenterTimeoutRef.current = window.setTimeout(() => {
+      scrollWheelIntoView('auto');
+      recenterTimeoutRef.current = null;
+    }, 180);
+  }, [scrollWheelIntoView]);
 
   const animateSpinToIndex = useCallback((index: number, sourceRestaurants?: Restaurant[]) => {
     const targetRestaurants = sourceRestaurants ?? restaurants;
@@ -196,11 +229,29 @@ export function RouletteWheel({
     recenterWheel();
     setIsSpinning(true);
     setSpinResult(null);
+    setWinnerSliceIndex(null);
+    setIsWinnerSliceHighlighted(false);
+    if (winnerPulseTimeoutRef.current !== null) {
+      window.clearTimeout(winnerPulseTimeoutRef.current);
+      winnerPulseTimeoutRef.current = null;
+    }
     gsap.killTweensOf(wheelRef.current);
 
-    gsap.to(wheelRef.current, {
+    const timeline = gsap.timeline();
+    timeline.to(wheelRef.current, {
+      rotation: currentRotationRef.current - ANTICIPATION_DEG,
+      duration: ANTICIPATION_DURATION_S,
+      ease: 'back.inOut(1.2)',
+      onUpdate: () => {
+        if (wheelRef.current) {
+          currentRotationRef.current = gsap.getProperty(wheelRef.current, 'rotation') as number;
+        }
+      },
+    });
+
+    timeline.to(wheelRef.current, {
       rotation: targetRotation,
-      duration: 5,
+      duration: SPIN_DURATION_S,
       ease: 'power4.out',
       onUpdate: () => {
         if (wheelRef.current) {
@@ -210,16 +261,27 @@ export function RouletteWheel({
       onComplete: () => {
         setIsSpinning(false);
         setSpinResult(result);
+        setWinnerSliceIndex(selectedIndex);
+        setIsWinnerSliceHighlighted(true);
+        winnerPulseTimeoutRef.current = window.setTimeout(() => {
+          setIsWinnerSliceHighlighted(false);
+        }, WINNER_PULSE_DURATION_MS);
         onSpinComplete(result);
 
-        setTimeout(() => {
+        if (resultScrollTimeoutRef.current !== null) {
+          window.clearTimeout(resultScrollTimeoutRef.current);
+        }
+        resultScrollTimeoutRef.current = window.setTimeout(() => {
           const resultCard = document.getElementById('spin-result-card');
           if (resultCard) {
-            resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            requestAnimationFrame(() => {
+            const cardRect = resultCard.getBoundingClientRect();
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+            const isFullyVisible = cardRect.top >= 0 && cardRect.bottom <= viewportHeight;
+            if (!isFullyVisible) {
               resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            });
+            }
           }
+          resultScrollTimeoutRef.current = null;
         }, 100);
       },
     });
@@ -312,6 +374,15 @@ export function RouletteWheel({
   useEffect(() => {
     return () => {
       clearCelebrationEffects();
+      if (recenterTimeoutRef.current !== null) {
+        window.clearTimeout(recenterTimeoutRef.current);
+      }
+      if (resultScrollTimeoutRef.current !== null) {
+        window.clearTimeout(resultScrollTimeoutRef.current);
+      }
+      if (winnerPulseTimeoutRef.current !== null) {
+        window.clearTimeout(winnerPulseTimeoutRef.current);
+      }
     };
   }, [clearCelebrationEffects]);
 
@@ -344,9 +415,9 @@ export function RouletteWheel({
   const spinAgainDisabled = isSpinning || !canSpin || (Boolean(onRequestSpin) && !canRequestSpin);
 
   return (
-    <div className="flex flex-col items-center gap-8 py-8">
+    <div className="flex flex-col items-center gap-6 py-4 sm:py-5">
       {/* Roulette Wheel */}
-      <div ref={wheelScrollRef} className="relative mx-auto w-full max-w-[28rem] px-3 sm:px-4 overflow-hidden">
+      <div ref={wheelScrollRef} className="relative mx-auto w-full max-w-[32.5rem] px-1 sm:px-3 overflow-hidden">
         {/* Pointer */}
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
           <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[30px] border-t-eatspin-orange drop-shadow-lg" />
@@ -355,8 +426,8 @@ export function RouletteWheel({
         {/* Wheel Container */}
         <div
           ref={wheelContainerRef}
-          className="relative w-full aspect-square"
-          style={{ maxWidth: 'min(90vw, 28rem)' }}
+          className="relative mx-auto w-full aspect-square"
+          style={{ maxWidth: '32.5rem' }}
         >
           {/* Wheel */}
           <div
@@ -378,6 +449,20 @@ export function RouletteWheel({
               );
             })}
 
+            {winnerSliceIndex !== null && (
+              <div
+                className={`pointer-events-none absolute inset-0 rounded-full ${isWinnerSliceHighlighted ? 'winner-slice-highlight' : 'winner-slice-highlight-idle'}`}
+                style={{
+                  background: `conic-gradient(
+                    from 0deg,
+                    rgba(255, 215, 0, 0) 0deg ${(winnerSliceIndex * segmentAngle)}deg,
+                    rgba(255, 215, 0, 0.34) ${(winnerSliceIndex * segmentAngle)}deg ${((winnerSliceIndex + 1) * segmentAngle)}deg,
+                    rgba(255, 215, 0, 0) ${((winnerSliceIndex + 1) * segmentAngle)}deg 360deg
+                  )`,
+                }}
+              />
+            )}
+
             {/* Restaurant names positioned with polar coordinates */}
             {restaurants.map((restaurant, index) => {
               const startAngle = (360 / restaurants.length) * index;
@@ -397,9 +482,9 @@ export function RouletteWheel({
               
               const displayName = restaurant.name;
               const nameLength = displayName.length;
-              const maxFontSize = wheelSize * 0.045;
+              const maxFontSize = wheelSize * 0.054;
               const minFontSize = wheelSize * 0.022;
-              const lengthFactor = Math.min(Math.max((nameLength - 4) / 24, 0), 1);
+              const lengthFactor = Math.min(Math.max((nameLength - 5) / 30, 0), 1);
               const baseFontSize =
                 maxFontSize - (maxFontSize - minFontSize) * lengthFactor;
               const maxLabelWidth = wheelSize * 0.28;
@@ -476,13 +561,13 @@ export function RouletteWheel({
             2-day skip
           </span>
         )}
-        <span className={`transition-opacity duration-300 ${isSpinning ? 'opacity-0' : 'opacity-100'}`}>
-          {spinButtonLabel}
-        </span>
-        {isSpinning && (
-          <span className="absolute inset-0 flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin" />
+        {isSpinning ? (
+          <span className="inline-flex items-center justify-center gap-2" aria-live="polite">
+            <Loader2 className="h-6 w-6 animate-spin text-white" />
+            <span className="text-base sm:text-lg">Spinning...</span>
           </span>
+        ) : (
+          <span>{spinButtonLabel}</span>
         )}
       </button>
 

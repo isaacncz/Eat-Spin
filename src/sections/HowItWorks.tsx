@@ -70,9 +70,6 @@ export function HowItWorks() {
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <span className="inline-block px-4 py-1.5 bg-eatspin-peach text-eatspin-orange text-sm font-medium rounded-full mb-4">
-            Simple Process
-          </span>
           <h2 className="font-heading text-3xl sm:text-4xl font-bold text-brand-black mb-4">
             How It Works
           </h2>

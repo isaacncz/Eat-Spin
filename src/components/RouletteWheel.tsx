@@ -95,6 +95,7 @@ export function RouletteWheel({
   const celebrationElementsRef = useRef<HTMLElement[]>([]);
   const lastExternalSpinIdRef = useRef('');
   const [pendingAutoSpin, setPendingAutoSpin] = useState(false);
+  const [showSkipReminder, setShowSkipReminder] = useState(false);
 
   const clearCelebrationEffects = useCallback(() => {
     celebrationTimeoutsRef.current.forEach((timeoutId) => {
@@ -470,6 +471,11 @@ export function RouletteWheel({
         disabled={spinAgainDisabled}
         className="sticky bottom-3 sm:static z-30 relative overflow-hidden w-full max-w-sm px-8 sm:px-12 py-5 bg-brand-orange text-white font-heading text-xl font-bold rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
+        {showSkipReminder && (
+          <span className="absolute top-2 right-3 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-brand-orange shadow-sm">
+            2-day skip
+          </span>
+        )}
         <span className={`transition-opacity duration-300 ${isSpinning ? 'opacity-0' : 'opacity-100'}`}>
           {spinButtonLabel}
         </span>
@@ -602,6 +608,7 @@ export function RouletteWheel({
                     if (!spinResult || isSpinning) return;
                     const shouldContinue = onAlreadyAteThis?.(spinResult);
                     if (shouldContinue === false) return;
+                    setShowSkipReminder(true);
                     setPendingAutoSpin(true);
                   }}
                   disabled={isSpinning || !spinResult || !onAlreadyAteThis}

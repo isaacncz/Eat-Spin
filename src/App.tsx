@@ -273,6 +273,7 @@ function App() {
 
   const handleAutoAlreadyAteThis = (restaurant: Restaurant) => {
     removeRestaurantForRound(restaurant.id);
+    toast.success(`Got it — we’ll skip ${restaurant.name} for the next 2 days.`);
     return true;
   };
 
@@ -282,6 +283,7 @@ function App() {
       return false;
     }
     removeManualRestaurant(restaurant.id);
+    toast.success(`Got it — we’ll skip ${restaurant.name} for the next 2 days.`);
     return true;
   };
 

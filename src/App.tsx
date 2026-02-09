@@ -43,6 +43,7 @@ const MANUAL_PRESETS_STORAGE_KEY = 'eatspin:manual-presets';
 const ROOM_LIST_SYNC_GRACE_MS = 2_500;
 const GROUP_SPIN_REPLAY_WINDOW_MS = 30_000;
 const LATE_JOIN_NOTICE_MS = 5 * 60 * 1000;
+const REVIEW_PREVIEW_COUNT = 30;
 
 const createManualRestaurant = (name: string): Restaurant => {
   const now = Date.now();
@@ -179,6 +180,7 @@ function App() {
   });
   const [autoWheelKey, setAutoWheelKey] = useState(0);
   const [isReviewExpanded, setIsReviewExpanded] = useState(false);
+  const [showAllRoundRestaurants, setShowAllRoundRestaurants] = useState(false);
   const [isMoreFiltersOpen, setIsMoreFiltersOpen] = useState(false);
 
   const [manualInput, setManualInput] = useState('');
@@ -276,6 +278,16 @@ function App() {
   const roundRestaurants = useMemo(() => (
     filteredRestaurants.filter((restaurant) => !roundRemovedRestaurantIds.includes(restaurant.id))
   ), [filteredRestaurants, roundRemovedRestaurantIds]);
+
+  const displayedRoundRestaurants = useMemo(() => (
+    showAllRoundRestaurants
+      ? roundRestaurants
+      : roundRestaurants.slice(0, REVIEW_PREVIEW_COUNT)
+  ), [roundRestaurants, showAllRoundRestaurants]);
+
+  useEffect(() => {
+    setShowAllRoundRestaurants(false);
+  }, [selectedCategories, selectedPriceRanges, nonHalalOnly, radiusKm, location]);
 
   const removeRestaurantForRound = (
     restaurantId: string,
@@ -860,8 +872,8 @@ function App() {
                       isReviewExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
                     }`}
                   >
-                    <ul className="max-h-72 overflow-y-auto overscroll-contain space-y-2 pr-1">
-                      {roundRestaurants.map((restaurant) => (
+                      <ul className="max-h-72 overflow-y-auto overscroll-contain space-y-2 pr-1">
+                      {displayedRoundRestaurants.map((restaurant) => (
                         <li key={restaurant.id} className="flex items-start justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
                           <div>
                             <p className="font-medium text-brand-black">{restaurant.name}</p>
@@ -889,6 +901,19 @@ function App() {
                       ))}
 
                       </ul>
+                      {roundRestaurants.length > REVIEW_PREVIEW_COUNT && (
+                        <div className="mt-3 flex justify-center">
+                          <button
+                            type="button"
+                            onClick={() => setShowAllRoundRestaurants((prev) => !prev)}
+                            className="rounded-full border border-eatspin-peach/80 bg-white px-3 py-1.5 text-xs font-medium text-eatspin-gray-1 hover:bg-brand-linen"
+                          >
+                            {showAllRoundRestaurants
+                              ? `Show first ${REVIEW_PREVIEW_COUNT}`
+                              : `Show all ${roundRestaurants.length}`}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

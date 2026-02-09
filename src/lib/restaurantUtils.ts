@@ -2,6 +2,68 @@
 
 import type { Restaurant, FoodCategory } from '@/types';
 
+type FilterCacheEntry = {
+  value: Restaurant[];
+  expiresAt: number;
+};
+
+const FILTER_CACHE_TTL_MS = 5 * 60 * 1000;
+const MAX_FILTER_CACHE_ENTRIES = 200;
+const filterCache = new Map<string, FilterCacheEntry>();
+
+const serializeSorted = (values: string[]): string => [...values].sort().join('|');
+
+const toBucket = (value: number, precision: number = 4): number => {
+  const factor = 10 ** precision;
+  return Math.round(value * factor) / factor;
+};
+
+const buildFilterCacheKey = (
+  userLocation: { lat: number; lng: number } | null,
+  selectedCategories: FoodCategory[],
+  radiusKm: number,
+  selectedPriceRanges: Restaurant['priceRange'][],
+  nonHalalOnly: boolean
+): string => {
+  const locationKey = userLocation
+    ? `${toBucket(userLocation.lat)}:${toBucket(userLocation.lng)}`
+    : 'no-location';
+
+  return [
+    locationKey,
+    radiusKm.toFixed(2),
+    serializeSorted(selectedCategories),
+    serializeSorted(selectedPriceRanges),
+    nonHalalOnly ? 'non-halal' : 'all',
+  ].join('::');
+};
+
+const readFilterCache = (key: string): Restaurant[] | null => {
+  const entry = filterCache.get(key);
+  if (!entry) return null;
+
+  if (entry.expiresAt < Date.now()) {
+    filterCache.delete(key);
+    return null;
+  }
+
+  return entry.value;
+};
+
+const writeFilterCache = (key: string, value: Restaurant[]): void => {
+  if (filterCache.size >= MAX_FILTER_CACHE_ENTRIES) {
+    const oldestKey = filterCache.keys().next().value;
+    if (oldestKey) {
+      filterCache.delete(oldestKey);
+    }
+  }
+
+  filterCache.set(key, {
+    value,
+    expiresAt: Date.now() + FILTER_CACHE_TTL_MS,
+  });
+};
+
 const nonHalalCategories: FoodCategory[] = ['chinese', 'japanese', 'korean', 'western'];
 
 /**
@@ -84,6 +146,19 @@ export const enhancedFilterRestaurants = (
   selectedPriceRanges: Restaurant['priceRange'][] = [],
   nonHalalOnly = false
 ): Restaurant[] => {
+  const cacheKey = buildFilterCacheKey(
+    userLocation,
+    selectedCategories,
+    radiusKm,
+    selectedPriceRanges,
+    nonHalalOnly
+  );
+
+  const cached = readFilterCache(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   // First filter by categories
   let filtered = restaurants;
   
@@ -118,9 +193,10 @@ export const enhancedFilterRestaurants = (
     ? withDistance.filter((restaurant) => (restaurant.distance ?? 0) <= radiusKm)
     : filterByRadius(withDistance, userLocation, radiusKm);
 
-  if (!userLocation) {
-    return withinRadius;
-  }
+  const result = !userLocation
+    ? withinRadius
+    : [...withinRadius].sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
 
-  return [...withinRadius].sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
+  writeFilterCache(cacheKey, result);
+  return result;
 };

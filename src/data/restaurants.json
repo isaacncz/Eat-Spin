@@ -95,81 +95,6 @@
     "description": "Iconic heritage spot famous for double-cooked roasted pork."
   },
   {
-    "name": "Tai Tong Restaurant",
-    "category": [
-      "chinese",
-      "breakfast",
-      "noodles"
-    ],
-    "address": "45 Lebuh Cintra, Georgetown, Penang",
-    "coordinates": {
-      "lat": 5.4178,
-      "lng": 100.334
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "14:30"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "14:30"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "14:30"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "14:30"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "14:30"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "14:30"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "14:30"
-          }
-        ]
-      }
-    },
-    "rating": 4.1,
-    "priceRange": "$$",
-    "phone": "+60 4-263 6625",
-    "description": "Traditional push-cart dim sum and classic noodles."
-  },
-  {
     "name": "Foong Wei Heong Restaurant",
     "category": [
       "chinese",
@@ -883,77 +808,6 @@
     "priceRange": "$$",
     "phone": "+60 4-261 2282",
     "description": "Home-style Chinese dishes serving hearty lunches."
-  },
-  {
-    "name": "Restoran Zim Sum",
-    "category": [
-      "chinese",
-      "breakfast",
-      "noodles"
-    ],
-    "address": "62 Jalan Macalister, Georgetown, Penang",
-    "coordinates": {
-      "lat": 5.4158,
-      "lng": 100.3289
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "13:30"
-          }
-        ]
-      },
-      "tuesday": {
-        "closed": true,
-        "windows": []
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "13:30"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "13:30"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "13:30"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "13:30"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "13:30"
-          }
-        ]
-      }
-    },
-    "rating": 3.9,
-    "priceRange": "$$",
-    "phone": "+6014-302 9177",
-    "description": "Casual, open-air dim sum restaurant with a large variety."
   },
   {
     "name": "Hock Seng Lau Restaurant",
@@ -3551,80 +3405,6 @@
     "description": "Bustling night food market along Chulia Street offering many street eats."
   },
   {
-    "name": "Restoran Zim Sum",
-    "category": [
-      "chinese",
-      "breakfast"
-    ],
-    "address": "Jalan Pintal Tali, George Town, Penang, Malaysia",
-    "coordinates": {
-      "lat": 5.4178,
-      "lng": 100.3396
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "07:30",
-            "close": "15:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "07:30",
-            "close": "15:00"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "07:30",
-            "close": "15:00"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "07:30",
-            "close": "15:00"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "07:30",
-            "close": "15:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "07:30",
-            "close": "15:00"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "07:30",
-            "close": "15:00"
-          }
-        ]
-      }
-    },
-    "rating": 4.1,
-    "priceRange": "$",
-    "phone": null,
-    "description": "Compact dim sum restaurant offering classic Cantonese breakfast and lunch."
-  },
-  {
     "name": "Nyonya Su Pei Private Dining • Heritage Artisans",
     "category": [
       "chinese",
@@ -3768,81 +3548,6 @@
     "priceRange": "$",
     "phone": "+6016-444 3804",
     "description": "Local kopitiam specializing in traditional Hokkien-style noodles and Quan Zhou heritage recipes."
-  },
-  {
-    "name": "Tai Tong Restaurant",
-    "category": [
-      "breakfast",
-      "chinese",
-      "seafood"
-    ],
-    "address": "188, Jalan Penang, 10000 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.4192,
-      "lng": 100.3325
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "21:30"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "21:30"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "21:30"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "21:30"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "21:30"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "21:30"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "06:30",
-            "close": "21:30"
-          }
-        ]
-      }
-    },
-    "rating": 4,
-    "priceRange": "$$",
-    "phone": null,
-    "description": "A secondary branch of the famed dim sum parlor, serving traditional push-cart breakfast and Chinese stir-fry."
   },
   {
     "name": "CRC Restaurant",
@@ -6331,611 +6036,6 @@
     "description": "Creative and flavorful vegetarian interpretations of traditional Chinese banquet dishes."
   },
   {
-    "name": "Qi Fan Ge Chinese Restaurant (七饭阁)",
-    "category": [
-      "chinese",
-      "seafood",
-      "rice"
-    ],
-    "address": "21, Karpal Singh Dr, 11600 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.3975,
-      "lng": 100.3292
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "15:00"
-          },
-          {
-            "open": "17:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "15:00"
-          },
-          {
-            "open": "17:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "15:00"
-          },
-          {
-            "open": "17:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "15:00"
-          },
-          {
-            "open": "17:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "15:00"
-          },
-          {
-            "open": "17:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "15:00"
-          },
-          {
-            "open": "17:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "15:00"
-          },
-          {
-            "open": "17:00",
-            "close": "22:00"
-          }
-        ]
-      }
-    },
-    "rating": 4.3,
-    "priceRange": "$$",
-    "phone": "+6016-309 2719",
-    "description": "A stylish restaurant specializing in bold Hunanese stir-fries and a viral big pot braised platter."
-  },
-  {
-    "name": "Mai Xiang China Chinese Food (麦香中国私厨美食)",
-    "category": [
-      "chinese",
-      "noodles",
-      "breakfast"
-    ],
-    "address": "8, Lorong Carnarvon, 10300 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.4144,
-      "lng": 100.3341
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "10:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "10:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "10:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "thursday": {
-        "closed": true,
-        "windows": []
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "10:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "10:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "10:00",
-            "close": "22:00"
-          }
-        ]
-      }
-    },
-    "rating": 4.5,
-    "priceRange": "$",
-    "phone": "+6011-1248 5758",
-    "description": "A cozy, family-run spot famous for authentic handmade dumplings and spicy Chongqing noodles."
-  },
-  {
-    "name": "Da.Le Restaurant (大樂餐廳 - George Town)",
-    "category": [
-      "chinese",
-      "noodles"
-    ],
-    "address": "53, Lebuh Campbell, 10200 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.4168,
-      "lng": 100.3352
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "08:00",
-            "close": "21:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "08:00",
-            "close": "21:00"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "08:00",
-            "close": "21:00"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "08:00",
-            "close": "21:00"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "08:00",
-            "close": "21:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "08:00",
-            "close": "21:00"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "08:00",
-            "close": "21:00"
-          }
-        ]
-      }
-    },
-    "rating": 4.1,
-    "priceRange": "$",
-    "phone": "+6012-662 4926",
-    "description": "Popular for its affordable, large-portion Sichuanese dishes and signature dumplings."
-  },
-  {
-    "name": "Fook Cheow Cafe (福釗茶室)",
-    "category": [
-      "chinese",
-      "noodles",
-      "breakfast"
-    ],
-    "address": "122I, Jalan Hutton, 10050 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.4214,
-      "lng": 100.3285
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "06:00",
-            "close": "12:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "06:00",
-            "close": "12:00"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "06:00",
-            "close": "12:00"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "06:00",
-            "close": "12:00"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "06:00",
-            "close": "12:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "06:00",
-            "close": "12:00"
-          }
-        ]
-      },
-      "sunday": {
-        "closed": true,
-        "windows": []
-      }
-    },
-    "rating": 4.2,
-    "priceRange": "$",
-    "phone": "+6016-454 3281",
-    "description": "A Michelin Bib Gourmand coffee shop renowned for its handmade fish balls and clear Koay Teow Thng."
-  },
-  {
-    "name": "Jit Seng Hong Kong Roasted Duck Rice",
-    "category": [
-      "chinese",
-      "chicken",
-      "rice"
-    ],
-    "address": "45, Lorong India (within Star Hotel), 10100 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.4152,
-      "lng": 100.3346
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "15:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "15:00"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "15:00"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "15:00"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "15:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "15:00"
-          }
-        ]
-      },
-      "sunday": {
-        "closed": true,
-        "windows": []
-      }
-    },
-    "rating": 4.4,
-    "priceRange": "$",
-    "phone": "+6012-431 3543",
-    "description": "Legendary stall serving Hong Kong-style duck with a 30-minute queue, open only for 3 hours daily."
-  },
-  {
-    "name": "Fatty Loh Chicken Rice",
-    "category": [
-      "chinese",
-      "chicken",
-      "rice"
-    ],
-    "address": "21, Jalan Fettes, 11200 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.4521,
-      "lng": 100.3061
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "17:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "17:00"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "17:00"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "17:00"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "17:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "17:00"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "17:00"
-          }
-        ]
-      }
-    },
-    "rating": 4,
-    "priceRange": "$$",
-    "phone": "+604-899 5543",
-    "description": "A long-standing Penang institution known for its classic Hainanese chicken rice and signature sauces."
-  },
-  {
-    "name": "Sifu (Peranakan/Chinese)",
-    "category": [
-      "chinese",
-      "rice"
-    ],
-    "address": "12, Lebuh Cannon, 10200 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.415,
-      "lng": 100.3375
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "closed": true,
-        "windows": []
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "22:00"
-          }
-        ]
-      }
-    },
-    "rating": 4.5,
-    "priceRange": "$$",
-    "phone": "+6019-335 1515",
-    "description": "Offers refined Nyonya-Chinese fusion dishes in a beautifully restored heritage house."
-  },
-  {
-    "name": "Laksalicious",
-    "category": [
-      "chinese",
-      "noodles"
-    ],
-    "address": "123, Hutton Ln, 10050 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.4211,
-      "lng": 100.3283
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "11:30",
-            "close": "19:30"
-          }
-        ]
-      },
-      "tuesday": {
-        "closed": true,
-        "windows": []
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "11:30",
-            "close": "19:30"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "11:30",
-            "close": "19:30"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "11:30",
-            "close": "19:30"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "11:30",
-            "close": "19:30"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "11:30",
-            "close": "19:30"
-          }
-        ]
-      }
-    },
-    "rating": 4.3,
-    "priceRange": "$$",
-    "phone": "+604-229 9178",
-    "description": "Modern eatery focusing on high-quality Assam Laksa and Nyonya Laksa with various sides."
-  },
-  {
     "name": "China Town Seafood Restaurant",
     "category": [
       "chinese",
@@ -7009,613 +6109,6 @@
     "priceRange": "$$",
     "phone": "+604-261 4059",
     "description": "A classic Dai Chow seafood spot favored for dinner gatherings near Prangin Mall."
-  },
-  {
-    "name": "Qi Fan Ge Chinese Restaurant (七饭阁)",
-    "category": [
-      "chinese",
-      "seafood",
-      "rice"
-    ],
-    "address": "21, Karpal Singh Dr, 11600 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.3975,
-      "lng": 100.3292
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "15:00"
-          },
-          {
-            "open": "17:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "15:00"
-          },
-          {
-            "open": "17:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "15:00"
-          },
-          {
-            "open": "17:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "15:00"
-          },
-          {
-            "open": "17:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "15:00"
-          },
-          {
-            "open": "17:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "15:00"
-          },
-          {
-            "open": "17:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "15:00"
-          },
-          {
-            "open": "17:00",
-            "close": "22:00"
-          }
-        ]
-      }
-    },
-    "rating": 4.3,
-    "priceRange": "$$",
-    "phone": "+6016-309 2719",
-    "description": "Stylish haunt for bold Hunanese stir-fries and their signature big pot braised platters."
-  },
-  {
-    "name": "Mai Xiang China Chinese Food (麦香中国私厨美食)",
-    "category": [
-      "chinese",
-      "noodles",
-      "street food"
-    ],
-    "address": "8, Lorong Carnarvon, 10300 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.4144,
-      "lng": 100.3341
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "10:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "10:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "10:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "thursday": {
-        "closed": true,
-        "windows": []
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "10:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "10:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "10:00",
-            "close": "22:00"
-          }
-        ]
-      }
-    },
-    "rating": 4.5,
-    "priceRange": "$$",
-    "phone": "+6011-1248 5758",
-    "description": "Home-style Mainland flavors featuring handmade dumplings and spicy Chongqing-style noodles."
-  },
-  {
-    "name": "Da.Le Restaurant (大樂餐廳 - George Town)",
-    "category": [
-      "chinese",
-      "noodles",
-      "street food"
-    ],
-    "address": "53, Lebuh Campbell, 10200 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.4168,
-      "lng": 100.3352
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "08:00",
-            "close": "21:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "08:00",
-            "close": "21:00"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "08:00",
-            "close": "21:00"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "08:00",
-            "close": "21:00"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "08:00",
-            "close": "21:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "08:00",
-            "close": "21:00"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "08:00",
-            "close": "21:00"
-          }
-        ]
-      }
-    },
-    "rating": 4.1,
-    "priceRange": "$$",
-    "phone": "+6012-662 4926",
-    "description": "Popular for its affordable, large-portion Sichuanese dishes and signature dumplings."
-  },
-  {
-    "name": "Fook Cheow Cafe (福釗茶室)",
-    "category": [
-      "chinese",
-      "noodles",
-      "breakfast"
-    ],
-    "address": "122I, Jalan Hutton, 10050 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.4214,
-      "lng": 100.3285
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "06:00",
-            "close": "12:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "06:00",
-            "close": "12:00"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "06:00",
-            "close": "12:00"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "06:00",
-            "close": "12:00"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "06:00",
-            "close": "12:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "06:00",
-            "close": "12:00"
-          }
-        ]
-      },
-      "sunday": {
-        "closed": true,
-        "windows": []
-      }
-    },
-    "rating": 4.2,
-    "priceRange": "$$",
-    "phone": "+6016-454 3281",
-    "description": "Heritage coffee shop lauded for its springy handmade fish balls and comforting Koay Teow Thng."
-  },
-  {
-    "name": "Jit Seng Hong Kong Roasted Duck Rice",
-    "category": [
-      "chinese",
-      "chicken",
-      "rice"
-    ],
-    "address": "45, Lorong India (within Star Hotel), 10100 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.4152,
-      "lng": 100.3346
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "15:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "15:00"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "15:00"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "15:00"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "15:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "15:00"
-          }
-        ]
-      },
-      "sunday": {
-        "closed": true,
-        "windows": []
-      }
-    },
-    "rating": 4.4,
-    "priceRange": "$$",
-    "phone": "+6012-431 3543",
-    "description": "Legendary stall serving Hong Kong-style duck with a 30-minute queue, open only for 3 hours daily."
-  },
-  {
-    "name": "Fatty Loh Chicken Rice",
-    "category": [
-      "chinese",
-      "chicken",
-      "rice"
-    ],
-    "address": "21, Jalan Fettes, 11200 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.4521,
-      "lng": 100.3061
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "17:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "17:00"
-          }
-        ]
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "17:00"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "17:00"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "17:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "17:00"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "09:00",
-            "close": "17:00"
-          }
-        ]
-      }
-    },
-    "rating": 4,
-    "priceRange": "$$",
-    "phone": "+604-899 5543",
-    "description": "A long-standing Penang institution known for its classic Hainanese chicken rice and signature sauces."
-  },
-  {
-    "name": "Sifu (Peranakan/Chinese)",
-    "category": [
-      "chinese",
-      "rice",
-      "seafood"
-    ],
-    "address": "12, Lebuh Cannon, 10200 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.415,
-      "lng": 100.3375
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "tuesday": {
-        "closed": true,
-        "windows": []
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "22:00"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "11:00",
-            "close": "22:00"
-          }
-        ]
-      }
-    },
-    "rating": 4.5,
-    "priceRange": "$$",
-    "phone": "+6019-335 1515",
-    "description": "Offers refined Peranakan-Chinese fusion dishes in a beautifully restored heritage house."
-  },
-  {
-    "name": "Laksalicious",
-    "category": [
-      "chinese",
-      "noodles"
-    ],
-    "address": "123, Hutton Ln, 10050 George Town, Pulau Pinang",
-    "coordinates": {
-      "lat": 5.4211,
-      "lng": 100.3283
-    },
-    "hours": {
-      "monday": {
-        "windows": [
-          {
-            "open": "11:30",
-            "close": "19:30"
-          }
-        ]
-      },
-      "tuesday": {
-        "closed": true,
-        "windows": []
-      },
-      "wednesday": {
-        "windows": [
-          {
-            "open": "11:30",
-            "close": "19:30"
-          }
-        ]
-      },
-      "thursday": {
-        "windows": [
-          {
-            "open": "11:30",
-            "close": "19:30"
-          }
-        ]
-      },
-      "friday": {
-        "windows": [
-          {
-            "open": "11:30",
-            "close": "19:30"
-          }
-        ]
-      },
-      "saturday": {
-        "windows": [
-          {
-            "open": "11:30",
-            "close": "19:30"
-          }
-        ]
-      },
-      "sunday": {
-        "windows": [
-          {
-            "open": "11:30",
-            "close": "19:30"
-          }
-        ]
-      }
-    },
-    "rating": 4.3,
-    "priceRange": "$$",
-    "phone": "+604-229 9178",
-    "description": "Vibrant eatery offering premium bowls of Assam Laksa and creamy Peranakan Laksa with various sides."
   },
   {
     "name": "China Town Seafood Restaurant",
@@ -8442,5 +6935,891 @@
     "priceRange": "$$",
     "phone": "+604-263 6625",
     "description": "Legendary institution specializing in Teochew-style steamed seafood and morning dim sum."
+  },
+  {
+    "name": "Tai Tong Restaurant",
+    "category": [
+      "chinese",
+      "breakfast"
+    ],
+    "address": "45, Lebuh Cintra, George Town, 10100 George Town, Pulau Pinang",
+    "coordinates": {
+      "lat": 5.4177118,
+      "lng": 100.3335284
+    },
+    "hours": {
+      "monday": {
+        "closed": true,
+        "windows": []
+      },
+      "tuesday": {
+        "windows": [
+          {
+            "open": "06:30",
+            "close": "14:00"
+          },
+          {
+            "open": "18:00",
+            "close": "21:30"
+          }
+        ]
+      },
+      "wednesday": {
+        "windows": [
+          {
+            "open": "06:30",
+            "close": "14:00"
+          },
+          {
+            "open": "18:00",
+            "close": "21:30"
+          }
+        ]
+      },
+      "thursday": {
+        "windows": [
+          {
+            "open": "06:30",
+            "close": "14:00"
+          },
+          {
+            "open": "18:00",
+            "close": "21:30"
+          }
+        ]
+      },
+      "friday": {
+        "windows": [
+          {
+            "open": "06:30",
+            "close": "14:00"
+          },
+          {
+            "open": "18:00",
+            "close": "21:30"
+          }
+        ]
+      },
+      "saturday": {
+        "windows": [
+          {
+            "open": "06:30",
+            "close": "14:00"
+          },
+          {
+            "open": "18:00",
+            "close": "21:30"
+          }
+        ]
+      },
+      "sunday": {
+        "windows": [
+          {
+            "open": "06:30",
+            "close": "14:00"
+          },
+          {
+            "open": "18:00",
+            "close": "21:30"
+          }
+        ]
+      }
+    },
+    "rating": 4.3,
+    "priceRange": "$$",
+    "phone": "+60 16-774 6625",
+    "description": "A well-known heritage spot in George Town famous for its traditional push-cart dim sum and classic Chinese dishes."
+  },
+  {
+    "name": "Restoran Zim Sum",
+    "category": [
+      "chinese",
+      "breakfast"
+    ],
+    "address": "62, Jln Macalister, 10400 George Town, Pulau Pinang",
+    "coordinates": {
+      "lat": 5.4150098,
+      "lng": 100.3271176
+    },
+    "hours": {
+      "monday": {
+        "windows": [
+          {
+            "open": "06:30",
+            "close": "13:30"
+          }
+        ]
+      },
+      "tuesday": {
+        "closed": true,
+        "windows": []
+      },
+      "wednesday": {
+        "windows": [
+          {
+            "open": "06:30",
+            "close": "13:30"
+          }
+        ]
+      },
+      "thursday": {
+        "windows": [
+          {
+            "open": "06:30",
+            "close": "13:30"
+          }
+        ]
+      },
+      "friday": {
+        "windows": [
+          {
+            "open": "06:30",
+            "close": "13:30"
+          }
+        ]
+      },
+      "saturday": {
+        "windows": [
+          {
+            "open": "06:30",
+            "close": "13:30"
+          }
+        ]
+      },
+      "sunday": {
+        "windows": [
+          {
+            "open": "06:30",
+            "close": "13:30"
+          }
+        ]
+      }
+    },
+    "rating": 4,
+    "priceRange": "$$",
+    "phone": null,
+    "description": "A bustling open-air corner restaurant offering a wide variety of affordable dim sum plates for the morning crowd."
+  },
+  {
+    "name": "Qi Fan Ge Chinese Restaurant",
+    "category": [
+      "chinese",
+      "seafood"
+    ],
+    "address": "21, Karpal Singh Dr, 11600 George Town, Penang",
+    "coordinates": {
+      "lat": 5.3989031,
+      "lng": 100.3304976
+    },
+    "hours": {
+      "monday": {
+        "windows": [
+          {
+            "open": "11:00",
+            "close": "15:00"
+          },
+          {
+            "open": "17:00",
+            "close": "22:00"
+          }
+        ]
+      },
+      "tuesday": {
+        "windows": [
+          {
+            "open": "11:00",
+            "close": "15:00"
+          },
+          {
+            "open": "17:00",
+            "close": "22:00"
+          }
+        ]
+      },
+      "wednesday": {
+        "windows": [
+          {
+            "open": "11:00",
+            "close": "15:00"
+          },
+          {
+            "open": "17:00",
+            "close": "22:00"
+          }
+        ]
+      },
+      "thursday": {
+        "windows": [
+          {
+            "open": "11:00",
+            "close": "15:00"
+          },
+          {
+            "open": "17:00",
+            "close": "22:00"
+          }
+        ]
+      },
+      "friday": {
+        "windows": [
+          {
+            "open": "11:00",
+            "close": "15:00"
+          },
+          {
+            "open": "17:00",
+            "close": "22:00"
+          }
+        ]
+      },
+      "saturday": {
+        "windows": [
+          {
+            "open": "11:00",
+            "close": "15:00"
+          },
+          {
+            "open": "17:00",
+            "close": "22:00"
+          }
+        ]
+      },
+      "sunday": {
+        "windows": [
+          {
+            "open": "11:00",
+            "close": "15:00"
+          },
+          {
+            "open": "17:00",
+            "close": "22:00"
+          }
+        ]
+      }
+    },
+    "rating": 4.6,
+    "priceRange": "$$",
+    "phone": "+60 16-309 2719",
+    "description": "A popular dining destination known for serving authentic Chinese cuisine with a focus on fresh ingredients and bold flavors."
+  },
+  {
+    "name": "Mai Xiang China Chinese Food",
+    "category": [
+      "chinese",
+      "noodles"
+    ],
+    "address": "8, Lorong Carnarvon, George Town, 10300 George Town, Pulau Pinang",
+    "coordinates": {
+      "lat": 5.4147986,
+      "lng": 100.3349749
+    },
+    "hours": {
+      "monday": {
+        "windows": [
+          {
+            "open": "10:00",
+            "close": "22:00"
+          }
+        ]
+      },
+      "tuesday": {
+        "windows": [
+          {
+            "open": "10:00",
+            "close": "22:00"
+          }
+        ]
+      },
+      "wednesday": {
+        "windows": [
+          {
+            "open": "10:00",
+            "close": "22:00"
+          }
+        ]
+      },
+      "thursday": {
+        "windows": [
+          {
+            "open": "10:00",
+            "close": "22:00"
+          }
+        ]
+      },
+      "friday": {
+        "windows": [
+          {
+            "open": "10:00",
+            "close": "22:00"
+          }
+        ]
+      },
+      "saturday": {
+        "windows": [
+          {
+            "open": "10:00",
+            "close": "22:00"
+          }
+        ]
+      },
+      "sunday": {
+        "windows": [
+          {
+            "open": "10:00",
+            "close": "22:00"
+          }
+        ]
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$",
+    "phone": "+60 11-1248 5758",
+    "description": "A cozy private kitchen specializing in handmade dumplings and authentic Northern Chinese noodle dishes."
+  },
+  {
+    "name": "Da.Le Restaurant",
+    "category": [
+      "chinese",
+      "rice"
+    ],
+    "address": "11, Jalan Tanjung Bungah, Tanjung Tokong, 11200 Tanjung Bungah, Pulau Pinang",
+    "coordinates": {
+      "lat": 5.4658122,
+      "lng": 100.2895492
+    },
+    "hours": {
+      "monday": {
+        "windows": [
+          {
+            "open": "10:30",
+            "close": "21:30"
+          }
+        ]
+      },
+      "tuesday": {
+        "windows": [
+          {
+            "open": "10:30",
+            "close": "21:30"
+          }
+        ]
+      },
+      "wednesday": {
+        "windows": [
+          {
+            "open": "10:30",
+            "close": "21:30"
+          }
+        ]
+      },
+      "thursday": {
+        "windows": [
+          {
+            "open": "10:30",
+            "close": "21:30"
+          }
+        ]
+      },
+      "friday": {
+        "windows": [
+          {
+            "open": "10:30",
+            "close": "21:30"
+          }
+        ]
+      },
+      "saturday": {
+        "windows": [
+          {
+            "open": "10:30",
+            "close": "21:30"
+          }
+        ]
+      },
+      "sunday": {
+        "closed": true,
+        "windows": []
+      }
+    },
+    "rating": 3.8,
+    "priceRange": "$$",
+    "phone": "+60 12-926 0127",
+    "description": "A local eatery offering a variety of home-cooked Chinese style dishes and convenient set meals."
+  },
+  {
+    "name": "Fook Cheow Cafe",
+    "category": [
+      "chinese",
+      "breakfast"
+    ],
+    "address": "122 I, Jalan Hutton, 10050 George Town, Pulau Pinang",
+    "coordinates": {
+      "lat": 5.4213856,
+      "lng": 100.328508
+    },
+    "hours": {
+      "monday": {
+        "windows": [
+          {
+            "open": "06:00",
+            "close": "12:00"
+          }
+        ]
+      },
+      "tuesday": {
+        "windows": [
+          {
+            "open": "06:00",
+            "close": "12:00"
+          }
+        ]
+      },
+      "wednesday": {
+        "windows": [
+          {
+            "open": "06:00",
+            "close": "12:00"
+          }
+        ]
+      },
+      "thursday": {
+        "windows": [
+          {
+            "open": "06:00",
+            "close": "12:00"
+          }
+        ]
+      },
+      "friday": {
+        "windows": [
+          {
+            "open": "06:00",
+            "close": "12:00"
+          }
+        ]
+      },
+      "saturday": {
+        "windows": [
+          {
+            "open": "06:00",
+            "close": "12:00"
+          }
+        ]
+      },
+      "sunday": {
+        "closed": true,
+        "windows": []
+      }
+    },
+    "rating": 4.1,
+    "priceRange": "$",
+    "phone": "+60 16-454 3281",
+    "description": "A traditional local coffee shop famous for its Koay Teow Th'ng and nostalgic morning atmosphere."
+  },
+  {
+    "name": "Jit Seng Hong Kong Roasted Duck Rice",
+    "category": [
+      "rice",
+      "chicken"
+    ],
+    "address": "206-208, Lebuh Carnarvon, George Town, 10100 George Town, Pulau Pinang",
+    "coordinates": {
+      "lat": 5.4148097,
+      "lng": 100.3340673
+    },
+    "hours": {
+      "monday": {
+        "windows": [
+          {
+            "open": "08:00",
+            "close": "17:00"
+          }
+        ]
+      },
+      "tuesday": {
+        "windows": [
+          {
+            "open": "08:00",
+            "close": "17:00"
+          }
+        ]
+      },
+      "wednesday": {
+        "windows": [
+          {
+            "open": "08:00",
+            "close": "17:00"
+          }
+        ]
+      },
+      "thursday": {
+        "windows": [
+          {
+            "open": "08:00",
+            "close": "17:00"
+          }
+        ]
+      },
+      "friday": {
+        "windows": [
+          {
+            "open": "08:00",
+            "close": "17:00"
+          }
+        ]
+      },
+      "saturday": {
+        "windows": [
+          {
+            "open": "08:00",
+            "close": "17:00"
+          }
+        ]
+      },
+      "sunday": {
+        "windows": [
+          {
+            "open": "08:00",
+            "close": "17:00"
+          }
+        ]
+      }
+    },
+    "rating": 4,
+    "priceRange": "$",
+    "phone": "+60 11-1656 3989",
+    "description": "A legendary stall serving Hong Kong-style roasted meats, particularly celebrated for its succulent roasted duck."
+  },
+  {
+    "name": "Fatty Loh Chicken Rice",
+    "category": [
+      "rice",
+      "chicken"
+    ],
+    "address": "21, Jalan Fettes, Tanjung Tokong, 11200 George Town, Pulau Pinang",
+    "coordinates": {
+      "lat": 5.4528068,
+      "lng": 100.3025884
+    },
+    "hours": {
+      "monday": {
+        "windows": [
+          {
+            "open": "09:30",
+            "close": "17:00"
+          }
+        ]
+      },
+      "tuesday": {
+        "windows": [
+          {
+            "open": "09:30",
+            "close": "17:00"
+          }
+        ]
+      },
+      "wednesday": {
+        "windows": [
+          {
+            "open": "09:30",
+            "close": "17:00"
+          }
+        ]
+      },
+      "thursday": {
+        "windows": [
+          {
+            "open": "09:30",
+            "close": "17:00"
+          }
+        ]
+      },
+      "friday": {
+        "windows": [
+          {
+            "open": "09:30",
+            "close": "17:00"
+          }
+        ]
+      },
+      "saturday": {
+        "windows": [
+          {
+            "open": "09:30",
+            "close": "17:00"
+          }
+        ]
+      },
+      "sunday": {
+        "windows": [
+          {
+            "open": "09:30",
+            "close": "17:00"
+          }
+        ]
+      }
+    },
+    "rating": 3.7,
+    "priceRange": "$$",
+    "phone": "+60 4-899 0888",
+    "description": "A long-standing establishment renowned for its classic Hainanese chicken rice and signature soy-braised dishes."
+  },
+  {
+    "name": "Sifu Nyonya Cuisine",
+    "category": [
+      "chinese",
+      "malay"
+    ],
+    "address": "Rope Walk, 154, Jalan Pintal Tali, George Town, 10100 George Town, Pulau Pinang",
+    "coordinates": {
+      "lat": 5.4152827,
+      "lng": 100.3322599
+    },
+    "hours": {
+      "monday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "15:00"
+          },
+          {
+            "open": "18:00",
+            "close": "21:45"
+          }
+        ]
+      },
+      "tuesday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "15:00"
+          },
+          {
+            "open": "18:00",
+            "close": "21:45"
+          }
+        ]
+      },
+      "wednesday": {
+        "closed": true,
+        "windows": []
+      },
+      "thursday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "15:00"
+          },
+          {
+            "open": "18:00",
+            "close": "21:45"
+          }
+        ]
+      },
+      "friday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "15:00"
+          },
+          {
+            "open": "18:00",
+            "close": "21:45"
+          }
+        ]
+      },
+      "saturday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "21:45"
+          }
+        ]
+      },
+      "sunday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "21:45"
+          }
+        ]
+      }
+    },
+    "rating": 4.2,
+    "priceRange": "$$",
+    "phone": "+60 4-305 1867",
+    "description": "A restaurant dedicated to authentic Peranakan flavors, blending Chinese and Malay culinary traditions seamlessly."
+  },
+  {
+    "name": "Laksalicious",
+    "category": [
+      "noodles",
+      "street food"
+    ],
+    "address": "117-117A, Jalan Hutton, George Town, 10050 George Town, Pulau Pinang",
+    "coordinates": {
+      "lat": 5.4200844,
+      "lng": 100.3300879
+    },
+    "hours": {
+      "monday": {
+        "closed": true,
+        "windows": []
+      },
+      "tuesday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "19:00"
+          }
+        ]
+      },
+      "wednesday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "19:00"
+          }
+        ]
+      },
+      "thursday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "19:00"
+          }
+        ]
+      },
+      "friday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "19:00"
+          }
+        ]
+      },
+      "saturday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "19:00"
+          }
+        ]
+      },
+      "sunday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "19:00"
+          }
+        ]
+      }
+    },
+    "rating": 4.5,
+    "priceRange": "$$",
+    "phone": "+60 4-229 9178",
+    "description": "A modern cafe specializing in various types of Laksa, offering a clean and comfortable environment for street food favorites."
+  },
+  {
+    "name": "Chu Char 1st",
+    "category": [
+      "chinese",
+      "seafood"
+    ],
+    "address": "15, King Street, George Town, 10200 George Town, Pulau Pinang",
+    "coordinates": {
+      "lat": 5.4184469,
+      "lng": 100.3403041
+    },
+    "hours": {
+      "monday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "14:30"
+          },
+          {
+            "open": "17:00",
+            "close": "21:00"
+          }
+        ]
+      },
+      "tuesday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "14:30"
+          },
+          {
+            "open": "17:00",
+            "close": "21:00"
+          }
+        ]
+      },
+      "wednesday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "14:30"
+          },
+          {
+            "open": "17:00",
+            "close": "21:00"
+          }
+        ]
+      },
+      "thursday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "14:30"
+          },
+          {
+            "open": "17:00",
+            "close": "21:00"
+          }
+        ]
+      },
+      "friday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "14:30"
+          },
+          {
+            "open": "17:00",
+            "close": "21:00"
+          }
+        ]
+      },
+      "saturday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "14:30"
+          },
+          {
+            "open": "17:00",
+            "close": "21:00"
+          }
+        ]
+      },
+      "sunday": {
+        "windows": [
+          {
+            "open": "11:30",
+            "close": "14:30"
+          },
+          {
+            "open": "17:00",
+            "close": "21:00"
+          }
+        ]
+      }
+    },
+    "rating": 4.6,
+    "priceRange": "$$",
+    "phone": "+60 11-5500 9733",
+    "description": "A traditional Chinese dai pai dong style restaurant serving a wide array of wok-fried dishes and seafood specialties."
   }
 ]

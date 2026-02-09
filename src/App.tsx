@@ -667,7 +667,7 @@ function App() {
 
 
   return (
-    <div className="min-h-screen bg-brand-linen">
+    <div className="min-h-screen overflow-x-clip bg-brand-linen">
       <Navbar
         isPremium={isPremium}
         onUpgradeClick={() => setShowSubscription(true)}

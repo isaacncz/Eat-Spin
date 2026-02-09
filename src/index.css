@@ -232,13 +232,13 @@
 }
 
 .celebration-ring-sm {
-  width: min(78vw, 24rem);
-  height: min(78vw, 24rem);
+  width: min(calc(100% + 1.5rem), 24rem);
+  height: min(calc(100% + 1.5rem), 24rem);
 }
 
 .celebration-ring-lg {
-  width: min(94vw, 30rem);
-  height: min(94vw, 30rem);
+  width: min(calc(100% + 4rem), 30rem);
+  height: min(calc(100% + 4rem), 30rem);
   animation-delay: 0.45s;
 }
 

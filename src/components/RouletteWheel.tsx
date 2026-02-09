@@ -398,7 +398,7 @@ export function RouletteWheel({
   return (
     <div className="flex flex-col items-center gap-6 py-4 sm:py-5">
       {/* Roulette Wheel */}
-      <div ref={wheelScrollRef} className="relative mx-auto w-full max-w-[32.5rem] px-2 sm:px-3 overflow-hidden">
+      <div ref={wheelScrollRef} className="relative mx-auto w-full max-w-[32.5rem] px-1 sm:px-3 overflow-hidden">
         {/* Pointer */}
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
           <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[30px] border-t-eatspin-orange drop-shadow-lg" />
@@ -407,8 +407,8 @@ export function RouletteWheel({
         {/* Wheel Container */}
         <div
           ref={wheelContainerRef}
-          className="relative w-full aspect-square"
-          style={{ maxWidth: 'min(85vw, 32.5rem)' }}
+          className="relative mx-auto w-full aspect-square"
+          style={{ maxWidth: '32.5rem' }}
         >
           {/* Wheel */}
           <div

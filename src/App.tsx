@@ -273,10 +273,16 @@ function App() {
 
   const handleAutoAlreadyAteThis = (restaurant: Restaurant) => {
     removeRestaurantForRound(restaurant.id);
+    return true;
   };
 
   const handleManualAlreadyAteThis = (restaurant: Restaurant) => {
+    if (isManualListReadOnly) {
+      toast.info('Only the host or co-host can edit the shared list.');
+      return false;
+    }
     removeManualRestaurant(restaurant.id);
+    return true;
   };
 
   // Handle spin attempt
@@ -1133,6 +1139,7 @@ function App() {
               onShuffle={shuffleWheel}
               onSpinStart={handleAutoSpinStart}
               onAlreadyAteThis={handleAutoAlreadyAteThis}
+              canSpin={canSpin(currentMealTime)}
             />
           </div>
         </section>

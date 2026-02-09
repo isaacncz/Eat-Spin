@@ -18,7 +18,7 @@ interface RouletteWheelProps {
   emptyStateTitle?: string;
   emptyStateSubtitle?: string;
   onEditList?: () => void;
-  onAlreadyAteThis?: (restaurant: Restaurant) => void;
+  onAlreadyAteThis?: (restaurant: Restaurant) => boolean | void;
   onSpinAgain?: () => boolean | void;
   externalSpin?: {
     spinId: string;
@@ -224,15 +224,15 @@ export function RouletteWheel({
     });
   }, [onSpinComplete, recenterWheel, restaurants, setIsSpinning]);
 
-  const handleLocalSpin = () => {
+  const handleLocalSpin = useCallback(() => {
     if (isSpinning || restaurants.length === 0 || !canSpin) return;
     const spinRestaurants = onSpinStart?.() ?? restaurants;
     if (spinRestaurants.length < 2) return;
     const randomIndex = Math.floor(Math.random() * spinRestaurants.length);
     animateSpinToIndex(randomIndex, spinRestaurants);
-  };
+  }, [animateSpinToIndex, canSpin, isSpinning, onSpinStart, restaurants]);
 
-  const handleSpinClick = () => {
+  const handleSpinClick = useCallback(() => {
     if (onRequestSpin) {
       if (isSpinning || !canSpin || !canRequestSpin) return;
       recenterWheel();
@@ -240,7 +240,7 @@ export function RouletteWheel({
       return;
     }
     handleLocalSpin();
-  };
+  }, [canRequestSpin, canSpin, handleLocalSpin, isSpinning, onRequestSpin, recenterWheel]);
 
   // Reset wheel position when restaurants change
   useEffect(() => {

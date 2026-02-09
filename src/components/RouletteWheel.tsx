@@ -678,6 +678,7 @@ export function RouletteWheel({
                     if (spinAgainDisabled) return;
                     const shouldSpin = onSpinAgain?.();
                     if (shouldSpin === false) return;
+                    setShowSkipReminder(false);
                     handleSpinClick();
                   }}
                   className="bg-brand-orange text-white hover:bg-brand-orange/90"

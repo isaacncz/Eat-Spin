@@ -320,7 +320,7 @@ function App() {
   }, []);
 
   const handleAutoAlreadyAteThis = (restaurant: Restaurant) => {
-    removeRestaurantForRound(restaurant.id);
+    removeRestaurantForRound(restaurant.id, { bumpKey: false });
     toast.success(`Got it — we’ll skip ${restaurant.name} for the next 2 days.`);
     return true;
   };
@@ -330,7 +330,7 @@ function App() {
       toast.info('Only the host or co-host can edit the shared list.');
       return false;
     }
-    removeManualRestaurant(restaurant.id);
+    removeManualRestaurant(restaurant.id, { bumpKey: false });
     toast.success(`Got it — we’ll skip ${restaurant.name} for the next 2 days.`);
     return true;
   };
@@ -469,7 +469,11 @@ function App() {
     setManualPresets((prev) => prev.filter((preset) => preset.id !== presetId));
   };
 
-  const removeManualRestaurant = (id: string) => {
+  const removeManualRestaurant = (
+    id: string,
+    options?: { bumpKey?: boolean },
+  ) => {
+    const { bumpKey = true } = options ?? {};
     if (isManualListReadOnly) {
       toast.info('Only the host or co-host can edit the shared list.');
       return;
@@ -479,7 +483,9 @@ function App() {
     setManualRestaurants(nextRestaurants);
     syncGroupListFromRestaurants(nextRestaurants);
     setManualSpinResult(null);
-    setManualWheelKey((prev) => prev + 1);
+    if (bumpKey) {
+      setManualWheelKey((prev) => prev + 1);
+    }
   };
 
   const clearManualRestaurants = () => {

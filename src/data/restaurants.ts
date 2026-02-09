@@ -36,8 +36,9 @@ type LegacyDailyHours = {
 };
 
 type RawDailyHours = DailyHours | LegacyDailyHours;
-type RawJsonRestaurant = Omit<JsonRestaurant, 'hours'> & {
+type RawJsonRestaurant = Omit<JsonRestaurant, 'hours' | 'phone'> & {
   hours: Record<string, RawDailyHours>;
+  phone?: string | null;
 };
 
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -48,7 +49,7 @@ const timeWindowSchema = z.object({
   close: timeStringSchema,
 });
 
-const dailyHoursSchema: z.ZodType<DailyHours> = z
+const strictDailyHoursSchema: z.ZodType<DailyHours> = z
   .object({
     windows: z.array(timeWindowSchema),
     closed: z.boolean().optional(),
@@ -69,6 +70,11 @@ const dailyHoursSchema: z.ZodType<DailyHours> = z
     }
   });
 
+const rawDailyHoursSchema: z.ZodType<DailyHours> = z.object({
+  windows: z.array(timeWindowSchema),
+  closed: z.boolean().optional(),
+});
+
 const legacyDailyHoursSchema: z.ZodType<LegacyDailyHours> = z.object({
   open: timeStringSchema,
   close: timeStringSchema,
@@ -77,10 +83,10 @@ const legacyDailyHoursSchema: z.ZodType<LegacyDailyHours> = z.object({
 
 const rawHoursSchema: z.ZodType<RawJsonRestaurant['hours']> = z.record(
   z.string(),
-  z.union([dailyHoursSchema, legacyDailyHoursSchema])
+  z.union([rawDailyHoursSchema, legacyDailyHoursSchema])
 );
 
-const hoursSchema: z.ZodType<JsonRestaurant['hours']> = z.record(z.string(), dailyHoursSchema);
+const hoursSchema: z.ZodType<JsonRestaurant['hours']> = z.record(z.string(), strictDailyHoursSchema);
 
 const jsonRestaurantSchema: z.ZodType<JsonRestaurant> = z.object({
   name: z.string().min(1),
@@ -109,7 +115,7 @@ const rawJsonRestaurantSchema: z.ZodType<RawJsonRestaurant> = z.object({
   hours: rawHoursSchema,
   rating: z.number(),
   priceRange: priceRangeSchema,
-  phone: z.string().optional(),
+  phone: z.string().nullable().optional(),
   image: z.string().optional(),
   description: z.string().min(1),
 });
@@ -135,6 +141,10 @@ const normalizeDailyHours = (dayHours: RawDailyHours): DailyHours => {
     return { closed: true, windows: [] };
   }
 
+  if (dayHours.windows.length === 0) {
+    return { closed: true, windows: [] };
+  }
+
   return {
     windows: dayHours.windows,
   };
@@ -155,6 +165,7 @@ if (!restaurantData.success) {
 
 const normalizedRestaurantData = restaurantData.data.map((restaurant) => ({
   ...restaurant,
+  phone: restaurant.phone ?? undefined,
   hours: normalizeRestaurantHours(restaurant.hours),
 }));
 

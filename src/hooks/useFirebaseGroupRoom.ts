@@ -656,8 +656,8 @@ export function useFirebaseGroupRoom() {
       return null;
     }
 
-    if (!isHostRef.current) {
-      setRoomError('Only the host can start a room spin.');
+    if (!isHostRef.current && !isCohostRef.current) {
+      setRoomError('Only the host or a co-host can start a room spin.');
       return null;
     }
 
@@ -674,7 +674,6 @@ export function useFirebaseGroupRoom() {
       const transactionResult = await runTransaction(metaRef, (currentMeta) => {
         const parsedMeta = parseRoomMeta(currentMeta);
         if (!parsedMeta) return;
-        if (parsedMeta.hostUid !== authUid) return;
         if (parsedMeta.expiresAt <= now) return;
         if (now - parsedMeta.lastSpinAt < GROUP_ROOM_SPIN_COOLDOWN_MS) return;
 

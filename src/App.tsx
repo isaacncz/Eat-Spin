@@ -545,8 +545,8 @@ function App() {
 
   const handleRequestGroupSpin = useCallback(async () => {
     if (!isGroupRoomActive) return;
-    if (!isGroupHost) {
-      toast.info('Only the room host can start the spin.');
+    if (!isGroupHost && !isGroupCohost) {
+      toast.info('Only the room host or a co-host can start the spin.');
       return;
     }
 
@@ -558,7 +558,7 @@ function App() {
     const spinResult = await requestHostSpin(manualRestaurantNames);
     if (!spinResult) return;
     toast.success(`Room spin started: ${spinResult.winnerName}`);
-  }, [isGroupRoomActive, isGroupHost, manualRestaurantNames, requestHostSpin]);
+  }, [isGroupCohost, isGroupRoomActive, isGroupHost, manualRestaurantNames, requestHostSpin]);
 
   const handleCreateGroupRoom = useCallback(async () => {
     setActiveTab('manual');
@@ -981,7 +981,7 @@ function App() {
                     {isGroupHost
                       ? 'Your list edits sync to everyone in this room.'
                       : isGroupCohost
-                        ? 'You can edit the shared list as co-host. Only host can start spins.'
+                        ? 'You can edit the shared list as co-host and start spins for everyone.'
                         : 'List editing is host/co-host only. You will receive live list and spin updates.'}
                   </p>
                   <p className="mt-1 text-xs text-brand-black/80">
@@ -1216,7 +1216,7 @@ function App() {
         isBusy={groupRoomBusy}
         roomError={groupRoomError}
         participants={groupParticipants}
-        canStartRoomSpin={isGroupRoomActive && isGroupHost && manualRestaurantNames.length >= 2}
+        canStartRoomSpin={isGroupRoomActive && (isGroupHost || isGroupCohost) && manualRestaurantNames.length >= 2}
         onCreateRoom={handleCreateGroupRoom}
         onJoinRoom={handleJoinGroupRoom}
         onLeaveRoom={leaveGroupRoom}

@@ -319,6 +319,22 @@ function App() {
     setManualSpinResult(restaurant);
   }, []);
 
+  const handleAutoAlreadyAteThis = (restaurant: Restaurant) => {
+    removeRestaurantForRound(restaurant.id, { bumpKey: false });
+    toast.success(`Got it — we’ll skip ${restaurant.name} for the next 2 days.`);
+    return true;
+  };
+
+  const handleManualAlreadyAteThis = (restaurant: Restaurant) => {
+    if (isManualListReadOnly) {
+      toast.info('Only the host or co-host can edit the shared list.');
+      return false;
+    }
+    removeManualRestaurant(restaurant.id, { bumpKey: false });
+    toast.success(`Got it — we’ll skip ${restaurant.name} for the next 2 days.`);
+    return true;
+  };
+
   // Handle spin attempt
   const handleSpinAttempt = () => {
     if (!canSpin(currentMealTime)) {
@@ -453,7 +469,11 @@ function App() {
     setManualPresets((prev) => prev.filter((preset) => preset.id !== presetId));
   };
 
-  const removeManualRestaurant = (id: string) => {
+  const removeManualRestaurant = (
+    id: string,
+    options?: { bumpKey?: boolean },
+  ) => {
+    const { bumpKey = true } = options ?? {};
     if (isManualListReadOnly) {
       toast.info('Only the host or co-host can edit the shared list.');
       return;
@@ -463,7 +483,9 @@ function App() {
     setManualRestaurants(nextRestaurants);
     syncGroupListFromRestaurants(nextRestaurants);
     setManualSpinResult(null);
-    setManualWheelKey((prev) => prev + 1);
+    if (bumpKey) {
+      setManualWheelKey((prev) => prev + 1);
+    }
   };
 
   const clearManualRestaurants = () => {
@@ -1026,6 +1048,7 @@ function App() {
                 externalSpin={manualExternalSpin}
                 onRequestSpin={isGroupRoomActive ? handleRequestGroupSpin : undefined}
                 canRequestSpin={!isGroupRoomActive || isGroupHost}
+                onAlreadyAteThis={handleManualAlreadyAteThis}
                 emptyStateTitle="Add restaurants to start"
                 emptyStateSubtitle="Type any restaurant you like…"
               />
@@ -1193,6 +1216,8 @@ function App() {
               setIsSpinning={setIsSpinning}
               onShuffle={shuffleWheel}
               onSpinStart={handleAutoSpinStart}
+              onAlreadyAteThis={handleAutoAlreadyAteThis}
+              canSpin={canSpin(currentMealTime)}
             />
           </div>
         </section>

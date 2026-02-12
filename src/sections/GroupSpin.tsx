@@ -137,7 +137,7 @@ export function GroupSpin({
   };
 
   const handleStartRoomSpin = async () => {
-    if (!isHost) return;
+    if (!isHost && !isCohost) return;
     await onStartRoomSpin();
   };
 
@@ -307,7 +307,7 @@ export function GroupSpin({
                 <p className="text-xs text-eatspin-gray-1">Signed in as {resolvedDisplayName}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                {isHost && (
+                {(isHost || isCohost) && (
                   <Button
                     className="bg-brand-orange text-white hover:bg-brand-orange/90"
                     onClick={() => void handleStartRoomSpin()}

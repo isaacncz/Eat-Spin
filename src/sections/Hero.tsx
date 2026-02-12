@@ -92,7 +92,7 @@ export function Hero({ onGetStarted, onGroupSpin }: HeroProps) {
                 ✦
               </span>
               <span className="text-[11px] sm:text-sm font-semibold text-brand-black tracking-[0.14em] uppercase">
-                #1 Food Discovery App in Penang
+                Food Discovery for Everyone
               </span>
             </div>
 
@@ -102,8 +102,8 @@ export function Hero({ onGetStarted, onGroupSpin }: HeroProps) {
             </h1>
 
             <p className="text-base sm:text-lg text-eatspin-gray-1 mb-4 max-w-lg">
-              Can't decide what to eat? Let our magical roulette wheel choose for you! 
-              Discover amazing restaurants in Penang based on your preferences and location.
+              Can't decide what to eat? Let our magical roulette wheel choose for you! Discover
+              amazing restaurants near you based on your preferences and location.
             </p>
             <p className="text-sm sm:text-base text-brand-black/70 mb-8 max-w-lg">
               New: Group Spin lets everyone join one room, tap ready, and share the exact same result.

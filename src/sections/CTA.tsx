@@ -84,7 +84,7 @@ export function CTA() {
 
           {/* Subtext */}
           <p className="text-lg text-[#4A4A4A] mb-8 max-w-xl mx-auto">
-            Join thousands of food lovers in Penang who have already discovered their new favorite restaurants with EatSpin.
+            Join thousands of food lovers who have already discovered their new favorite restaurants with EatSpin.
           </p>
 
           {/* Buttons */}
@@ -119,7 +119,7 @@ export function CTA() {
               No ads
             </span>
             <span className="px-4 py-2 bg-[#2E2E2E]/10 text-[#2E2E2E] text-sm font-medium rounded-full border border-[#2E2E2E]/20">
-              Penang focused
+              Works anywhere
             </span>
           </div>
         </div>

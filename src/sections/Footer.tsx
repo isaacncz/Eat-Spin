@@ -52,7 +52,7 @@ export function Footer() {
             </div>
 
             <p className="text-eatspin-gray-2 text-sm leading-relaxed mb-6 max-w-sm">
-              The fun way to decide what to eat! Discover amazing restaurants in Penang with our magical roulette wheel. No more "where to eat" arguments.
+              The fun way to decide what to eat! Discover amazing restaurants near you with our magical roulette wheel. No more "where to eat" arguments.
             </p>
 
             {/* Contact Info */}
@@ -73,7 +73,7 @@ export function Footer() {
               </a>
               <div className="flex items-center gap-3 text-sm text-eatspin-gray-2">
                 <MapPin size={16} className="text-eatspin-orange" />
-                Georgetown, Penang, Malaysia
+                Available worldwide
               </div>
             </div>
           </div>

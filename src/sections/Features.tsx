@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
 import {
+  Users,
+  Radio,
+  ShieldCheck,
   Heart,
   Compass,
   Scale,
   Zap,
   User,
-  PartyPopper,
-  Shield,
-  Clock,
 } from 'lucide-react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -15,6 +15,21 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 gsap.registerPlugin(ScrollTrigger);
 
 const features = [
+  {
+    icon: Users,
+    title: 'Shared Room List',
+    description: 'Create or join a room and keep one synchronized restaurant list that everyone can see in real time.',
+  },
+  {
+    icon: Radio,
+    title: 'Synchronized Spin Result',
+    description: 'One room spin delivers the exact same winner for every participant across devices.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Host & Co-host Controls',
+    description: 'Hosts can assign co-hosts to help manage the list and start spins without slowing the group down.',
+  },
   {
     icon: Heart,
     title: 'No More Arguments',
@@ -40,21 +55,6 @@ const features = [
     title: 'Personalized',
     description: 'Choose your preferred food categories and we\'ll only show relevant options.',
   },
-  {
-    icon: PartyPopper,
-    title: 'Fun & Exciting',
-    description: 'The anticipation of the spin makes choosing food fun again!',
-  },
-  {
-    icon: Shield,
-    title: 'Only Open Restaurants',
-    description: 'We automatically filter out closed restaurants. No more disappointments!',
-  },
-  {
-    icon: Clock,
-    title: 'Meal Time Aware',
-    description: 'Get breakfast spots in the morning, dinner places in the evening.',
-  },
 ];
 
 export function Features() {
@@ -63,7 +63,6 @@ export function Features() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Animate grid items with stagger
       const items = gridRef.current?.children;
       if (items) {
         gsap.fromTo(
@@ -95,7 +94,6 @@ export function Features() {
       className="py-20 px-4 sm:px-6 lg:px-8 bg-eatspin-linen"
     >
       <div className="max-w-7xl mx-auto">
-        {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="font-heading text-3xl sm:text-4xl font-bold text-brand-black mb-4">
             Why Choose EatSpin?
@@ -105,7 +103,6 @@ export function Features() {
           </p>
         </div>
 
-        {/* Features Grid */}
         <div
           ref={gridRef}
           className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6"
@@ -115,12 +112,10 @@ export function Features() {
               key={index}
               className="group bg-white rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer"
             >
-              {/* Icon */}
               <div className="w-12 h-12 bg-eatspin-peach rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
                 <feature.icon size={24} className="text-eatspin-orange" />
               </div>
 
-              {/* Content */}
               <h3 className="font-heading text-lg font-bold text-brand-black mb-2">
                 {feature.title}
               </h3>
@@ -131,7 +126,6 @@ export function Features() {
           ))}
         </div>
 
-        {/* Bottom Stats */}
         <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
             { value: '10,000+', label: 'Happy Users' },

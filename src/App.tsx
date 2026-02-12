@@ -24,7 +24,7 @@ import { GroupSpin } from '@/sections/GroupSpin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
-import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X, Trash2, ChevronDown } from 'lucide-react';
+import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X, Trash2, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import './App.css';
 
@@ -44,6 +44,7 @@ const ROOM_LIST_SYNC_GRACE_MS = 2_500;
 const GROUP_SPIN_REPLAY_WINDOW_MS = 30_000;
 const LATE_JOIN_NOTICE_MS = 5 * 60 * 1000;
 const REVIEW_PREVIEW_COUNT = 30;
+const MANUAL_SUGGESTED_RESTAURANTS = ['Sushi Place', 'Burger Spot', 'Local Noodles', 'Pizza Corner'];
 
 const createManualRestaurant = (name: string): Restaurant => {
   const now = Date.now();
@@ -385,13 +386,13 @@ function App() {
     void syncHostList(normalizedNames);
   }, [canEditGroupList, groupRoomId, isGroupRoomActive, syncHostList]);
 
-  const addManualRestaurant = () => {
+  const addManualRestaurantByName = (restaurantName: string) => {
     if (isManualListReadOnly) {
       toast.info('Only the host or co-host can edit the shared list.');
       return;
     }
 
-    const name = manualInput.trim();
+    const name = restaurantName.trim();
     if (!name) return;
 
     const exists = manualRestaurants.some(
@@ -409,6 +410,10 @@ function App() {
     setManualInput('');
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
+  };
+
+  const addManualRestaurant = () => {
+    addManualRestaurantByName(manualInput);
   };
 
   const buildRestaurantsFromNames = useCallback((names: string[]) => {
@@ -727,42 +732,44 @@ function App() {
 
       <section id="app" className="py-8 sm:py-10 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-4">
-            <h2 className="font-heading text-2xl sm:text-4xl font-bold text-brand-black mb-2">
-              Let's Find You Something to Eat!
+          <div className="text-center mb-3 sm:mb-4">
+            <h2 className="font-heading text-2xl sm:text-4xl font-bold text-brand-black mb-1.5 sm:mb-2">
+              Pick a mode and spin faster.
             </h2>
             <p className="text-sm sm:text-base text-eatspin-gray-1 max-w-md mx-auto">
-              Choose whether you want suggestions or already know your options
+              Auto suggests nearby places. Manual spins your own shortlist.
             </p>
           </div>
 
-          <div className="mb-4 flex justify-center">
+          <div className="mb-2.5 sm:mb-3 flex justify-center">
             <MealTimeIndicator />
           </div>
 
-          <div className="mb-5 flex justify-center">
+          <div className="mb-4 sm:mb-5 flex justify-center">
             <div className="inline-flex items-center justify-center p-1 bg-brand-black rounded-2xl border-2 border-brand-black shadow-lg">
               <button
                 type="button"
                 onClick={() => switchTab('auto')}
                 className={`min-h-11 px-5 py-2.5 rounded-xl text-[0.95rem] font-heading font-bold transition-all duration-200 ${
                   activeTab === 'auto'
-                    ? 'bg-brand-orange text-white shadow-lg'
+                    ? 'bg-brand-orange text-white shadow-lg ring-2 ring-white/80'
                     : 'bg-white text-brand-black hover:bg-eatspin-peach/30'
                 }`}
               >
-                <span className="inline-flex items-center gap-2"><Sparkles size={18} />Spin for me</span>
+                <span className={`inline-flex items-center gap-2 ${activeTab === 'auto' ? 'font-extrabold' : ''}`}><Sparkles size={18} className={activeTab === 'auto' ? 'scale-105' : ''} />Spin for me</span>
+                {activeTab === 'auto' && <span className="block text-[11px] font-medium text-white/90">Smart nearby picks</span>}
               </button>
               <button
                 type="button"
                 onClick={() => switchTab('manual')}
                 className={`min-h-11 px-5 py-2.5 rounded-xl text-[0.95rem] font-heading font-bold transition-all duration-200 ${
                   activeTab === 'manual'
-                    ? 'bg-brand-orange text-white shadow-lg'
+                    ? 'bg-brand-orange text-white shadow-lg ring-2 ring-white/80'
                     : 'bg-white text-brand-black hover:bg-eatspin-peach/30'
                 }`}
               >
-                <span className="inline-flex items-center gap-2"><PencilLine size={18} />I know where</span>
+                <span className={`inline-flex items-center gap-2 ${activeTab === 'manual' ? 'font-extrabold' : ''}`}><PencilLine size={18} className={activeTab === 'manual' ? 'scale-105' : ''} />I know where</span>
+                {activeTab === 'manual' && <span className="block text-[11px] font-medium text-white/90">Add your own shortlist</span>}
               </button>
             </div>
           </div>
@@ -848,6 +855,7 @@ function App() {
                     type="button"
                     onClick={() => setIsMoreFiltersOpen((prev) => !prev)}
                     className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-brand-black hover:text-brand-orange"
+                    aria-expanded={isMoreFiltersOpen}
                   >
                     <ChevronDown
                       size={16}
@@ -872,6 +880,37 @@ function App() {
                       />
                     </div>
                   </div>
+                </div>
+              )}
+
+              {location && roundRestaurants.length > 0 && (
+                <div className="mb-5 flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button
+                    onClick={() => {
+                      if (handleSpinAttempt()) {
+                        shuffleWheel();
+                        setShowWheelSection(true);
+                        setTimeout(() => {
+                          const wheelSection = document.getElementById('wheel');
+                          wheelSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 100);
+                      }
+                    }}
+                    disabled={isSpinning || roundRestaurants.length === 0}
+                    className="w-full sm:w-auto bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-base sm:text-lg font-bold px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-70"
+                  >
+                    <Utensils size={20} className="mr-2" />
+                    Spin for {currentMealTime !== 'none' ? currentMealTime : 'Food'}
+                  </Button>
+
+                  <Button
+                    onClick={resetAutoWheel}
+                    variant="outline"
+                    className="w-full sm:w-auto border-eatspin-orange text-eatspin-orange hover:bg-eatspin-orange/10 font-medium px-6 py-4 sm:py-5 rounded-2xl"
+                  >
+                    <RotateCcw size={18} className="mr-2" />
+                    Reset Wheel
+                  </Button>
                 </div>
               )}
 
@@ -957,37 +996,6 @@ function App() {
                     onUpgrade={() => setShowSubscription(true)}
                     onClose={() => setShowSpinLimitWarning(false)}
                   />
-                </div>
-              )}
-
-              {location && roundRestaurants.length > 0 && (
-                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-                  <Button
-                    onClick={() => {
-                      if (handleSpinAttempt()) {
-                        shuffleWheel();
-                        setShowWheelSection(true);
-                        setTimeout(() => {
-                          const wheelSection = document.getElementById('wheel');
-                          wheelSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, 100);
-                      }
-                    }}
-                    disabled={isSpinning || roundRestaurants.length === 0}
-                    className="w-full sm:w-auto bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-base sm:text-lg font-bold px-6 sm:px-8 py-5 sm:py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-70"
-                  >
-                    <Utensils size={20} className="mr-2" />
-                    Spin for {currentMealTime !== 'none' ? currentMealTime : 'Food'}
-                  </Button>
-
-                  <Button
-                    onClick={resetAutoWheel}
-                    variant="outline"
-                    className="w-full sm:w-auto border-eatspin-orange text-eatspin-orange hover:bg-eatspin-orange/10 font-medium px-6 py-5 sm:py-6 rounded-full"
-                  >
-                    <RotateCcw size={18} className="mr-2" />
-                    Reset Wheel
-                  </Button>
                 </div>
               )}
 
@@ -1102,7 +1110,25 @@ function App() {
                   </div>
 
                   {manualRestaurants.length === 0 ? (
-                    <p className="text-sm text-eatspin-gray-1">No restaurants yet.</p>
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-eatspin-gray-1">Add at least 2 places to spin.</p>
+                      {!isManualListReadOnly && (
+                        <div className="flex flex-wrap gap-2">
+                          {MANUAL_SUGGESTED_RESTAURANTS.map((suggestion) => (
+                            <button
+                              key={suggestion}
+                              type="button"
+                              onClick={() => {
+                                addManualRestaurantByName(suggestion);
+                              }}
+                              className="inline-flex items-center gap-1 rounded-full border border-eatspin-peach/80 bg-brand-linen px-3 py-1.5 text-xs font-medium text-brand-black hover:border-brand-orange hover:text-brand-orange"
+                            >
+                              <CheckCircle2 size={12} /> {suggestion}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <ul className="space-y-2">
                       {manualRestaurants.map((restaurant) => (

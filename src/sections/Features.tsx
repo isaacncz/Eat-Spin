@@ -95,7 +95,7 @@ export function Features() {
     >
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-brand-black mb-4">
+          <h2 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-bold text-brand-black mb-4">
             Why Choose EatSpin?
           </h2>
           <p className="text-eatspin-gray-1 max-w-lg mx-auto">

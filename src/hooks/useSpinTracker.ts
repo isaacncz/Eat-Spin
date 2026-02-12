@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { SpinResult, MealTime } from '@/types';
-import { penangRestaurants } from '@/data/restaurants';
+import { restaurants } from '@/data/restaurants';
 
 interface SpinTrackerState {
   spins: SpinResult[];
@@ -79,7 +79,7 @@ export function useSpinTracker(): SpinTrackerState {
 
   const recordSpin = useCallback(
     (restaurantId: string, mealTime: MealTime) => {
-      const restaurant = penangRestaurants.find((r) => r.id === restaurantId);
+      const restaurant = restaurants.find((r) => r.id === restaurantId);
       if (!restaurant) return;
 
       const newSpin: SpinResult = {

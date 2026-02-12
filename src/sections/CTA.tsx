@@ -84,7 +84,7 @@ export function CTA() {
 
           {/* Subtext */}
           <p className="text-lg text-[#4A4A4A] mb-8 max-w-xl mx-auto">
-            Join food lovers everywhere who have already discovered new favorite restaurants with EatSpin.
+            Join thousands of food lovers who have already discovered their new favorite restaurants with EatSpin.
           </p>
 
           {/* Buttons */}

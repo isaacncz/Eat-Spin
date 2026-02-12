@@ -4,7 +4,7 @@ import { useLocation } from '@/hooks/useLocation';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
-import { penangRestaurants } from '@/data/restaurants';
+import { restaurants } from '@/data/restaurants';
 import { enhancedFilterRestaurants } from '@/lib/restaurantUtils';
 import { getCurrentMealTime } from '@/lib/utils';
 import { FoodCategorySelector } from '@/components/FoodCategorySelector';
@@ -272,7 +272,7 @@ function App() {
 
   const filteredRestaurants = useMemo(() => (
     enhancedFilterRestaurants(
-      penangRestaurants,
+      restaurants,
       location,
       selectedCategories,
       radiusKm,

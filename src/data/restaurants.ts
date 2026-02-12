@@ -176,8 +176,8 @@ if (!normalizedRestaurantParse.success) {
   throw new Error('Invalid normalized restaurant data in restaurants.json');
 }
 
-// Mock restaurant data for Penang, Malaysia
-export const penangRestaurants: Restaurant[] = normalizedRestaurantParse.data.map((restaurant, index) => ({
+// Mock restaurant data
+export const restaurants: Restaurant[] = normalizedRestaurantParse.data.map((restaurant, index) => ({
   ...restaurant,
   id: generateRestaurantId(index),
 }));

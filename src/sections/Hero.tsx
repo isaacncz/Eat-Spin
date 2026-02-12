@@ -92,7 +92,7 @@ export function Hero({ onGetStarted, onGroupSpin }: HeroProps) {
                 ✦
               </span>
               <span className="text-[11px] sm:text-sm font-semibold text-brand-black tracking-[0.14em] uppercase">
-                Food roulette for every city
+                Food Discovery for Everyone
               </span>
             </div>
 

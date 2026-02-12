@@ -92,7 +92,7 @@ export function CTA() {
             <Button
               onClick={scrollToApp}
               size="lg"
-              className="w-full sm:w-auto bg-[#2E2E2E] text-white hover:bg-[#1a1a1a] font-heading text-lg font-bold px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+              className="w-full sm:w-auto bg-[#2E2E2E] text-white hover:bg-[#1a1a1a] font-heading text-lg font-bold px-8 py-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
             >
               Start Spinning Now
               <ArrowRight
@@ -104,7 +104,7 @@ export function CTA() {
             <Button
               variant="outline"
               size="lg"
-              className="w-full sm:w-auto border-2 border-[#2E2E2E] text-[#2E2E2E] bg-white/80 hover:bg-white font-medium px-8 py-6 rounded-full shadow-lg"
+              className="w-full sm:w-auto border-2 border-[#2E2E2E] text-[#2E2E2E] bg-white/80 hover:bg-white font-medium px-8 py-6 rounded-2xl shadow-lg"
             >
               Download App
             </Button>
@@ -119,7 +119,7 @@ export function CTA() {
               No ads
             </span>
             <span className="px-4 py-2 bg-[#2E2E2E]/10 text-[#2E2E2E] text-sm font-medium rounded-full border border-[#2E2E2E]/20">
-              Works anywhere
+              Works wherever you are
             </span>
           </div>
         </div>

@@ -210,6 +210,11 @@ function App() {
     window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
   }, []);
 
+  const handleHeroGetStarted = useCallback(() => {
+    setActiveTab('manual');
+    scrollToSection('app');
+  }, [scrollToSection]);
+
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
   const { canSpin, recordSpin } = useSpinTracker();
@@ -691,8 +696,35 @@ function App() {
       />
 
       <Hero
-        onGetStarted={() => scrollToSection('app')}
+        onGetStarted={handleHeroGetStarted}
         onGroupSpin={() => scrollToSection('group-spin')}
+      />
+
+      <GroupSpin
+        isFirebaseConfigured={isFirebaseConfigured}
+        firebaseConfigError={firebaseConfigError}
+        authLoading={groupAuthLoading}
+        authError={groupAuthError}
+        authUid={groupAuthUid}
+        displayName={groupDisplayName}
+        resolvedDisplayName={groupResolvedDisplayName}
+        setDisplayName={setGroupDisplayName}
+        roomId={groupRoomId}
+        hostUid={groupHostUid}
+        roomLink={groupRoomLink}
+        isHost={isGroupHost}
+        isCohost={isGroupCohost}
+        cohostUids={groupCohostUids}
+        isBusy={groupRoomBusy}
+        roomError={groupRoomError}
+        participants={groupParticipants}
+        canStartRoomSpin={isGroupRoomActive && (isGroupHost || isGroupCohost) && manualRestaurantNames.length >= 2}
+        onCreateRoom={handleCreateGroupRoom}
+        onJoinRoom={handleJoinGroupRoom}
+        onLeaveRoom={leaveGroupRoom}
+        onStartRoomSpin={handleRequestGroupSpin}
+        onSetParticipantCohost={setParticipantCohost}
+        onClearRoomError={clearGroupRoomError}
       />
 
       <HowItWorks />
@@ -1225,33 +1257,6 @@ function App() {
           </div>
         </section>
       )}
-
-      <GroupSpin
-        isFirebaseConfigured={isFirebaseConfigured}
-        firebaseConfigError={firebaseConfigError}
-        authLoading={groupAuthLoading}
-        authError={groupAuthError}
-        authUid={groupAuthUid}
-        displayName={groupDisplayName}
-        resolvedDisplayName={groupResolvedDisplayName}
-        setDisplayName={setGroupDisplayName}
-        roomId={groupRoomId}
-        hostUid={groupHostUid}
-        roomLink={groupRoomLink}
-        isHost={isGroupHost}
-        isCohost={isGroupCohost}
-        cohostUids={groupCohostUids}
-        isBusy={groupRoomBusy}
-        roomError={groupRoomError}
-        participants={groupParticipants}
-        canStartRoomSpin={isGroupRoomActive && (isGroupHost || isGroupCohost) && manualRestaurantNames.length >= 2}
-        onCreateRoom={handleCreateGroupRoom}
-        onJoinRoom={handleJoinGroupRoom}
-        onLeaveRoom={leaveGroupRoom}
-        onStartRoomSpin={handleRequestGroupSpin}
-        onSetParticipantCohost={setParticipantCohost}
-        onClearRoomError={clearGroupRoomError}
-      />
 
       <Testimonials />
       <CTA />

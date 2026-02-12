@@ -104,29 +104,30 @@ export function Hero({ onGetStarted, onGroupSpin }: HeroProps) {
             <p className="text-base sm:text-lg text-eatspin-gray-1 mb-4 max-w-lg">
               Can't decide what to eat? Let the roulette wheel pick for you based on your taste, timing, and location.
             </p>
-            <p className="text-sm sm:text-base text-eatspin-gray-1 mb-8 max-w-lg">
-              New: Group Spin lets everyone join one room, tap ready, and share the exact same result.
+            <p className="text-sm sm:text-base text-brand-black/70 mb-8 max-w-lg">
+              Create/join a room and decide together. Group Spin keeps one shared list, host/co-host controls,
+              and synchronized results for everyone.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <Button
-                onClick={onGetStarted}
+                onClick={onGroupSpin}
                 size="lg"
                 className="w-full sm:w-auto bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-base sm:text-lg font-bold px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
               >
-                Start Spinning
+                Start Group Spin
                 <ArrowRight
                   size={20}
                   className="ml-2 group-hover:translate-x-1 transition-transform"
                 />
               </Button>
               <Button
-                onClick={onGroupSpin}
+                onClick={onGetStarted}
                 size="lg"
                 variant="outline"
                 className="w-full sm:w-auto border-brand-orange text-brand-orange font-heading text-base sm:text-lg font-bold px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-sm hover:bg-brand-orange/10 transition-all duration-300"
               >
-                Start Group Spin
+                Start Solo Spin
               </Button>
             </div>
 

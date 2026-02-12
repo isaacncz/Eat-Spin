@@ -1020,12 +1020,14 @@ function App() {
                 onShuffle={() => {
                   shuffleManualRestaurants();
                 }}
-                canSpin={manualRestaurants.length >= 2 && (!isGroupRoomActive || isGroupHost)}
+                canSpin={manualRestaurants.length >= 2 && (!isGroupRoomActive || isGroupHost || isGroupCohost)}
                 helperText={manualHelperText}
-                spinButtonLabel={isGroupRoomActive ? (isGroupHost ? 'Spin for everyone' : 'Waiting for host spin') : 'Spin the Wheel!'}
+                spinButtonLabel={isGroupRoomActive
+                  ? (isGroupHost || isGroupCohost ? 'Spin for everyone' : 'Waiting for host or co-host spin')
+                  : 'Spin the Wheel!'}
                 externalSpin={manualExternalSpin}
                 onRequestSpin={isGroupRoomActive ? handleRequestGroupSpin : undefined}
-                canRequestSpin={!isGroupRoomActive || isGroupHost}
+                canRequestSpin={!isGroupRoomActive || isGroupHost || isGroupCohost}
                 emptyStateTitle="Add restaurants to start"
                 emptyStateSubtitle="Type any restaurant you like…"
               />

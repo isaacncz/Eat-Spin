@@ -1,4 +1,4 @@
-import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from 'lucide-react';
+import { Facebook, Instagram, Twitter } from 'lucide-react';
 
 const footerLinks = {
   product: [
@@ -55,27 +55,7 @@ export function Footer() {
               The fun way to decide what to eat! Discover amazing restaurants with our roulette wheel and skip the "where to eat" debate.
             </p>
 
-            {/* Contact Info */}
-            <div className="space-y-3">
-              <a
-                href="mailto:hello@eatspin.my"
-                className="flex items-center gap-3 text-sm text-eatspin-gray-2 hover:text-white transition-colors"
-              >
-                <Mail size={16} className="text-eatspin-orange" />
-                hello@eatspin.my
-              </a>
-              <a
-                href="tel:+60123456789"
-                className="flex items-center gap-3 text-sm text-eatspin-gray-2 hover:text-white transition-colors"
-              >
-                <Phone size={16} className="text-eatspin-orange" />
-                +60 12-345 6789
-              </a>
-              <div className="flex items-center gap-3 text-sm text-eatspin-gray-2">
-                <MapPin size={16} className="text-eatspin-orange" />
-                Available worldwide
-              </div>
-            </div>
+            {/* Contact Info removed */}
           </div>
 
           {/* Product Links */}

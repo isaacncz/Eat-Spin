@@ -517,8 +517,8 @@ export function RouletteWheel({
             })}
 
             {/* Larger Center Circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-4 border-eatspin-peach">
-              <span className="text-base sm:text-lg font-heading text-eatspin-orange font-bold">SPIN</span>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-4 border-eatspin-peach" style={{ boxShadow: '0 14px 28px rgba(0,0,0,0.2), 0 0 20px rgba(245, 71, 3, 0.3)' }}>
+              <span className="text-lg sm:text-xl font-heading text-eatspin-orange font-bold">SPIN</span>
             </div>
             
             {/* Inner decorative ring */}
@@ -535,15 +535,22 @@ export function RouletteWheel({
       <button
         onClick={handleSpinClick}
         disabled={isSpinning || !canSpin || (Boolean(onRequestSpin) && !canRequestSpin)}
-        className="sticky bottom-3 sm:static z-30 relative overflow-hidden w-full max-w-sm px-8 sm:px-12 py-5 bg-brand-orange text-white font-heading text-xl font-bold rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+        className="sticky bottom-3 sm:static z-30 relative overflow-hidden w-full max-w-sm px-8 sm:px-12 py-6 sm:py-7 bg-brand-orange text-white font-heading text-2xl sm:text-[1.7rem] font-bold rounded-2xl shadow-xl animate-cta-pulse transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+        style={{ boxShadow: '0 18px 35px rgba(0,0,0,0.24), 0 0 28px rgba(245, 71, 3, 0.5)' }}
       >
         {isSpinning ? (
-          <span className="inline-flex items-center justify-center gap-2" aria-live="polite">
+          <span className="inline-flex flex-col items-center justify-center gap-1" aria-live="polite">
+            <span className="inline-flex items-center justify-center gap-2">
             <Loader2 className="h-6 w-6 animate-spin text-white" />
-            <span className="text-base sm:text-lg">Spinning...</span>
+            <span className="text-lg sm:text-xl">Spinning...</span>
+            </span>
+            <span className="text-xs sm:text-sm font-medium opacity-85">One tap. Let fate decide.</span>
           </span>
         ) : (
-          <span>{spinButtonLabel}</span>
+          <span className="inline-flex flex-col items-center gap-1 leading-tight">
+            <span>{spinButtonLabel}</span>
+            <span className="text-xs sm:text-sm font-medium opacity-85">One tap. Let fate decide.</span>
+          </span>
         )}
       </button>
 

@@ -126,6 +126,10 @@
    .animate-bounce-subtle {
      animation: bounce-subtle 2s ease-in-out infinite;
    }
+
+   .animate-cta-pulse {
+     animation: cta-pulse 2.6s ease-in-out infinite;
+   }
    
    .bg-gradient-orange-peach {
      background: linear-gradient(90deg, var(--eatspin-orange) 0%, var(--eatspin-peach) 100%);
@@ -168,6 +172,17 @@
   }
   50% {
     transform: translateY(-5px);
+  }
+}
+
+@keyframes cta-pulse {
+  0%,
+  88%,
+  100% {
+    transform: scale(1);
+  }
+  94% {
+    transform: scale(1.03);
   }
 }
 

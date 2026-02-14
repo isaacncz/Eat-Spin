@@ -7,18 +7,6 @@ const footerLinks = {
     { label: 'Pricing', href: '#' },
     { label: 'Download App', href: '#' },
   ],
-  company: [
-    { label: 'About Us', href: '#' },
-    { label: 'Careers', href: '#' },
-    { label: 'Press', href: '#' },
-    { label: 'Contact', href: '#' },
-  ],
-  support: [
-    { label: 'Help Center', href: '#' },
-    { label: 'Privacy Policy', href: '#' },
-    { label: 'Terms of Service', href: '#' },
-    { label: 'Restaurant Partners', href: '#' },
-  ],
 };
 
 const socialLinks = [
@@ -38,7 +26,7 @@ export function Footer() {
   return (
     <footer className="bg-[#181818] text-white py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12 mb-12">
           {/* Brand Column */}
           <div className="lg:col-span-2">
             {/* Logo */}
@@ -95,39 +83,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Company Links */}
-          <div>
-            <h4 className="font-heading font-bold text-white mb-4">Company</h4>
-            <ul className="space-y-3">
-              {footerLinks.company.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-eatspin-gray-2 hover:text-white transition-colors"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Support Links */}
-          <div>
-            <h4 className="font-heading font-bold text-white mb-4">Support</h4>
-            <ul className="space-y-3">
-              {footerLinks.support.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-eatspin-gray-2 hover:text-white transition-colors"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
 
         {/* Divider */}

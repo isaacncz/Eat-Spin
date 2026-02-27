@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import { useLocation } from '@/hooks/useLocation';
+import { useNearbyRestaurants } from '@/hooks/useNearbyRestaurants';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
-import { restaurants } from '@/data/restaurants';
+import { restaurants as localRestaurants } from '@/data/restaurants';
 import { enhancedFilterRestaurants } from '@/lib/restaurantUtils';
 import { getCurrentMealTime } from '@/lib/utils';
 import { FoodCategorySelector } from '@/components/FoodCategorySelector';
@@ -160,6 +161,9 @@ const formatRelativeSpinTime = (ageMs: number) => {
 const formatAbsoluteSpinTime = (timestamp: number) =>
   new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
+const formatAbsoluteSyncTime = (timestamp: number) =>
+  new Date(timestamp).toLocaleString([], { hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric' });
+
 function App() {
   // State management
   const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
@@ -219,6 +223,19 @@ function App() {
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
   const { canSpin, recordSpin } = useSpinTracker();
   const {
+    restaurants: nearbyRestaurants,
+    isLoading: nearbyRestaurantsLoading,
+    error: nearbyRestaurantsError,
+    source: nearbyRestaurantsSource,
+    shouldUseLocalFallback,
+    lastSyncedAt: nearbyLastSyncedAt,
+  } = useNearbyRestaurants({
+    enabled: activeTab === 'auto' && Boolean(location),
+    location,
+    radiusKm,
+    openNowOnly: true,
+  });
+  const {
     authUid: groupAuthUid,
     isFirebaseConfigured,
     firebaseConfigError,
@@ -251,6 +268,36 @@ function App() {
   const priceOptions: Restaurant['priceRange'][] = ['$', '$$', '$$$', '$$$$'];
   const isGroupRoomActive = Boolean(groupRoomId);
   const isManualListReadOnly = isGroupRoomActive && !canEditGroupList;
+  const localFallbackAutoRestaurants = useMemo(
+    () => localRestaurants.map((restaurant) => ({ ...restaurant, source: 'local-fallback' as const })),
+    []
+  );
+  const autoSourceRestaurants = useMemo(() => {
+    if (!location) return [];
+    if (nearbyRestaurants.length > 0) return nearbyRestaurants;
+    if (shouldUseLocalFallback) return localFallbackAutoRestaurants;
+    return [];
+  }, [location, nearbyRestaurants, shouldUseLocalFallback, localFallbackAutoRestaurants]);
+  const autoDataSourceLabel = useMemo(() => {
+    if (!location) return null;
+    if (nearbyRestaurantsLoading) return 'Loading nearby restaurants...';
+    if (nearbyRestaurantsSource === 'google-cache') {
+      if (!nearbyLastSyncedAt) return 'Using cached nearby results (monthly sync).';
+      return `Using cached nearby results (last sync ${formatAbsoluteSyncTime(nearbyLastSyncedAt)}).`;
+    }
+    if (nearbyRestaurantsSource === 'google-live') {
+      if (!nearbyLastSyncedAt) return 'Using live nearby results.';
+      return `Using live nearby results (synced ${formatAbsoluteSyncTime(nearbyLastSyncedAt)}).`;
+    }
+    if (shouldUseLocalFallback) return 'Google unavailable. Using local fallback results.';
+    return null;
+  }, [
+    location,
+    nearbyLastSyncedAt,
+    nearbyRestaurantsLoading,
+    nearbyRestaurantsSource,
+    shouldUseLocalFallback,
+  ]);
 
   const togglePriceRange = (price: Restaurant['priceRange']) => {
     setSelectedPriceRanges((prev) =>
@@ -272,14 +319,14 @@ function App() {
 
   const filteredRestaurants = useMemo(() => (
     enhancedFilterRestaurants(
-      restaurants,
+      autoSourceRestaurants,
       location,
       selectedCategories,
       radiusKm,
       selectedPriceRanges,
       nonHalalOnly
     )
-  ), [location, selectedCategories, radiusKm, selectedPriceRanges, nonHalalOnly]);
+  ), [autoSourceRestaurants, location, selectedCategories, radiusKm, selectedPriceRanges, nonHalalOnly]);
 
   const roundRestaurants = useMemo(() => (
     filteredRestaurants.filter((restaurant) => !roundRemovedRestaurantIds.includes(restaurant.id))
@@ -293,7 +340,7 @@ function App() {
 
   useEffect(() => {
     setShowAllRoundRestaurants(false);
-  }, [selectedCategories, selectedPriceRanges, nonHalalOnly, radiusKm, location]);
+  }, [selectedCategories, selectedPriceRanges, nonHalalOnly, radiusKm, location, autoSourceRestaurants]);
 
   const removeRestaurantForRound = (
     restaurantId: string,
@@ -317,7 +364,7 @@ function App() {
 
   // Handle spin complete
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
-    recordSpin(restaurant.id, currentMealTime);
+    recordSpin(restaurant, currentMealTime);
     setPendingAutoRemovalId(restaurant.id);
   }, [currentMealTime, recordSpin]);
 
@@ -799,6 +846,17 @@ function App() {
                       <span className="font-semibold text-brand-orange">{roundRestaurants.length}</span> matches
                     </p>
                   </div>
+
+                  {(autoDataSourceLabel || nearbyRestaurantsError) && (
+                    <div className="mb-3 space-y-1">
+                      {autoDataSourceLabel && (
+                        <p className="text-xs font-medium text-eatspin-gray-1">{autoDataSourceLabel}</p>
+                      )}
+                      {nearbyRestaurantsError && (
+                        <p className="text-xs text-eatspin-error">{nearbyRestaurantsError}</p>
+                      )}
+                    </div>
+                  )}
 
                   <div className="mb-4">
                     <label className="mb-2 block text-sm font-medium text-gray-700">

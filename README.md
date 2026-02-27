@@ -104,3 +104,27 @@ Group Spin now uses Firebase Realtime Database + Anonymous Auth for cross-browse
    - `VITE_FIREBASE_DATABASE_URL`
    - `VITE_FIREBASE_PROJECT_ID`
    - `VITE_FIREBASE_APP_ID`
+
+## Google Nearby Restaurants Setup
+
+Auto mode now uses Google Places nearby search with local-first IndexedDB caching.
+
+1. In Google Cloud Console, enable:
+   - Maps JavaScript API
+   - Places API
+2. Create an API key and restrict it:
+   - Application restrictions: HTTP referrers (your local/dev/prod domains)
+   - API restrictions: Maps JavaScript API and Places API
+3. Add env values in `.env` and hosting settings:
+   - `VITE_GOOGLE_MAPS_API_KEY`
+   - `VITE_GOOGLE_PLACES_REGION` (default `MY`)
+   - `VITE_GOOGLE_PLACES_LANGUAGE` (default `en`)
+   - `VITE_NEARBY_CACHE_TTL_DAYS` (default `30`)
+   - `VITE_NEARBY_CACHE_MIN_RESULTS` (default `12`)
+   - `VITE_NEARBY_CACHE_AREA_KM` (default `2`)
+
+Caching behavior:
+- Cache lookup uses geohash precision 6 and checks 8 neighboring cells.
+- Cache is accepted only when user is within 2 km of cached center and record is not expired.
+- If cache has at least 12 restaurants, no Google call is made.
+- If cache is missing, expired, or below 12 restaurants, app refreshes from Google and stores top 12 by rating (tie-breakers: review count, then distance).

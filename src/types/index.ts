@@ -15,6 +15,9 @@ export interface Restaurant {
   description?: string;
   isOpen?: boolean;
   distance?: number;
+  userRatingCount?: number;
+  googlePlaceId?: string;
+  source?: 'google-live' | 'google-cache' | 'local-fallback';
 }
 
 // Type for JSON restaurant data (without ID fields)

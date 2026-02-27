@@ -1,12 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
-import type { SpinResult, MealTime } from '@/types';
-import { restaurants } from '@/data/restaurants';
+import type { SpinResult, MealTime, Restaurant } from '@/types';
 
 interface SpinTrackerState {
   spins: SpinResult[];
   spinsToday: number;
   canSpin: (mealTime: MealTime) => boolean;
-  recordSpin: (restaurantId: string, mealTime: MealTime) => void;
+  recordSpin: (restaurant: Restaurant, mealTime: MealTime) => void;
   getSpinsForMeal: (mealTime: MealTime) => SpinResult[];
 }
 
@@ -78,10 +77,7 @@ export function useSpinTracker(): SpinTrackerState {
   // );
 
   const recordSpin = useCallback(
-    (restaurantId: string, mealTime: MealTime) => {
-      const restaurant = restaurants.find((r) => r.id === restaurantId);
-      if (!restaurant) return;
-
+    (restaurant: Restaurant, mealTime: MealTime) => {
       const newSpin: SpinResult = {
         restaurant,
         timestamp: new Date(),

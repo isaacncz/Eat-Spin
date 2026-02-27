@@ -5,7 +5,7 @@
 - Skip Google API if cache is valid and has at least 12 restaurants.
 - Call Google only when cache is missing, expired (30 days), or has fewer than 12 restaurants.
 - Force monthly resync (30-day TTL).
-- Keep only the top 12 highest-rated restaurants within nearby radius for roulette.
+- Keep ranked nearby results (up to API limit) for filtering and review, while roulette still spins a 12-restaurant round.
 - Keep static local dataset as failure fallback.
 
 ## Storage Design
@@ -47,7 +47,7 @@
   1. `rating` descending
   2. `userRatingCount` descending (tie-breaker)
   3. `distance` ascending (final tie-breaker)
-- Persist and render only the top 12 restaurants after sorting.
+- Persist and render ranked nearby restaurants up to API response limits.
 - If fewer than 12 pass filters, store and render available results, and trigger Google refresh when cache is reused and still below 12.
 
 ## Read Flow (Local-First)
@@ -65,7 +65,7 @@ Call Google only when:
 After fetch:
 1. Normalize Google places to existing `Restaurant` shape.
 2. Rank candidates using `rating desc -> userRatingCount desc -> distance asc`.
-3. Keep top 12 only.
+3. Keep ranked results up to API response limits.
 4. Upsert `places`.
 5. Upsert `snapshot`.
 6. Render results.
@@ -105,5 +105,5 @@ After fetch:
 - Minimum cache size: 12.
 - Area threshold: 2 km.
 - Geohash strategy: precision 6 + 8-neighbor lookup.
-- Top list policy: highest-rated 12 nearby (rating, then review count, then distance).
+- Ranking policy: highest-rated nearby first (rating, then review count, then distance).
 - Force resync: 30 days.

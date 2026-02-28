@@ -49,6 +49,59 @@ function getSegmentColor(index: number): string {
   return WHEEL_COLORS[index % WHEEL_COLORS.length];
 }
 
+const compactRestaurantName = (name: string, maxLength: number): string => {
+  const normalized = name.trim().replace(/\s+/g, ' ');
+  if (normalized.length <= maxLength) return normalized;
+
+  const delimiters = [' - ', ' | ', ',', '('];
+  for (const delimiter of delimiters) {
+    const delimiterIndex = normalized.indexOf(delimiter);
+    if (delimiterIndex > 4) {
+      const compacted = normalized.slice(0, delimiterIndex).trim();
+      if (compacted.length >= 4) {
+        return compacted;
+      }
+    }
+  }
+
+  return normalized;
+};
+
+const wrapLabelText = (text: string, maxCharsPerLine: number, maxLines: number): string[] => {
+  const words = text.split(' ').filter(Boolean);
+  const lines: string[] = [];
+
+  for (const word of words) {
+    const currentLine = lines[lines.length - 1] ?? '';
+    const nextLine = currentLine ? `${currentLine} ${word}` : word;
+
+    if (!currentLine || nextLine.length <= maxCharsPerLine) {
+      if (currentLine) {
+        lines[lines.length - 1] = nextLine;
+      } else {
+        lines.push(word);
+      }
+      continue;
+    }
+
+    if (lines.length < maxLines) {
+      lines.push(word);
+      continue;
+    }
+
+    lines[lines.length - 1] = `${currentLine.slice(0, Math.max(currentLine.length - 1, 1))}…`;
+    return lines;
+  }
+
+  if (lines.length > maxLines) {
+    return lines.slice(0, maxLines);
+  }
+
+  return lines;
+};
+
+const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
+
 
 const getOpeningHoursLabel = (restaurant: Restaurant): string => {
   const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -104,6 +157,11 @@ export function RouletteWheel({
   const lastExternalSpinIdRef = useRef('');
   const [winnerSliceIndex, setWinnerSliceIndex] = useState<number | null>(null);
   const [isWinnerSliceHighlighted, setIsWinnerSliceHighlighted] = useState(false);
+
+  const syncWheelRotationVar = useCallback((rotation: number) => {
+    if (!wheelRef.current) return;
+    wheelRef.current.style.setProperty('--wheel-rotation', `${rotation}deg`);
+  }, []);
 
   const clearCelebrationEffects = useCallback(() => {
     celebrationTimeoutsRef.current.forEach((timeoutId) => {
@@ -239,6 +297,7 @@ export function RouletteWheel({
       onUpdate: () => {
         if (wheelRef.current) {
           currentRotationRef.current = gsap.getProperty(wheelRef.current, 'rotation') as number;
+          syncWheelRotationVar(currentRotationRef.current);
         }
       },
     });
@@ -250,6 +309,7 @@ export function RouletteWheel({
       onUpdate: () => {
         if (wheelRef.current) {
           currentRotationRef.current = gsap.getProperty(wheelRef.current, 'rotation') as number;
+          syncWheelRotationVar(currentRotationRef.current);
         }
       },
       onComplete: () => {
@@ -279,7 +339,7 @@ export function RouletteWheel({
         }, 100);
       },
     });
-  }, [onSpinComplete, recenterWheel, restaurants, setIsSpinning]);
+  }, [onSpinComplete, recenterWheel, restaurants, setIsSpinning, syncWheelRotationVar]);
 
   const handleLocalSpin = () => {
     if (isSpinning || restaurants.length === 0 || !canSpin) return;
@@ -308,8 +368,9 @@ export function RouletteWheel({
     if (wheelRef.current) {
       gsap.set(wheelRef.current, { rotation: 0 });
       currentRotationRef.current = 0;
+      syncWheelRotationVar(0);
     }
-  }, [isSpinning, restaurants]);
+  }, [isSpinning, restaurants, syncWheelRotationVar]);
 
   useEffect(() => {
     if (!externalSpin || restaurants.length === 0) return;
@@ -384,10 +445,47 @@ export function RouletteWheel({
   }
 
   const segmentAngle = 360 / restaurants.length;
+  const wheelRadius = wheelSize / 2;
+  const outerPadding = wheelRadius * 0.08;
+  const labelOuterRadius = wheelRadius - outerPadding;
+  const centerButtonRadius = wheelRadius * 0.2;
+  const labelInnerRadius = centerButtonRadius + wheelRadius * 0.14;
+  const labelRadius = labelInnerRadius + (labelOuterRadius - labelInnerRadius) * 0.62;
   const centerX = wheelSize / 2;
   const centerY = wheelSize / 2;
-  // Position text at 65% from center to give more space with larger center circle
-  const textRadius = (wheelSize / 2) * 0.66;
+  const angleRad = (segmentAngle * Math.PI) / 180;
+  const usableArcWidth = Math.max(labelRadius * angleRad * 0.92, wheelSize * 0.19);
+  const radialBandHeight = Math.max((labelOuterRadius - labelInnerRadius) * 0.8, wheelSize * 0.15);
+  const maxCharsPerLine = clamp(Math.floor(usableArcWidth / 10), 8, 18);
+  const baseFontSize = clamp(Math.min(usableArcWidth * 0.16, radialBandHeight * 0.28), 11.5, 22);
+  const canShowDistance = segmentAngle >= 34 && radialBandHeight >= 42;
+
+  const labelLayouts = restaurants.map((restaurant, index) => {
+      const startAngle = segmentAngle * index;
+      const midAngle = startAngle + segmentAngle / 2;
+      const pointAngleRad = ((midAngle - 90) * Math.PI) / 180;
+      const x = centerX + labelRadius * Math.cos(pointAngleRad);
+      const y = centerY + labelRadius * Math.sin(pointAngleRad);
+
+      const compactName = compactRestaurantName(restaurant.name, maxCharsPerLine * 2 + 5);
+      const lines = wrapLabelText(compactName, maxCharsPerLine, 3);
+      const longestLineLength = Math.max(...lines.map((line) => line.length), 1);
+      const densityScale = clamp(maxCharsPerLine / longestLineLength, 0.75, 1.08);
+      const fontSize = clamp(baseFontSize * densityScale, 11.5, 24);
+      const distanceLabel = canShowDistance && lines.length <= 2 && restaurant.distance !== undefined
+        ? `${restaurant.distance.toFixed(1)} km`
+        : null;
+
+      return {
+        restaurant,
+        x,
+        y,
+        lines,
+        fontSize,
+        distanceLabel,
+      };
+    });
+
   const isManualResult = Boolean(
     spinResult
       && (spinResult.id.startsWith('manual-')
@@ -416,6 +514,7 @@ export function RouletteWheel({
             className="w-full h-full rounded-full shadow-2xl relative overflow-hidden"
             style={{
               background: wheelBackground,
+              ['--wheel-rotation' as string]: '0deg',
             }}
           >
             {/* Segment dividers */}
@@ -444,39 +543,8 @@ export function RouletteWheel({
               />
             )}
 
-            {/* Restaurant names positioned with polar coordinates */}
-            {restaurants.map((restaurant, index) => {
-              const startAngle = (360 / restaurants.length) * index;
-              const midAngle = startAngle + segmentAngle / 2;
-              // Convert polar to cartesian coordinates
-              // Subtract 90 degrees because 0 degrees is at 3 o'clock, we want it at 12 o'clock
-              const angleRad = ((midAngle - 90) * Math.PI) / 180;
-              const x = centerX + textRadius * Math.cos(angleRad);
-              const y = centerY + textRadius * Math.sin(angleRad);
-              
-               // Text rotation: always point toward center
-              // Add 90 degrees to make text read from outside toward center
-              const textRotation = midAngle + 90;
-              
-              // All colors in our palette have good contrast with white text
-              const textColor = '#FFFFFF';
-              
-              const displayName = restaurant.name;
-              const nameLength = displayName.length;
-              const maxFontSize = wheelSize * 0.054;
-              const minFontSize = wheelSize * 0.022;
-              const lengthFactor = Math.min(Math.max((nameLength - 5) / 30, 0), 1);
-              const baseFontSize =
-                maxFontSize - (maxFontSize - minFontSize) * lengthFactor;
-              const maxLabelWidth = wheelSize * 0.28;
-              const estimatedCharWidth = 0.6;
-              const fitFontSize = maxLabelWidth / Math.max(nameLength * estimatedCharWidth, 1);
-              const computedFontSize = Math.max(
-                minFontSize,
-                Math.min(baseFontSize, fitFontSize),
-              );
-              const fontWeight = nameLength <= 5 ? 700 : 600;
-              
+            {/* Labels remain upright by counter-rotating the wheel transform. */}
+            {labelLayouts.map(({ restaurant, x, y, lines, fontSize, distanceLabel }) => {
               return (
                 <div
                   key={restaurant.id}
@@ -484,45 +552,49 @@ export function RouletteWheel({
                   style={{
                     left: `${(x / wheelSize) * 100}%`,
                     top: `${(y / wheelSize) * 100}%`,
-                    transform: `translate(-50%, -50%) rotate(${textRotation}deg)`,
+                    width: `${usableArcWidth}px`,
+                    transform: 'translate(-50%, -50%) rotate(calc(-1 * var(--wheel-rotation)))',
                     transformOrigin: 'center center',
                   }}
                 >
-                  <span
-                    className="text-center leading-tight whitespace-nowrap"
+                  <div
+                    className="text-center leading-[1.05]"
                     style={{
-                      color: textColor,
-                      fontSize: `${computedFontSize}px`,
-                      fontWeight,
-                      maxWidth: `${maxLabelWidth}px`,
+                      color: '#FFFFFF',
+                      fontSize: `${fontSize}px`,
+                      fontWeight: 700,
                       textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 1px 1px rgba(0,0,0,0.8)',
                     }}
                   >
-                    {displayName}
-                  </span>
-                  {restaurant.distance !== undefined && (
-                    <span 
-                      className="text-[8px] sm:text-[10px] font-semibold whitespace-nowrap"
+                    {lines.map((line, lineIndex) => (
+                      <span key={`${restaurant.id}-${lineIndex}`} className="block">
+                        {line}
+                      </span>
+                    ))}
+                  </div>
+                  {distanceLabel && (
+                    <span
+                      className="mt-0.5 text-[10px] sm:text-[11px] font-semibold whitespace-nowrap"
                       style={{
-                        color: textColor,
+                        color: '#FFFFFF',
                         textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 1px 1px rgba(0,0,0,0.6)',
-                        opacity: 0.9,
+                        opacity: 0.8,
                       }}
                     >
-                      {restaurant.distance.toFixed(1)} km
+                      {distanceLabel}
                     </span>
                   )}
                 </div>
               );
             })}
 
-            {/* Larger Center Circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-4 border-eatspin-peach" style={{ boxShadow: '0 14px 28px rgba(0,0,0,0.2), 0 0 20px rgba(245, 71, 3, 0.3)' }}>
-              <span className="text-lg sm:text-xl font-heading text-eatspin-orange font-bold">SPIN</span>
+            {/* Center Circle */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-[3px] border-eatspin-peach" style={{ boxShadow: '0 14px 28px rgba(0,0,0,0.2), 0 0 20px rgba(245, 71, 3, 0.3)' }}>
+              <span className="text-base sm:text-lg font-heading text-eatspin-orange font-bold">SPIN</span>
             </div>
             
             {/* Inner decorative ring */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-28 sm:h-28 rounded-full border-2 border-white/20 pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 pointer-events-none" />
           </div>
 
           {/* Decorative outer rings */}

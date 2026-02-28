@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Crown, Menu, X } from 'lucide-react';
+import { CircleDot, Crown, Menu, X } from 'lucide-react';
 
 interface NavbarProps {
   isPremium: boolean;
+  activeRoomId: string;
   onUpgradeClick: () => void;
 }
 
-export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
+export function Navbar({ isPremium, activeRoomId, onUpgradeClick }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const hasActiveRoom = Boolean(activeRoomId);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -115,6 +117,12 @@ export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
+            {hasActiveRoom && (
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                <CircleDot size={14} className="text-emerald-500" />
+                Room Active: {activeRoomId}
+              </div>
+            )}
             {!isPremium && (
               <Button
                 onClick={onUpgradeClick}
@@ -182,6 +190,11 @@ export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
               </button>
               
               <div className="pt-4 border-t border-eatspin-gray-3 space-y-3">
+                {hasActiveRoom && (
+                  <p className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                    Room Active: {activeRoomId}
+                  </p>
+                )}
                 {!isPremium && (
                   <Button
                     onClick={() => {

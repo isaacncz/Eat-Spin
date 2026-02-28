@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
+import { trackEvent } from '@/lib/analytics';
 import { useLocation } from '@/hooks/useLocation';
 import { useNearbyRestaurants } from '@/hooks/useNearbyRestaurants';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
@@ -248,6 +249,7 @@ function App() {
   }, []);
 
   const handleHeroGetStarted = useCallback(() => {
+    trackEvent('hero_get_started');
     setActiveTab('auto');
     scrollToSection('app');
   }, [scrollToSection]);
@@ -409,20 +411,24 @@ function App() {
 
   // Handle spin complete
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
+    trackEvent('spin_complete', { mode: 'auto', restaurant_name: restaurant.name, category: restaurant.category?.[0] ?? '' });
     recordSpin(restaurant, currentMealTime);
     setPendingAutoRemovalId(restaurant.id);
   }, [currentMealTime, recordSpin]);
 
   const handleManualSpinComplete = useCallback((restaurant: Restaurant) => {
+    trackEvent('spin_complete', { mode: 'manual', restaurant_name: restaurant.name });
     setManualSpinResult(restaurant);
   }, []);
 
   // Handle spin attempt
   const handleSpinAttempt = () => {
     if (!canSpin(currentMealTime)) {
+      trackEvent('spin_blocked', { mode: activeTab });
       setShowSpinLimitWarning(true);
       return false;
     }
+    trackEvent('spin_start', { mode: activeTab, restaurant_count: activeTab === 'auto' ? wheelRestaurants.length : manualRestaurants.length });
     return true;
   };
 
@@ -444,12 +450,14 @@ function App() {
 
   const handleAutoRangeModeChange = (nextMode: AutoRangeMode) => {
     if (nextMode === rangeMode) return;
+    trackEvent('range_mode_changed', { mode: nextMode });
     setRangeMode(nextMode);
     resetAutoWheel();
   };
 
   // Shuffle wheel restaurants
   const shuffleWheel = () => {
+    trackEvent('shuffle_wheel', { restaurant_count: roundRestaurants.length });
     const shuffled = [...roundRestaurants].sort(() => Math.random() - 0.5);
     const sliced = shuffled.slice(0, 12);
     const sortedByDistance = location
@@ -459,6 +467,7 @@ function App() {
   };
 
   const switchTab = (tab: SpinTab) => {
+    trackEvent('tab_switched', { tab });
     setActiveTab(tab);
     if (tab === 'auto') {
       setWheelRestaurants([]);
@@ -505,6 +514,7 @@ function App() {
     const nextRestaurants = [...manualRestaurants, createManualRestaurant(name)];
     setManualRestaurants(nextRestaurants);
     syncGroupListFromRestaurants(nextRestaurants);
+    trackEvent('manual_restaurant_added', { name });
     setManualInput('');
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
@@ -532,6 +542,7 @@ function App() {
     const restaurants = buildRestaurantsFromNames(preset.restaurants);
     setManualRestaurants(restaurants);
     syncGroupListFromRestaurants(restaurants);
+    trackEvent('preset_loaded', { preset_name: preset.name, count: preset.restaurants.length });
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
   }, [buildRestaurantsFromNames, isManualListReadOnly, syncGroupListFromRestaurants]);
@@ -550,6 +561,7 @@ function App() {
     };
 
     setManualPresets((prev) => [newPreset, ...prev]);
+    trackEvent('preset_saved', { preset_name: trimmedName, meal_time: presetMealTimeInput ?? 'none', count: restaurantNames.length });
     toast.success(`Preset "${trimmedName}" saved!`, {
       description: `${restaurantNames.length} restaurants saved${presetMealTimeInput ? ` for ${presetMealTimeTimeToLabel(presetMealTimeInput)}` : ''}`,
     });
@@ -558,6 +570,7 @@ function App() {
   };
 
   const deletePreset = (presetId: string) => {
+    trackEvent('preset_deleted');
     setManualPresets((prev) => prev.filter((preset) => preset.id !== presetId));
   };
 
@@ -568,6 +581,8 @@ function App() {
     }
 
     const nextRestaurants = manualRestaurants.filter((restaurant) => restaurant.id !== id);
+    const removed = manualRestaurants.find((r) => r.id === id);
+    if (removed) trackEvent('manual_restaurant_removed', { name: removed.name });
     setManualRestaurants(nextRestaurants);
     syncGroupListFromRestaurants(nextRestaurants);
     setManualSpinResult(null);
@@ -665,18 +680,26 @@ function App() {
 
     const spinResult = await requestHostSpin(manualRestaurantNames);
     if (!spinResult) return;
+    trackEvent('group_spin_requested', { room_id: groupRoomId, restaurant_count: manualRestaurantNames.length });
     toast.success(`Room spin started: ${spinResult.winnerName}`);
   }, [isGroupCohost, isGroupRoomActive, isGroupHost, manualRestaurantNames, requestHostSpin]);
 
   const handleCreateGroupRoom = useCallback(async () => {
+    trackEvent('group_room_created');
     setActiveTab('manual');
     await createGroupRoom();
   }, [createGroupRoom]);
 
   const handleJoinGroupRoom = useCallback(async (value: string) => {
+    trackEvent('group_room_joined', { room_id: value });
     setActiveTab('manual');
     await joinGroupRoom(value);
   }, [joinGroupRoom]);
+
+  const handleLeaveGroupRoom = useCallback(async () => {
+    trackEvent('group_room_left', { room_id: groupRoomId });
+    await leaveGroupRoom();
+  }, [groupRoomId, leaveGroupRoom]);
 
   useEffect(() => {
     if (!isGroupRoomActive || !canEditGroupList || !groupRoomId) return;
@@ -789,14 +812,12 @@ function App() {
   return (
     <div className="min-h-screen overflow-x-clip bg-brand-linen">
       <Navbar
-        isPremium={isPremium}
         activeRoomId={groupRoomId}
-        onUpgradeClick={() => setShowSubscription(true)}
       />
 
       <Hero
         onGetStarted={handleHeroGetStarted}
-        onGroupSpin={() => scrollToSection('group-spin')}
+        onGroupSpin={() => { trackEvent('hero_group_spin'); scrollToSection('group-spin'); }}
       />
 
       <GroupSpin
@@ -820,7 +841,7 @@ function App() {
         canStartRoomSpin={isGroupRoomActive && (isGroupHost || isGroupCohost) && manualRestaurantNames.length >= 2}
         onCreateRoom={handleCreateGroupRoom}
         onJoinRoom={handleJoinGroupRoom}
-        onLeaveRoom={leaveGroupRoom}
+        onLeaveRoom={handleLeaveGroupRoom}
         onStartRoomSpin={handleRequestGroupSpin}
         onSetParticipantCohost={setParticipantCohost}
         onClearRoomError={clearGroupRoomError}

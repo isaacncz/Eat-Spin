@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
+import { trackEvent } from '@/lib/analytics';
 import { Button } from '@/components/ui/button';
-import { CircleDot, Crown, Menu, X } from 'lucide-react';
+import { CircleDot, Menu, X } from 'lucide-react';
 
 interface NavbarProps {
-  isPremium: boolean;
   activeRoomId: string;
-  onUpgradeClick: () => void;
 }
 
-export function Navbar({ isPremium, activeRoomId, onUpgradeClick }: NavbarProps) {
+export function Navbar({ activeRoomId }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const hasActiveRoom = Boolean(activeRoomId);
@@ -28,6 +27,7 @@ export function Navbar({ isPremium, activeRoomId, onUpgradeClick }: NavbarProps)
   }, [isScrolled, isMobileMenuOpen]);
 
   const scrollToSection = (sectionId: string) => {
+    trackEvent('nav_section_click', { section: sectionId });
     const element = document.getElementById(sectionId);
     if (element) {
       const navbarHeight = Number.parseInt(
@@ -123,16 +123,6 @@ export function Navbar({ isPremium, activeRoomId, onUpgradeClick }: NavbarProps)
                 Room Active: {activeRoomId}
               </div>
             )}
-            {!isPremium && (
-              <Button
-                onClick={onUpgradeClick}
-                className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-medium px-4 py-2 rounded-full shadow-lg"
-              >
-                <Crown size={16} className="mr-2" />
-                Premium
-              </Button>
-            )}
-            
             <Button
               onClick={() => scrollToSection('app')}
               className="bg-brand-orange hover:bg-brand-orange/90 text-white font-medium px-5 py-2 rounded-full"
@@ -200,19 +190,6 @@ export function Navbar({ isPremium, activeRoomId, onUpgradeClick }: NavbarProps)
               </button>
               
               <div className="pt-4 border-t border-eatspin-gray-3 space-y-3">
-                {!isPremium && (
-                  <Button
-                    onClick={() => {
-                      onUpgradeClick();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-medium"
-                  >
-                    <Crown size={16} className="mr-2" />
-                    Upgrade to Premium
-                  </Button>
-                )}
-                
                 <Button
                   onClick={() => scrollToSection('app')}
                   className="w-full bg-brand-orange hover:bg-brand-orange/90 text-white font-medium"

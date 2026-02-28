@@ -28,6 +28,10 @@ import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
 import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X, Trash2, ChevronDown, CheckCircle2, Heart, Navigation } from 'lucide-react';
 import { useFavourites } from '@/hooks/useFavourites';
+import { useFeedbackPrompt } from '@/hooks/useFeedbackPrompt';
+import { enqueueFeedback } from '@/lib/feedbackStore';
+import { deriveFavouriteId } from '@/types/favourites';
+import { FeedbackPrompt } from '@/components/FeedbackPrompt';
 import { toast } from 'sonner';
 import './App.css';
 
@@ -264,7 +268,9 @@ function App() {
     save: saveFavourite,
     remove: removeFavouriteEntry,
     recordVisitAndSave,
+    updateRating: updateFavouriteRating,
   } = useFavourites();
+  const { pending: feedbackPending, dismiss: dismissFeedback } = useFeedbackPrompt();
   const {
     restaurants: nearbyRestaurants,
     isLoading: nearbyRestaurantsLoading,
@@ -370,6 +376,17 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  const avoidedRestaurantIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const fav of favourites) {
+      if (fav.userRating === 'avoid') {
+        ids.add(fav.id);
+        if (fav.restaurant.googlePlaceId) ids.add(fav.restaurant.googlePlaceId);
+      }
+    }
+    return ids;
+  }, [favourites]);
+
   const filterResult = useMemo(() => (
     enhancedFilterRestaurants(
       autoSourceRestaurants,
@@ -377,9 +394,11 @@ function App() {
       selectedCategories,
       rangeMode,
       selectedPriceRanges,
-      'all'
+      'all',
+      undefined,
+      avoidedRestaurantIds,
     )
-  ), [autoSourceRestaurants, location, selectedCategories, rangeMode, selectedPriceRanges]);
+  ), [autoSourceRestaurants, location, selectedCategories, rangeMode, selectedPriceRanges, avoidedRestaurantIds]);
 
   const filteredRestaurants = filterResult.results;
 
@@ -441,6 +460,10 @@ function App() {
     trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
     void recordVisitAndSave(restaurant);
 
+    // Enqueue feedback for next app open
+    const favId = deriveFavouriteId(restaurant);
+    enqueueFeedback({ favouriteId: favId, restaurantName: restaurant.name });
+
     // Open Google Maps navigation
     const { lat, lng } = restaurant.coordinates;
     const query = encodeURIComponent(restaurant.name);
@@ -464,6 +487,24 @@ function App() {
     addManualRestaurantByName(name);
     toast.success(`${name} added to spin list!`);
   }, []);
+
+  const handleFeedbackRate = useCallback((rating: 'suggest' | 'neutral' | 'avoid') => {
+    if (!feedbackPending) return;
+    trackEvent('feedback_given', { rating, restaurant_name: feedbackPending.restaurantName });
+    void updateFavouriteRating(feedbackPending.favouriteId, rating);
+    dismissFeedback();
+    if (rating === 'suggest') {
+      toast.success(`Great! We'll suggest ${feedbackPending.restaurantName} when you're nearby.`);
+    } else if (rating === 'avoid') {
+      toast(`${feedbackPending.restaurantName} won't be suggested again.`);
+    }
+  }, [dismissFeedback, feedbackPending, updateFavouriteRating]);
+
+  const handleFeedbackDidntGo = useCallback(() => {
+    if (!feedbackPending) return;
+    trackEvent('feedback_didnt_go', { restaurant_name: feedbackPending.restaurantName });
+    dismissFeedback();
+  }, [dismissFeedback, feedbackPending]);
 
   // Handle spin attempt
   const handleSpinAttempt = () => {
@@ -1541,6 +1582,15 @@ function App() {
         onClose={() => setShowSubscription(false)}
         onSubscribe={handleSubscribe}
       />
+
+      {feedbackPending && (
+        <FeedbackPrompt
+          restaurantName={feedbackPending.restaurantName}
+          open={true}
+          onRate={handleFeedbackRate}
+          onDidntGo={handleFeedbackDidntGo}
+        />
+      )}
 
       <Toaster />
     </div>

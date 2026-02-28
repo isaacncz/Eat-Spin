@@ -84,12 +84,16 @@ const buildFilterCacheKey = (
   rangeMode: RangeMode,
   selectedPriceRanges: Restaurant['priceRange'][],
   halalFilter: HalalFilter,
-  dataVersion?: string
+  dataVersion?: string,
+  avoidedRestaurantIds?: Set<string>,
 ): string => {
   const locationKey = userLocation
     ? `${toBucket(userLocation.lat)}:${toBucket(userLocation.lng)}`
     : 'no-location';
   const poolSignature = buildRestaurantPoolSignature(restaurants, dataVersion);
+  const avoidedKey = avoidedRestaurantIds && avoidedRestaurantIds.size > 0
+    ? `avoided:${[...avoidedRestaurantIds].sort().join(',')}`
+    : 'no-avoided';
 
   return [
     poolSignature,
@@ -98,6 +102,7 @@ const buildFilterCacheKey = (
     serializeSorted(selectedCategories),
     serializeSorted(selectedPriceRanges),
     halalFilter,
+    avoidedKey,
   ].join('::');
 };
 
@@ -210,6 +215,8 @@ export const filterByRadius = (
  * @param rangeMode - Range mode (walk / drive10 / drive20)
  * @param selectedPriceRanges - Selected price ranges
  * @param halalFilter - 'halal' keeps only halal-friendly restaurants; 'non-halal' keeps only non-halal; 'all' shows all
+ * @param dataVersion - optional data version string for cache keying
+ * @param avoidedRestaurantIds - optional set of restaurant IDs (googlePlaceId or derived favourite IDs) to exclude (user marked 'avoid')
  * @returns FilterResult with results array and expansion metadata
  */
 export const enhancedFilterRestaurants = (
@@ -219,7 +226,8 @@ export const enhancedFilterRestaurants = (
   rangeMode: RangeMode,
   selectedPriceRanges: Restaurant['priceRange'][] = [],
   halalFilter: HalalFilter = 'all',
-  dataVersion?: string
+  dataVersion?: string,
+  avoidedRestaurantIds?: Set<string>,
 ): FilterResult => {
   const cacheKey = buildFilterCacheKey(
     restaurants,
@@ -228,7 +236,8 @@ export const enhancedFilterRestaurants = (
     rangeMode,
     selectedPriceRanges,
     halalFilter,
-    dataVersion
+    dataVersion,
+    avoidedRestaurantIds,
   );
 
   const cached = readFilterCache(cacheKey);
@@ -244,6 +253,16 @@ export const enhancedFilterRestaurants = (
     if ((restaurant.userRatingCount ?? 0) < MIN_QUALITY_REVIEWS) return false;
     return true;
   });
+
+  // 0b. Exclude restaurants the user has marked as 'avoid' in favourites.
+  if (avoidedRestaurantIds && avoidedRestaurantIds.size > 0) {
+    filtered = filtered.filter((restaurant) => {
+      // Check both the restaurant's googlePlaceId and its raw id
+      if (restaurant.googlePlaceId && avoidedRestaurantIds.has(restaurant.googlePlaceId)) return false;
+      if (avoidedRestaurantIds.has(restaurant.id)) return false;
+      return true;
+    });
+  }
 
   // 1. Category filter
   if (selectedCategories.length > 0) {

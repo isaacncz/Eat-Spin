@@ -198,7 +198,7 @@ function App() {
   // State management
   const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
   const [selectedPriceRanges, setSelectedPriceRanges] = useState<Restaurant['priceRange'][]>([]);
-  const [nonHalalOnly, setNonHalalOnly] = useState(false);
+  const [halalFriendlyOnly, setHalalFriendlyOnly] = useState(false);
   const [rangeMode, setRangeMode] = useState<AutoRangeMode>(() => loadAutoRangeMode());
   const [isSpinning, setIsSpinning] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
@@ -313,7 +313,7 @@ function App() {
     if (!location) return null;
     if (nearbyRestaurantsLoading) return 'Loading nearby restaurants...';
     if (nearbyRestaurantsSource === 'google-cache') {
-      if (!nearbyLastSyncedAt) return 'Using cached nearby results (monthly sync).';
+      if (!nearbyLastSyncedAt) return 'Using cached nearby results (weekly sync).';
       return `Using cached nearby results (last sync ${formatAbsoluteSyncTime(nearbyLastSyncedAt)}).`;
     }
     if (nearbyRestaurantsSource === 'google-live') {
@@ -353,16 +353,18 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const filteredRestaurants = useMemo(() => (
+  const filterResult = useMemo(() => (
     enhancedFilterRestaurants(
       autoSourceRestaurants,
       location,
       selectedCategories,
-      radiusKm,
+      rangeMode,
       selectedPriceRanges,
-      nonHalalOnly
+      halalFriendlyOnly
     )
-  ), [autoSourceRestaurants, location, selectedCategories, radiusKm, selectedPriceRanges, nonHalalOnly]);
+  ), [autoSourceRestaurants, location, selectedCategories, rangeMode, selectedPriceRanges, halalFriendlyOnly]);
+
+  const filteredRestaurants = filterResult.results;
 
   const roundRestaurants = useMemo(() => (
     filteredRestaurants.filter((restaurant) => !roundRemovedRestaurantIds.includes(restaurant.id))
@@ -376,7 +378,7 @@ function App() {
 
   useEffect(() => {
     setShowAllRoundRestaurants(false);
-  }, [selectedCategories, selectedPriceRanges, nonHalalOnly, radiusKm, location, autoSourceRestaurants]);
+  }, [selectedCategories, selectedPriceRanges, halalFriendlyOnly, rangeMode, location, autoSourceRestaurants]);
 
   const removeRestaurantForRound = (
     restaurantId: string,
@@ -949,16 +951,32 @@ function App() {
                     })}
                     <button
                       type="button"
-                      onClick={() => setNonHalalOnly((prev) => !prev)}
+                      onClick={() => setHalalFriendlyOnly((prev) => !prev)}
                       className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
-                        nonHalalOnly
+                        halalFriendlyOnly
                           ? 'bg-brand-orange text-white shadow-md'
                           : 'border border-gray-200 bg-white text-brand-black hover:border-brand-orange hover:text-brand-orange'
                       }`}
                     >
-                      Non-halal only
+                      Halal-friendly only
                     </button>
                   </div>
+
+                  {selectedPriceRanges.length > 0 && (
+                    <p className="mb-2 text-xs text-eatspin-gray-1">
+                      Some places may not appear if Google hasn't mapped their price tier.
+                    </p>
+                  )}
+
+                  {halalFriendlyOnly && (
+                    <p className="mb-2 text-xs text-eatspin-gray-1">
+                      Based on name and category signals — not a certified halal guarantee.
+                    </p>
+                  )}
+
+                  {filterResult.expanded && filterResult.expandedLabel && (
+                    <p className="mb-2 text-xs text-eatspin-gray-1">{filterResult.expandedLabel}</p>
+                  )}
 
                   <button
                     type="button"
@@ -989,6 +1007,21 @@ function App() {
                       />
                     </div>
                   </div>
+                </div>
+              )}
+
+              {location && filteredRestaurants.length === 0 && !nearbyRestaurantsLoading && autoSourceRestaurants.length > 0 && (
+                <div className="mb-5 rounded-2xl border border-eatspin-peach/60 bg-white p-4 text-center">
+                  <p className="text-sm font-medium text-brand-black">No matches — try clearing a filter.</p>
+                  {(selectedPriceRanges.length > 0 || halalFriendlyOnly) && (
+                    <p className="mt-1 text-xs text-eatspin-gray-1">
+                      {selectedPriceRanges.length > 0 && halalFriendlyOnly
+                        ? 'Price and halal-friendly filters are active.'
+                        : selectedPriceRanges.length > 0
+                          ? 'Price filter is active.'
+                          : 'Halal-friendly filter is active.'}
+                    </p>
+                  )}
                 </div>
               )}
 

@@ -29,7 +29,7 @@ interface UseNearbyRestaurantsResult {
 const DEFAULT_DEBOUNCE_MS = 450;
 const DEFAULT_MIN_RESULTS = 12;
 const DEFAULT_TOP_RESULTS = 20;
-const DEFAULT_CACHE_TTL_DAYS = 30;
+const DEFAULT_CACHE_TTL_DAYS = 7;
 const DEFAULT_CACHE_AREA_KM = 2;
 
 const parsePositiveNumber = (rawValue: string | undefined, fallback: number): number => {

@@ -119,7 +119,7 @@ Auto mode now uses Google Places nearby search with local-first IndexedDB cachin
    - `VITE_GOOGLE_MAPS_API_KEY`
    - `VITE_GOOGLE_PLACES_REGION` (default `MY`)
    - `VITE_GOOGLE_PLACES_LANGUAGE` (default `en`)
-   - `VITE_NEARBY_CACHE_TTL_DAYS` (default `30`)
+   - `VITE_NEARBY_CACHE_TTL_DAYS` (default `7`)
    - `VITE_NEARBY_CACHE_MIN_RESULTS` (default `12`)
    - `VITE_NEARBY_CACHE_AREA_KM` (default `2`)
 

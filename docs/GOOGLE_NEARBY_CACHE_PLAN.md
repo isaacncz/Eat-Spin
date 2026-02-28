@@ -1,101 +1,69 @@
-﻿# Local-First Nearby Restaurant Caching (IndexedDB + Monthly Sync)
+﻿# Cost-First Nearby Restaurant Caching (Single Call Pool + Exclusive Drive Bands)
 
 ## Summary
-- Load nearby restaurants from IndexedDB first.
-- Skip Google API if cache is valid and has at least 12 restaurants.
-- Call Google only when cache is missing, expired (30 days), or has fewer than 12 restaurants.
-- Force monthly resync (30-day TTL).
-- Keep ranked nearby results (up to API limit) for filtering and review, while roulette still spins a 12-restaurant round.
-- Keep static local dataset as failure fallback.
+- Lock Google fetch strategy to one Nearby call per cache miss, then reuse local cache for repeated spins.
+- Always fetch at the widest radius for the selected mode; filter down to the display band in-app.
+- Keep 3 range options with non-overlap defaults:
+  - Walking: `0–1.2 km`
+  - 10-min drive: `>1.2–6 km`
+  - 20-min drive: `>6–12 km`
+- If a driving band is sparse, auto-expand inward using the existing pool — no additional API call.
+- Wheel spins with whatever is available if pool is under 12 after full expansion; show contextual message.
+- Keep wheel cap at 12 per spin.
+- Set cache TTL default to 7 days.
+- Always send `POPULARITY` rank preference to Google for all modes; local re-sort handles display order.
+- Keep current filter semantics and source labels.
 
-## Storage Design
-- In-memory cache for current session.
-- IndexedDB for persistent cache.
-- localStorage only for small metadata (`schema version`, `last cleanup`).
+## API Constraint (Locked)
+- Places Nearby Search (New) allows `maxResultCount` up to 20 per request.
+- Nearby Search (New) does not expose pagination.
+- Therefore, always set `maxResultCount: 20` explicitly; cap normalization output at 20 defensively.
 
-## IndexedDB Schema
-### Store: `snapshots` (keyPath: `snapshotKey`)
-- `snapshotKey`: hash(areaKey + queryKey)
-- `areaGeohash`: string (geohash precision 6 of snapshot center)
-- `areaNeighborGeohashes`: string[] (8 neighboring geohash cells)
-- `centerLat`, `centerLng`
-- `areaRadiusKm`: 2
-- `searchRadiusKm`
-- `openNowOnly`: true
-- `region`: "MY"
-- `placeIds`: string[]
-- `restaurantCount`: number
-- `rankStrategy`: `rating_desc_reviewCount_desc_distance_asc`
-- `fetchedAt`: epoch ms
-- `expiresAt`: epoch ms (`fetchedAt + 30 days`)
+## Fetch and Pool Strategy
+- Fetch radius equals the mode's outer bound: `walk` → 1.2 km, `drive10` → 6 km, `drive20` → 12 km.
+- The full fetched pool (up to 20) is cached at the fetch radius, not the display band.
+- Distance band filtering is applied client-side from the cached pool.
+- Sparse expansion iterates over the same pool — no additional Google call.
+- `rankPreference` is always `POPULARITY` for all modes. Local re-sort (rating desc → review count desc → distance asc) determines display order.
 
-### Store: `places` (keyPath: `placeId`)
-- `placeId`: string
-- `restaurant`: normalized `Restaurant`
-- `updatedAt`: epoch ms
-- `expiresAt`: epoch ms
+## Filter Design
 
-## Cache Key Rules
-- Key dimensions: `geohash6(currentLocation)` + search radius + openNow + region + schema version.
-- Snapshot lookup checks current geohash plus its 8 neighbors to improve cache hit near cell edges.
-- "Same area" still requires current user location to be within 2 km of snapshot center.
+### Filter order (UI and logic)
+```
+Range mode  →  Category  →  Halal-friendly  →  Price
+```
 
-## Ranking and Top-12 Policy
-- Candidate pool is nearby, open-now restaurants from Google Places.
-- Keep only restaurants within 2 km from the current user position.
-- Sort candidates by:
-  1. `rating` descending
-  2. `userRatingCount` descending (tie-breaker)
-  3. `distance` ascending (final tie-breaker)
-- Persist and render ranked nearby restaurants up to API response limits.
-- If fewer than 12 pass filters, store and render available results, and trigger Google refresh when cache is reused and still below 12.
+### Halal filter
+- Toggle label: **"Halal-friendly only"** (not "Halal certified").
+- Off (default): include all restaurants including likely non-halal.
+- On: exclude restaurants flagged by the non-halal heuristic.
+- Caveat shown beneath the toggle: _"Based on name and category signals — not a certified halal guarantee."_
 
-## Read Flow (Local-First)
-1. Get user location.
-2. Compute `geohash6` and find valid snapshot in current geohash or neighbor geohashes.
-3. If unexpired and count >= 12, load places from IndexedDB and render.
-4. Do not call Google.
+### Price filter
+- Use icon chips: `$`, `$$`, `$$$`, `$$$$` — no chip selected means no price filter (show all).
+- Multi-select: selecting `$` and `$$` shows only places in those two tiers.
+- When chips are active, restaurants with unknown price are excluded. Footnote shown: _"Some places may not appear if Google hasn't mapped their price tier."_
 
-## Refresh Flow (Google Call)
-Call Google only when:
-- no snapshot in 2 km area, or
-- snapshot expired (>= 30 days), or
-- cached count < 12.
+### Empty state
+- Zero results after all filters: show _"No matches — try clearing a filter."_
+- Highlight the most-likely culprit filter (price or halal when either is active).
 
-After fetch:
-1. Normalize Google places to existing `Restaurant` shape.
-2. Rank candidates using `rating desc -> userRatingCount desc -> distance asc`.
-3. Keep ranked results up to API response limits.
-4. Upsert `places`.
-5. Upsert `snapshot`.
-6. Render results.
-
-## Failure Flow
-- If Google fails, use unexpired cache if available.
-- Else use static local dataset.
-- Show source banner:
-  - `Cached nearby results`
-  - `Live Google nearby results`
-  - `Local fallback results`
-
-## Cleanup
-- Run cleanup every 24h app-open:
-  - remove expired snapshots,
-  - remove expired places not referenced by non-expired snapshots.
-
-## Files to Add/Update
-- `src/lib/nearbyCache.ts`
-- `src/lib/googlePlacesRestaurants.ts`
-- `src/hooks/useNearbyRestaurants.ts`
-- `src/types/index.ts`
-- `src/App.tsx`
-- `.env.example`
-- `README.md`
+## Exclusive Band Filtering with Sparse Auto-Expand
+- Filter order (applied to cached pool):
+  1. Category
+  2. Price
+  3. Halal-friendly
+  4. Distance band
+- Sparse expansion behavior (uses existing pool, no new fetch):
+  - `walk`: strict `0–1.2 km`, no expansion.
+  - `drive10`: `>1.2–6 km` → expand to `0–6 km` if under 12.
+  - `drive20`: `>6–12 km` → expand to `>1.2–12 km` → expand to `0–12 km` if still under 12.
+- If pool is still under 12 after full expansion: spin with available results. Show: _"X nearby spots found — try a wider range for more options."_
 
 ## Config
 - `VITE_GOOGLE_MAPS_API_KEY`
 - `VITE_GOOGLE_PLACES_REGION=MY`
-- `VITE_NEARBY_CACHE_TTL_DAYS=30`
+- `VITE_NEARBY_CACHE_TTL_DAYS=7` (default 7 days; override via env)
 - `VITE_NEARBY_CACHE_MIN_RESULTS=12`
 - `VITE_NEARBY_CACHE_AREA_KM=2`
 
@@ -104,6 +72,13 @@ After fetch:
 - Region: MY.
 - Minimum cache size: 12.
 - Area threshold: 2 km.
+- Range presets: walking 1.2 km, 10-min drive 6 km, 20-min drive 12 km.
+- Default range preset: 10-min drive, with last selected preset persisted in localStorage.
 - Geohash strategy: precision 6 + 8-neighbor lookup.
-- Ranking policy: highest-rated nearby first (rating, then review count, then distance).
-- Force resync: 30 days.
+- Ranking policy: POPULARITY (Google-side); local re-sort by rating desc → review count desc → distance asc.
+- Force resync: 7 days (default).
+
+## Migration Note
+- Cache schema version bump (2 → 3) invalidates all existing user caches on first deploy.
+- Every active user triggers a live Google call on next app open. One-time cost spike — expected and acceptable.
+

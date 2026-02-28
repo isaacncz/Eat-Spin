@@ -233,7 +233,7 @@ export const fetchNearbyGoogleRestaurants = async (
     body: JSON.stringify({
       includedTypes: ['restaurant'],
       maxResultCount,
-      rankPreference: 'DISTANCE',
+      rankPreference: 'POPULARITY',
       openNow: true,
       languageCode: options.language,
       regionCode: options.region,

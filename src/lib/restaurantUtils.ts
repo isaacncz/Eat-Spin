@@ -3,6 +3,7 @@
 import type { Restaurant, FoodCategory } from '@/types';
 
 export type RangeMode = 'walk' | 'drive10' | 'drive20';
+export type HalalFilter = 'all' | 'halal' | 'non-halal';
 
 export interface FilterResult {
   results: Restaurant[];
@@ -39,7 +40,7 @@ const buildFilterCacheKey = (
   selectedCategories: FoodCategory[],
   rangeMode: RangeMode,
   selectedPriceRanges: Restaurant['priceRange'][],
-  halalFriendlyOnly: boolean
+  halalFilter: HalalFilter
 ): string => {
   const locationKey = userLocation
     ? `${toBucket(userLocation.lat)}:${toBucket(userLocation.lng)}`
@@ -50,7 +51,7 @@ const buildFilterCacheKey = (
     rangeMode,
     serializeSorted(selectedCategories),
     serializeSorted(selectedPriceRanges),
-    halalFriendlyOnly ? 'halal-friendly' : 'all',
+    halalFilter,
   ].join('::');
 };
 
@@ -148,13 +149,13 @@ export const filterByRadius = (
 
 /**
  * Enhanced restaurant filter that includes exclusive distance-band filtering with sparse auto-expand.
- * Filter order: category → price → halal-friendly → distance band (with sparse expansion).
+ * Filter order: category → price → halal filter → distance band (with sparse expansion).
  * @param restaurants - Pool of restaurants (already fetched at the widest radius for the mode)
  * @param userLocation - User's current location
  * @param selectedCategories - Selected food categories
  * @param rangeMode - Range mode (walk / drive10 / drive20)
  * @param selectedPriceRanges - Selected price ranges
- * @param halalFriendlyOnly - When true, exclude heuristic non-halal restaurants
+ * @param halalFilter - 'halal' keeps only halal-friendly restaurants; 'non-halal' keeps only non-halal; 'all' shows all
  * @returns FilterResult with results array and expansion metadata
  */
 export const enhancedFilterRestaurants = (
@@ -163,14 +164,14 @@ export const enhancedFilterRestaurants = (
   selectedCategories: FoodCategory[],
   rangeMode: RangeMode,
   selectedPriceRanges: Restaurant['priceRange'][] = [],
-  halalFriendlyOnly = false
+  halalFilter: HalalFilter = 'all'
 ): FilterResult => {
   const cacheKey = buildFilterCacheKey(
     userLocation,
     selectedCategories,
     rangeMode,
     selectedPriceRanges,
-    halalFriendlyOnly
+    halalFilter
   );
 
   const cached = readFilterCache(cacheKey);
@@ -195,10 +196,11 @@ export const enhancedFilterRestaurants = (
     });
   }
 
-  // 3. Halal-friendly filter: `isNonHalalRestaurant` returns true for heuristically non-halal
-  //    restaurants; negating it keeps only halal-friendly ones.
-  if (halalFriendlyOnly) {
+  // 3. Halal filter: keep only halal-friendly or only non-halal restaurants
+  if (halalFilter === 'halal') {
     filtered = filtered.filter((restaurant) => !isNonHalalRestaurant(restaurant));
+  } else if (halalFilter === 'non-halal') {
+    filtered = filtered.filter((restaurant) => isNonHalalRestaurant(restaurant));
   }
 
   // 4. Attach computed distances

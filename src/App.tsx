@@ -267,6 +267,7 @@ function App() {
     isFavourite: isFavouriteCheck,
     save: saveFavourite,
     remove: removeFavouriteEntry,
+    restore: restoreFavouriteEntry,
     recordVisitAndSave,
     updateRating: updateFavouriteRating,
   } = useFavourites();
@@ -499,9 +500,22 @@ function App() {
 
   const handleRemoveFavourite = useCallback((id: string, name: string) => {
     trackEvent('favourite_removed', { favourite_id: id });
-    void removeFavouriteEntry(id);
-    toast('Removed from favourites', { description: name });
-  }, [removeFavouriteEntry]);
+    void removeFavouriteEntry(id).then((deleted) => {
+      toast(`Removed ${name} from favourites`, {
+        duration: 5000,
+        action: deleted
+          ? {
+              label: 'Undo',
+              onClick: () => {
+                void restoreFavouriteEntry(deleted).then(() => {
+                  toast.success(`${name} restored to favourites`);
+                });
+              },
+            }
+          : undefined,
+      });
+    });
+  }, [removeFavouriteEntry, restoreFavouriteEntry]);
 
   const handleAddFavouriteToManualList = useCallback((name: string) => {
     addManualRestaurantByName(name);

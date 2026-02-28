@@ -116,15 +116,31 @@ export const addFavourite = async (
   });
 };
 
-/** Remove a favourite by ID. */
-export const removeFavourite = async (id: string): Promise<void> => {
+/** Remove a favourite by ID. Returns the deleted entry (for undo). */
+export const removeFavourite = async (id: string): Promise<FavouriteEntry | undefined> => {
+  if (!isAvailable()) return undefined;
+
+  const existing = await getFavourite(id);
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.delete(id);
+
+    request.onsuccess = () => resolve(existing);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+/** Restore a previously deleted favourite entry (for undo). */
+export const restoreFavourite = async (entry: FavouriteEntry): Promise<void> => {
   if (!isAvailable()) return;
 
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
-    const request = store.delete(id);
+    const request = store.put(entry);
 
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);

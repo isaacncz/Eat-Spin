@@ -6,6 +6,7 @@ import {
   getAllFavourites,
   addFavourite,
   removeFavourite,
+  restoreFavourite,
   updateFavourite,
   recordVisit,
 } from '@/lib/favouritesStore';
@@ -19,8 +20,10 @@ interface UseFavouritesReturn {
   isFavourite: (restaurant: Restaurant) => boolean;
   /** Save a restaurant as a favourite. */
   save: (restaurant: Restaurant, savedFrom: FavouriteEntry['savedFrom']) => Promise<void>;
-  /** Remove a favourite by its ID. */
-  remove: (id: string) => Promise<void>;
+  /** Remove a favourite by ID. Returns the deleted entry (for undo). */
+  remove: (id: string) => Promise<FavouriteEntry | undefined>;
+  /** Restore a previously removed favourite (undo). */
+  restore: (entry: FavouriteEntry) => Promise<void>;
   /** Update the user rating on a favourite. */
   updateRating: (id: string, userRating: FavouriteEntry['userRating']) => Promise<void>;
   /** Record a visit (increments visitCount, sets feedbackPending). */
@@ -67,8 +70,17 @@ export const useFavourites = (): UseFavouritesReturn => {
   );
 
   const remove = useCallback(
-    async (id: string) => {
-      await removeFavourite(id);
+    async (id: string): Promise<FavouriteEntry | undefined> => {
+      const deleted = await removeFavourite(id);
+      await load();
+      return deleted;
+    },
+    [load],
+  );
+
+  const restore = useCallback(
+    async (entry: FavouriteEntry) => {
+      await restoreFavourite(entry);
       await load();
     },
     [load],
@@ -104,6 +116,7 @@ export const useFavourites = (): UseFavouritesReturn => {
     isFavourite: isFavouriteCheck,
     save,
     remove,
+    restore,
     updateRating,
     recordVisitAndSave,
     clearFeedbackPending,

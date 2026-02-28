@@ -1,5 +1,6 @@
 import type { CategoryConfidence, DailyHours, FoodCategory, Restaurant } from '@/types';
 import { calculateDistance } from '@/lib/restaurantUtils';
+import { computeQualityScore } from '@/lib/restaurantUtils';
 import { classifyPlace } from '@/lib/categoryClassifier';
 
 const GOOGLE_NEARBY_ENDPOINT = 'https://places.googleapis.com/v1/places:searchNearby';
@@ -20,6 +21,69 @@ const GOOGLE_PLACE_FIELDS = [
   'places.businessStatus',
 ].join(',');
 const DEFAULT_MAX_RESULTS = 20;
+
+// ---------------------------------------------------------------------------
+// Excluded types – sent to the Google API to prevent non-restaurant results
+// ---------------------------------------------------------------------------
+const EXCLUDED_TYPES: string[] = [
+  'gas_station',
+  'convenience_store',
+  'supermarket',
+  'grocery_store',
+  'department_store',
+  'shopping_mall',
+  'hotel',
+  'lodging',
+  'hospital',
+  'pharmacy',
+  'store',
+  'car_wash',
+  'car_repair',
+  'parking',
+  'auto_parts_store',
+  'movie_theater',
+  'tourist_attraction',
+];
+
+// ---------------------------------------------------------------------------
+// Primary-type blacklist – if Google's single best-guess type is one of these
+// the place is not a real restaurant even though it may serve food.
+// ---------------------------------------------------------------------------
+const BLACKLISTED_PRIMARY_TYPES: ReadonlySet<string> = new Set([
+  'gas_station',
+  'convenience_store',
+  'supermarket',
+  'grocery_store',
+  'department_store',
+  'shopping_mall',
+  'hotel',
+  'lodging',
+  'hospital',
+  'pharmacy',
+  'store',
+  'car_wash',
+  'car_repair',
+  'parking',
+  'auto_parts_store',
+  'movie_theater',
+  'tourist_attraction',
+  'event_venue',
+  'night_club',
+  'bar',
+  'liquor_store',
+  'amusement_park',
+  'bowling_alley',
+  'gym',
+  'spa',
+  'beauty_salon',
+  'laundry',
+  'school',
+  'university',
+  'library',
+  'church',
+  'mosque',
+  'temple',
+]);
 
 type GooglePlaceOpeningPoint = {
   day?: number;
@@ -318,6 +382,11 @@ const normalizeGooglePlace = (
     return null;
   }
 
+  // Reject places whose primary identity is not a food establishment.
+  if (place.primaryType && BLACKLISTED_PRIMARY_TYPES.has(place.primaryType)) {
+    return null;
+  }
+
   const coordinates = {
     lat: place.location.latitude,
     lng: place.location.longitude,
@@ -415,6 +484,7 @@ export const fetchNearbyGoogleRestaurants = async (
     },
     body: JSON.stringify({
       includedTypes,
+      excludedTypes: EXCLUDED_TYPES,
       maxResultCount,
       rankPreference: 'POPULARITY',
       openNow: true,
@@ -491,11 +561,12 @@ export const rankNearbyRestaurants = (
     .filter((restaurant) => (restaurant.distance ?? Number.POSITIVE_INFINITY) <= radiusKm);
 
   const sorted = [...filtered].sort((left, right) => {
-    if (right.rating !== left.rating) return right.rating - left.rating;
+    // Primary sort: weighted quality score (rating × review volume)
+    const leftScore = computeQualityScore(left.rating, left.userRatingCount ?? 0);
+    const rightScore = computeQualityScore(right.rating, right.userRatingCount ?? 0);
+    if (Math.abs(rightScore - leftScore) > 0.01) return rightScore - leftScore;
 
-    const ratingCountDelta = (right.userRatingCount ?? 0) - (left.userRatingCount ?? 0);
-    if (ratingCountDelta !== 0) return ratingCountDelta;
-
+    // Tiebreaker: distance (closer is better)
     return (left.distance ?? Number.POSITIVE_INFINITY) - (right.distance ?? Number.POSITIVE_INFINITY);
   });
 

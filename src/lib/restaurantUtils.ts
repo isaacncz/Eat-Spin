@@ -30,8 +30,26 @@ const RANGE_BAND_MAX_KM: Record<RangeMode, number> = { walk: 1.2, drive10: 6, dr
 const SPARSE_THRESHOLD = 12;
 
 // Quality gate: minimum thresholds for curated results
-const MIN_QUALITY_RATING = 3.5;
-const MIN_QUALITY_REVIEWS = 10;
+// Places below these are excluded from the wheel entirely.
+const MIN_QUALITY_RATING = 3.8;
+const MIN_QUALITY_REVIEWS = 15;
+
+/**
+ * Bayesian-weighted quality score that balances rating with review volume.
+ *
+ * Uses a simplified Wilson-like formula:
+ *   score = rating × log10(max(reviewCount, 1) + 1)
+ *
+ * This ensures:
+ * - A 5.0★ / 2-review place scores ~2.4
+ * - A 4.5★ / 50-review scores ~7.7  (much higher — preferred)
+ * - A 4.2★ / 500-review scores ~11.3 (proven popular — wins)
+ *
+ * The score is used for ranking, not filtering.
+ */
+export const computeQualityScore = (rating: number, userRatingCount: number): number => {
+  return rating * Math.log10(Math.max(userRatingCount, 1) + 1);
+};
 
 const serializeSorted = (values: string[]): string => [...values].sort().join('|');
 

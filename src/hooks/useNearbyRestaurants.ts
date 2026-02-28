@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import type { Restaurant, UserLocation } from '@/types';
+import type { FoodCategory, Restaurant, UserLocation } from '@/types';
 import { fetchNearbyGoogleRestaurants, rankNearbyRestaurants } from '@/lib/googlePlacesRestaurants';
 import { enrichRestaurantListCategories } from '@/lib/categoryClassifier';
 import {
@@ -16,6 +16,8 @@ interface UseNearbyRestaurantsOptions {
   openNowOnly?: boolean;
   region?: string;
   language?: string;
+  /** Cuisine categories the user has selected. Drives cuisine-specific Google types. */
+  selectedCategories?: FoodCategory[];
 }
 
 interface UseNearbyRestaurantsResult {
@@ -49,6 +51,7 @@ export function useNearbyRestaurants({
   openNowOnly = true,
   region = (import.meta.env.VITE_GOOGLE_PLACES_REGION as string | undefined) ?? 'MY',
   language = (import.meta.env.VITE_GOOGLE_PLACES_LANGUAGE as string | undefined) ?? 'en',
+  selectedCategories,
 }: UseNearbyRestaurantsOptions): UseNearbyRestaurantsResult {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -57,6 +60,15 @@ export function useNearbyRestaurants({
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [shouldUseLocalFallback, setShouldUseLocalFallback] = useState(false);
   const requestIdRef = useRef(0);
+
+  // Stable string key for selectedCategories to use as a useEffect dependency.
+  // Sorted so ['chinese','japanese'] and ['japanese','chinese'] produce the same key.
+  const categoriesKey = useMemo(
+    () => (selectedCategories && selectedCategories.length > 0
+      ? [...selectedCategories].sort().join(',')
+      : '*'),
+    [selectedCategories]
+  );
 
   const cacheConfig = useMemo(() => {
     const ttlDays = parsePositiveNumber(
@@ -119,6 +131,7 @@ export function useNearbyRestaurants({
         openNowOnly,
         region: normalizedRegion,
         movementThresholdKm: cacheConfig.movementThresholdKm,
+        categoriesKey,
       };
 
       let cachedResult: Awaited<ReturnType<typeof getCachedNearbyRestaurants>> = null;
@@ -152,6 +165,7 @@ export function useNearbyRestaurants({
           region: normalizedRegion,
           language: normalizedLanguage,
           signal: abortController.signal,
+          selectedCategories,
         });
 
         if (requestIdRef.current !== requestId) return;
@@ -175,6 +189,7 @@ export function useNearbyRestaurants({
             movementThresholdKm: cacheConfig.movementThresholdKm,
             ttlMs: cacheConfig.ttlMs,
             fetchedAtMs,
+            categoriesKey,
           });
         }
 
@@ -243,7 +258,7 @@ export function useNearbyRestaurants({
       window.clearTimeout(debounceTimer);
       abortController.abort();
     };
-  }, [cacheConfig, enabled, language, location, openNowOnly, radiusKm, region]);
+  }, [cacheConfig, categoriesKey, enabled, language, location, openNowOnly, radiusKm, region, selectedCategories]);
 
   return {
     restaurants,

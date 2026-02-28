@@ -267,6 +267,7 @@ function App() {
     location,
     radiusKm: fetchRadiusKm,
     openNowOnly: true,
+    selectedCategories,
   });
   const {
     authUid: groupAuthUid,

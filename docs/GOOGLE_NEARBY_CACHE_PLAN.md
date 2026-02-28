@@ -5,6 +5,10 @@
 - Skip Google API if cache is valid and has at least 12 restaurants.
 - Call Google only when cache is missing, expired (30 days), or has fewer than 12 restaurants.
 - Force monthly resync (30-day TTL).
+- Replace free-form km slider with 3 UX presets:
+  - Walking distance (~1.2 km)
+  - 10 min drive (~6 km)
+  - 20 min drive (~12 km)
 - Keep ranked nearby results (up to API limit) for filtering and review, while roulette still spins a 12-restaurant round.
 - Keep static local dataset as failure fallback.
 
@@ -104,6 +108,8 @@ After fetch:
 - Region: MY.
 - Minimum cache size: 12.
 - Area threshold: 2 km.
+- Range presets: walking 1.2 km, 10-min drive 6 km, 20-min drive 12 km.
+- Default range preset: 10-min drive, with last selected preset persisted in localStorage.
 - Geohash strategy: precision 6 + 8-neighbor lookup.
 - Ranking policy: highest-rated nearby first (rating, then review count, then distance).
 - Force resync: 30 days.

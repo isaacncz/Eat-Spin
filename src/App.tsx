@@ -225,9 +225,10 @@ function App() {
   const [presetMealTimeInput, setPresetMealTimeInput] = useState<PresetMealTime>(() => getPresetMealTime());
   const [manualPresets, setManualPresets] = useState<ManualPreset[]>(() => loadManualPresets());
   const [groupSpinNow, setGroupSpinNow] = useState(() => Date.now());
-  // Always fetch at widest radius so all range modes share one cached pool.
-  // Band filtering in enhancedFilterRestaurants narrows to the active mode.
-  const fetchRadiusKm = AUTO_RANGE_RADIUS_KM.drive20;
+  // Fetch radius follows the selected range mode so each mode gets its own
+  // focused 20-place pool from Google. Cached separately per radius — repeat
+  // visits cost nothing for 7 days.
+  const fetchRadiusKm = AUTO_RANGE_RADIUS_KM[rangeMode];
   const autoLoadedMealTimeRef = useRef<PresetMealTime>(null);
   const seededRoomSyncIdRef = useRef('');
   const pendingRoomListSyncRef = useRef<{ roomId: string; signature: string; startedAt: number } | null>(null);

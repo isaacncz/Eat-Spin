@@ -121,11 +121,12 @@ Auto mode now uses Google Places nearby search with local-first IndexedDB cachin
    - `VITE_GOOGLE_PLACES_LANGUAGE` (default `en`)
    - `VITE_NEARBY_CACHE_TTL_DAYS` (default `7`)
    - `VITE_NEARBY_CACHE_MIN_RESULTS` (default `12`)
-   - `VITE_NEARBY_CACHE_AREA_KM` (default `2`)
+   - `VITE_NEARBY_CACHE_MOVEMENT_THRESHOLD_KM` (default `0.1`, refresh after moving beyond ~100m)
+   - `VITE_NEARBY_CACHE_AREA_KM` (legacy fallback; same behavior if movement threshold is unset)
 
 Caching behavior:
 - Cache lookup uses geohash precision 6 and checks 8 neighboring cells.
-- Cache is accepted only when user is within 2 km of cached center and record is not expired.
+- Cache is accepted only when user is within 0.1 km (~100m) of cached center and record is not expired.
 - If cache has at least 12 restaurants, no Google call is made.
 - If cache is missing, expired, or below 12 restaurants, app refreshes from Google and stores ranked nearby results (up to API limit) by rating, then review count, then distance.
 

@@ -44,7 +44,7 @@ export interface NearbyCacheLookupOptions {
   searchRadiusKm: number;
   openNowOnly: boolean;
   region: string;
-  areaKm: number;
+  movementThresholdKm: number;
   nowMs?: number;
 }
 
@@ -54,7 +54,7 @@ export interface NearbyCacheWriteOptions {
   searchRadiusKm: number;
   openNowOnly: boolean;
   region: string;
-  areaKm: number;
+  movementThresholdKm: number;
   ttlMs: number;
   fetchedAtMs?: number;
 }
@@ -226,6 +226,7 @@ const openNearbyCacheDb = async (): Promise<IDBDatabase> => {
   });
 };
 
+// searchRadiusKm is part of the key so walk/drive modes maintain independent caches.
 const buildSnapshotKey = (
   areaGeohash: string,
   region: string,
@@ -277,7 +278,7 @@ const isSnapshotMatch = (
     snapshot.centerLng
   );
 
-  return distanceToCenter <= options.areaKm;
+  return distanceToCenter <= options.movementThresholdKm;
 };
 
 const getSnapshotsByGeohash = async (
@@ -385,7 +386,7 @@ export const saveNearbyRestaurantsSnapshot = async (options: NearbyCacheWriteOpt
     areaNeighborGeohashes: neighborGeohashes,
     centerLat: options.location.lat,
     centerLng: options.location.lng,
-    areaRadiusKm: options.areaKm,
+    areaRadiusKm: options.movementThresholdKm,
     searchRadiusKm: options.searchRadiusKm,
     openNowOnly: options.openNowOnly,
     region: normalizeRegion(options.region),

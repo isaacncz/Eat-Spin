@@ -1,3 +1,5 @@
+export type CategoryConfidence = 'high' | 'medium' | 'low';
+
 export interface Restaurant {
   id: string;
   name: string;
@@ -19,6 +21,13 @@ export interface Restaurant {
   googlePlaceId?: string;
   source?: 'google-live' | 'google-cache' | 'local-fallback';
   hasKnownPriceRange?: boolean;
+  /**
+   * How confident the classification pipeline is about this restaurant's categories.
+   * - `high`: primaryType or cuisine-specific API query confirms the category
+   * - `medium`: multiple signals agree (type mapper + name heuristic)
+   * - `low`: weak/no signal — generic restaurant or heuristic-only guess
+   */
+  categoryConfidence?: CategoryConfidence;
 }
 
 // Type for JSON restaurant data (without ID fields)

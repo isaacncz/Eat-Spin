@@ -29,6 +29,10 @@ const RANGE_BAND_MIN_KM: Record<RangeMode, number> = { walk: 0, drive10: 1.2, dr
 const RANGE_BAND_MAX_KM: Record<RangeMode, number> = { walk: 1.2, drive10: 6, drive20: 12 };
 const SPARSE_THRESHOLD = 12;
 
+// Quality gate: minimum thresholds for curated results
+const MIN_QUALITY_RATING = 3.5;
+const MIN_QUALITY_REVIEWS = 10;
+
 const serializeSorted = (values: string[]): string => [...values].sort().join('|');
 
 const toBucket = (value: number, precision: number = 4): number => {
@@ -214,13 +218,28 @@ export const enhancedFilterRestaurants = (
     return cached;
   }
 
-  // 1. Category filter
-  let filtered = restaurants;
+  // 0. Quality gate: exclude poorly reviewed places to keep the wheel curated.
+  //    Local fallback restaurants skip this gate (they don't have real review counts).
+  let filtered = restaurants.filter((restaurant) => {
+    if (restaurant.source === 'local-fallback') return true;
+    if (restaurant.rating < MIN_QUALITY_RATING) return false;
+    if ((restaurant.userRatingCount ?? 0) < MIN_QUALITY_REVIEWS) return false;
+    return true;
+  });
 
+  // 1. Category filter
   if (selectedCategories.length > 0) {
     filtered = filtered.filter((restaurant) =>
       restaurant.category.some((category) => selectedCategories.includes(category as FoodCategory))
     );
+
+    // 1b. Confidence gate: when the user has selected specific cuisines,
+    //     exclude low-confidence restaurants (weak/no classification signal).
+    filtered = filtered.filter((restaurant) => {
+      // Local fallback data is hand-curated — always trusted
+      if (restaurant.source === 'local-fallback') return true;
+      return restaurant.categoryConfidence !== 'low';
+    });
   }
 
   // 2. Price filter: when chips active, exclude unknown-price restaurants

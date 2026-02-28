@@ -303,7 +303,11 @@ function App() {
   const isGroupRoomActive = Boolean(groupRoomId);
   const isManualListReadOnly = isGroupRoomActive && !canEditGroupList;
   const localFallbackAutoRestaurants = useMemo(
-    () => localRestaurants.map((restaurant) => ({ ...restaurant, source: 'local-fallback' as const })),
+    () => localRestaurants.map((restaurant) => ({
+      ...restaurant,
+      source: 'local-fallback' as const,
+      categoryConfidence: 'high' as const,
+    })),
     []
   );
   const autoSourceRestaurants = useMemo(() => {

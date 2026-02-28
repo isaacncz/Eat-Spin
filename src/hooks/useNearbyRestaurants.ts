@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Restaurant, UserLocation } from '@/types';
 import { fetchNearbyGoogleRestaurants, rankNearbyRestaurants } from '@/lib/googlePlacesRestaurants';
+import { enrichRestaurantListCategories } from '@/lib/categoryClassifier';
 import {
   getCachedNearbyRestaurants,
   runNearbyCacheCleanup,
@@ -134,7 +135,7 @@ export function useNearbyRestaurants({
           cacheConfig.topResults,
           'google-cache'
         );
-        setRestaurants(rankedCached);
+        setRestaurants(enrichRestaurantListCategories(rankedCached));
         setSource('google-cache');
         setLastSyncedAt(cachedResult.fetchedAtMs);
         setIsLoading(false);
@@ -184,7 +185,7 @@ export function useNearbyRestaurants({
             cacheConfig.topResults,
             'google-cache'
           );
-          setRestaurants(rankedCached);
+          setRestaurants(enrichRestaurantListCategories(rankedCached));
           setSource('google-cache');
           setError('Live refresh returned no matches. Showing cached nearby data.');
           setLastSyncedAt(cachedResult.fetchedAtMs);
@@ -192,7 +193,7 @@ export function useNearbyRestaurants({
           return;
         }
 
-        setRestaurants(rankedLive);
+        setRestaurants(enrichRestaurantListCategories(rankedLive));
         setSource('google-live');
         setLastSyncedAt(fetchedAtMs);
         setShouldUseLocalFallback(false);
@@ -212,7 +213,7 @@ export function useNearbyRestaurants({
             cacheConfig.topResults,
             'google-cache'
           );
-          setRestaurants(rankedCached);
+          setRestaurants(enrichRestaurantListCategories(rankedCached));
           setSource('google-cache');
           setError(`${errorMessage} Showing cached nearby data.`);
           setLastSyncedAt(cachedResult.fetchedAtMs);

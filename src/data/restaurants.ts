@@ -203,6 +203,22 @@ export const foodCategories: FoodCategoryConfig[] = [
   { id: 'korean', name: 'Korean', icon: '🔥', color: '#A29BFE' },
 ];
 
+/** Cuisine-only subset shown in the category selector UI. */
+const CUISINE_IDS: ReadonlySet<FoodCategory> = new Set([
+  'western',
+  'chinese',
+  'malay',
+  'indian',
+  'thai',
+  'japanese',
+  'korean',
+  'cafe',
+]);
+
+export const cuisineCategories: FoodCategoryConfig[] = foodCategories.filter(
+  (c) => CUISINE_IDS.has(c.id)
+);
+
 // Helper function to calculate distance between two coordinates in km
 export function calculateDistance(
   lat1: number,

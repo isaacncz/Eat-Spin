@@ -1,5 +1,6 @@
 import type { DailyHours, FoodCategory, Restaurant } from '@/types';
 import { calculateDistance } from '@/lib/restaurantUtils';
+import { classifyPlace, mergeCategories } from '@/lib/categoryClassifier';
 
 const GOOGLE_NEARBY_ENDPOINT = 'https://places.googleapis.com/v1/places:searchNearby';
 const GOOGLE_PLACE_FIELDS = [
@@ -182,7 +183,12 @@ const normalizeGooglePlace = (
     lng: place.location.longitude,
   };
   const distance = calculateDistance(location.lat, location.lng, coordinates.lat, coordinates.lng);
-  const categories = mapGoogleTypesToCategories(place.types);
+  const typeMapperCategories = mapGoogleTypesToCategories(place.types);
+  const heuristicCategories = classifyPlace({
+    displayName: place.displayName?.text,
+    types: place.types,
+  });
+  const categories = mergeCategories(typeMapperCategories, heuristicCategories);
   const rating = typeof place.rating === 'number' ? Number(place.rating.toFixed(1)) : 0;
   const userRatingCount = typeof place.userRatingCount === 'number' ? place.userRatingCount : 0;
   const mappedPrice = mapGooglePriceLevel(place.priceLevel);
@@ -231,7 +237,7 @@ export const fetchNearbyGoogleRestaurants = async (
       'X-Goog-FieldMask': GOOGLE_PLACE_FIELDS,
     },
     body: JSON.stringify({
-      includedTypes: ['restaurant'],
+      includedTypes: ['restaurant', 'cafe', 'bakery', 'ice_cream_shop', 'meal_takeaway'],
       maxResultCount,
       rankPreference: 'POPULARITY',
       openNow: true,

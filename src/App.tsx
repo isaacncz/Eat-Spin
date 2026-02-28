@@ -786,6 +786,7 @@ function App() {
     <div className="min-h-screen overflow-x-clip bg-brand-linen">
       <Navbar
         isPremium={isPremium}
+        activeRoomId={groupRoomId}
         onUpgradeClick={() => setShowSubscription(true)}
       />
 

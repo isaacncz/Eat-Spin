@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Crown, Menu, X } from 'lucide-react';
+import { CircleDot, Crown, Menu, X } from 'lucide-react';
 
 interface NavbarProps {
   isPremium: boolean;
+  activeRoomId: string;
   onUpgradeClick: () => void;
 }
 
-export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
+export function Navbar({ isPremium, activeRoomId, onUpgradeClick }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const hasActiveRoom = Boolean(activeRoomId);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -115,6 +117,12 @@ export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
+            {hasActiveRoom && (
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                <CircleDot size={14} className="text-emerald-500" />
+                Room Active: {activeRoomId}
+              </div>
+            )}
             {!isPremium && (
               <Button
                 onClick={onUpgradeClick}
@@ -132,6 +140,16 @@ export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
               Start Spinning
             </Button>
           </div>
+
+
+          {hasActiveRoom && (
+            <div className="mx-2 flex flex-1 justify-center md:hidden">
+              <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+                <CircleDot size={12} className="shrink-0 text-emerald-500" />
+                <span className="truncate">Room Active: {activeRoomId}</span>
+              </div>
+            </div>
+          )}
 
           {/* Mobile Menu Button */}
           <button

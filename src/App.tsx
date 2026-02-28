@@ -26,7 +26,8 @@ import { GroupSpin } from '@/sections/GroupSpin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
-import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X, Trash2, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X, Trash2, ChevronDown, CheckCircle2, Heart, Navigation } from 'lucide-react';
+import { useFavourites } from '@/hooks/useFavourites';
 import { toast } from 'sonner';
 import './App.css';
 
@@ -258,6 +259,13 @@ function App() {
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
   const { canSpin, recordSpin } = useSpinTracker();
   const {
+    favourites,
+    isFavourite: isFavouriteCheck,
+    save: saveFavourite,
+    remove: removeFavouriteEntry,
+    recordVisitAndSave,
+  } = useFavourites();
+  const {
     restaurants: nearbyRestaurants,
     isLoading: nearbyRestaurantsLoading,
     error: nearbyRestaurantsError,
@@ -419,6 +427,42 @@ function App() {
   const handleManualSpinComplete = useCallback((restaurant: Restaurant) => {
     trackEvent('spin_complete', { mode: 'manual', restaurant_name: restaurant.name });
     setManualSpinResult(restaurant);
+  }, []);
+
+  const handleSaveFavourite = useCallback((restaurant: Restaurant, mode: 'auto' | 'manual') => {
+    trackEvent('favourite_saved', { restaurant_name: restaurant.name, mode });
+    void saveFavourite(restaurant, mode === 'auto' ? 'spin-auto' : 'spin-manual');
+    toast.success(`${restaurant.name} saved to favourites!`, {
+      description: 'Find it in the "I Know Where" tab under My Favourites.',
+    });
+  }, [saveFavourite]);
+
+  const handleLetsGo = useCallback((restaurant: Restaurant) => {
+    trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
+    void recordVisitAndSave(restaurant);
+
+    // Open Google Maps navigation
+    const { lat, lng } = restaurant.coordinates;
+    const query = encodeURIComponent(restaurant.name);
+    const mapsUrl = lat && lng
+      ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${restaurant.googlePlaceId ?? ''}&query=${query}`
+      : `https://www.google.com/maps/search/?api=1&query=${query}`;
+    window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+
+    toast.success(`Navigating to ${restaurant.name}!`, {
+      description: 'We\'ll ask how it was next time you open the app.',
+    });
+  }, [recordVisitAndSave]);
+
+  const handleRemoveFavourite = useCallback((id: string, name: string) => {
+    trackEvent('favourite_removed', { favourite_id: id });
+    void removeFavouriteEntry(id);
+    toast('Removed from favourites', { description: name });
+  }, [removeFavouriteEntry]);
+
+  const handleAddFavouriteToManualList = useCallback((name: string) => {
+    addManualRestaurantByName(name);
+    toast.success(`${name} added to spin list!`);
   }, []);
 
   // Handle spin attempt
@@ -1220,7 +1264,84 @@ function App() {
                 canRequestSpin={!isGroupRoomActive || isGroupHost || isGroupCohost}
                 emptyStateTitle="Add restaurants to start"
                 emptyStateSubtitle="Type any restaurant you like…"
+                onSaveFavourite={(r) => handleSaveFavourite(r, 'manual')}
+                onLetsGo={handleLetsGo}
+                isFavourite={isFavouriteCheck}
               />
+
+                {/* My Favourites Section */}
+                {favourites.length > 0 && (
+                  <div className="mt-6 max-w-xl mx-auto">
+                    <div className="bg-white rounded-xl border border-pink-200/60 p-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="font-heading font-semibold text-brand-black flex items-center gap-2">
+                          <Heart size={16} className="text-pink-500 fill-pink-500" />
+                          My Favourites ({favourites.length})
+                        </h4>
+                      </div>
+                      <p className="text-xs text-eatspin-gray-1 mb-3">
+                        Places you saved from spinning. Tap <Plus size={12} className="inline" /> to add to your current spin list.
+                      </p>
+                      <ul className="space-y-2 max-h-64 overflow-y-auto overscroll-contain pr-1">
+                        {favourites
+                          .filter((f) => f.userRating !== 'avoid')
+                          .map((fav) => {
+                            const alreadyInList = manualRestaurants.some(
+                              (r) => r.name.toLowerCase() === fav.restaurant.name.toLowerCase()
+                            );
+                            return (
+                              <li key={fav.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-linen px-3 py-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium text-brand-black truncate">{fav.restaurant.name}</p>
+                                  <div className="flex flex-wrap gap-1.5 mt-1">
+                                    {fav.restaurant.rating > 0 && (
+                                      <span className="text-xs text-eatspin-gray-1">⭐ {fav.restaurant.rating}</span>
+                                    )}
+                                    {fav.visitCount > 0 && (
+                                      <span className="text-xs text-eatspin-gray-1">
+                                        · Visited {fav.visitCount}×
+                                      </span>
+                                    )}
+                                    {fav.userRating === 'neutral' && (
+                                      <span className="text-xs text-eatspin-gray-2">· Neutral</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  {!alreadyInList && !isManualListReadOnly && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAddFavouriteToManualList(fav.restaurant.name)}
+                                      className="inline-flex items-center gap-1 rounded-full border border-brand-orange/40 bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
+                                      aria-label={`Add ${fav.restaurant.name} to spin list`}
+                                    >
+                                      <Plus size={12} /> Add
+                                    </button>
+                                  )}
+                                  {alreadyInList && (
+                                    <span className="text-xs text-eatspin-success font-medium">In list ✓</span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveFavourite(fav.id, fav.restaurant.name)}
+                                    className="text-eatspin-gray-2 hover:text-red-500"
+                                    aria-label={`Remove ${fav.restaurant.name} from favourites`}
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                      {favourites.some((f) => f.userRating === 'avoid') && (
+                        <p className="mt-2 text-xs text-eatspin-gray-2">
+                          {favourites.filter((f) => f.userRating === 'avoid').length} hidden (marked "don't suggest")
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div id="manual-input" className="mt-8 max-w-xl mx-auto">
                   <div className="sticky bottom-3 z-30 rounded-2xl border border-eatspin-peach/60 bg-white/95 p-3 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-white/85">
@@ -1403,6 +1524,9 @@ function App() {
               setIsSpinning={setIsSpinning}
               onShuffle={shuffleWheel}
               onSpinStart={handleAutoSpinStart}
+              onSaveFavourite={(r) => handleSaveFavourite(r, 'auto')}
+              onLetsGo={handleLetsGo}
+              isFavourite={isFavouriteCheck}
             />
           </div>
         </section>

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown, Heart, Navigation } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,12 @@ interface RouletteWheelProps {
   onRequestSpin?: () => void | Promise<void>;
   canRequestSpin?: boolean;
   onSpinStart?: () => Restaurant[] | null;
+  /** Called when user taps the "★ Save" button on the spin result. */
+  onSaveFavourite?: (restaurant: Restaurant) => void;
+  /** Called when user taps "Let's go!" on the spin result. */
+  onLetsGo?: (restaurant: Restaurant) => void;
+  /** Returns true if the restaurant is already saved as a favourite. */
+  isFavourite?: (restaurant: Restaurant) => boolean;
 }
 
 // Vibrant appetizing color palette
@@ -136,6 +142,9 @@ export function RouletteWheel({
   onRequestSpin,
   canRequestSpin = true,
   onSpinStart,
+  onSaveFavourite,
+  onLetsGo,
+  isFavourite,
 }: RouletteWheelProps) {
   const ANTICIPATION_DURATION_S = 0.5;
   const ANTICIPATION_DEG = 50;
@@ -779,6 +788,29 @@ export function RouletteWheel({
             </div>
 
             <div className="mt-5 flex flex-wrap justify-center gap-3">
+              {onLetsGo && (
+                <Button
+                  className="bg-brand-orange hover:bg-brand-orange/90 text-white font-heading font-bold"
+                  onClick={() => onLetsGo(spinResult)}
+                >
+                  <Navigation size={16} className="mr-1.5" />
+                  Let's go!
+                </Button>
+              )}
+              {onSaveFavourite && (
+                <Button
+                  variant={isFavourite?.(spinResult) ? 'default' : 'outline'}
+                  className={isFavourite?.(spinResult)
+                    ? 'bg-pink-500 hover:bg-pink-600 text-white font-heading font-bold'
+                    : 'border-pink-300 text-pink-500 hover:bg-pink-50 font-heading font-bold'
+                  }
+                  onClick={() => onSaveFavourite(spinResult)}
+                  disabled={isFavourite?.(spinResult)}
+                >
+                  <Heart size={16} className={`mr-1.5 ${isFavourite?.(spinResult) ? 'fill-current' : ''}`} />
+                  {isFavourite?.(spinResult) ? 'Saved!' : 'Save'}
+                </Button>
+              )}
               {onEditList && (
                 <Button variant="outline" onClick={onEditList}>
                   Edit list

@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import './App.css';
 
 type SpinTab = 'auto' | 'manual';
+type AutoRangeMode = 'walk' | 'drive10' | 'drive20';
 type PresetMealTime = Exclude<MealTime, 'none'> | null;
 interface ManualPreset {
   id: string;
@@ -41,11 +42,40 @@ interface ManualPreset {
 
 const MANUAL_RESTAURANTS_STORAGE_KEY = 'eatspin:manual-restaurants';
 const MANUAL_PRESETS_STORAGE_KEY = 'eatspin:manual-presets';
+const AUTO_RANGE_MODE_STORAGE_KEY = 'eatspin:auto-range-mode';
 const ROOM_LIST_SYNC_GRACE_MS = 2_500;
 const GROUP_SPIN_REPLAY_WINDOW_MS = 30_000;
 const LATE_JOIN_NOTICE_MS = 5 * 60 * 1000;
 const REVIEW_PREVIEW_COUNT = 30;
 const MANUAL_SUGGESTED_RESTAURANTS = ['Sushi Place', 'Burger Spot', 'Local Noodles', 'Pizza Corner'];
+const DEFAULT_AUTO_RANGE_MODE: AutoRangeMode = 'drive10';
+const AUTO_RANGE_RADIUS_KM: Record<AutoRangeMode, number> = {
+  walk: 1.2,
+  drive10: 6,
+  drive20: 12,
+};
+const AUTO_RANGE_LABEL: Record<AutoRangeMode, string> = {
+  walk: 'Walking distance',
+  drive10: '10 min drive',
+  drive20: '20 min drive',
+};
+const AUTO_RANGE_OPTIONS: Array<{ id: AutoRangeMode; label: string; helper: string }> = [
+  { id: 'walk', label: 'Walking distance', helper: '~1.2 km' },
+  { id: 'drive10', label: '10 min drive', helper: '~6 km' },
+  { id: 'drive20', label: '20 min drive', helper: '~12 km' },
+];
+
+const isAutoRangeMode = (value: string): value is AutoRangeMode =>
+  value === 'walk' || value === 'drive10' || value === 'drive20';
+
+const loadAutoRangeMode = (): AutoRangeMode => {
+  if (typeof window === 'undefined') return DEFAULT_AUTO_RANGE_MODE;
+  const storedMode = window.localStorage.getItem(AUTO_RANGE_MODE_STORAGE_KEY);
+  if (!storedMode || !isAutoRangeMode(storedMode)) {
+    return DEFAULT_AUTO_RANGE_MODE;
+  }
+  return storedMode;
+};
 
 const createManualRestaurant = (name: string): Restaurant => {
   const now = Date.now();
@@ -169,7 +199,7 @@ function App() {
   const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
   const [selectedPriceRanges, setSelectedPriceRanges] = useState<Restaurant['priceRange'][]>([]);
   const [nonHalalOnly, setNonHalalOnly] = useState(false);
-  const [radiusKm, setRadiusKm] = useState<number>(5);
+  const [rangeMode, setRangeMode] = useState<AutoRangeMode>(() => loadAutoRangeMode());
   const [isSpinning, setIsSpinning] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
   const [showSpinLimitWarning, setShowSpinLimitWarning] = useState(false);
@@ -196,6 +226,7 @@ function App() {
   const [presetMealTimeInput, setPresetMealTimeInput] = useState<PresetMealTime>(() => getPresetMealTime());
   const [manualPresets, setManualPresets] = useState<ManualPreset[]>(() => loadManualPresets());
   const [groupSpinNow, setGroupSpinNow] = useState(() => Date.now());
+  const radiusKm = AUTO_RANGE_RADIUS_KM[rangeMode];
   const autoLoadedMealTimeRef = useRef<PresetMealTime>(null);
   const seededRoomSyncIdRef = useRef('');
   const pendingRoomListSyncRef = useRef<{ roomId: string; signature: string; startedAt: number } | null>(null);
@@ -305,6 +336,11 @@ function App() {
     );
   };
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(AUTO_RANGE_MODE_STORAGE_KEY, rangeMode);
+  }, [rangeMode]);
+
   // Update current meal time
   useEffect(() => {
     const updateMealTime = () => {
@@ -395,6 +431,12 @@ function App() {
     setShowWheelSection(false);
     setWheelRestaurants([]);
     setAutoWheelKey((prev) => prev + 1);
+  };
+
+  const handleAutoRangeModeChange = (nextMode: AutoRangeMode) => {
+    if (nextMode === rangeMode) return;
+    setRangeMode(nextMode);
+    resetAutoWheel();
   };
 
   // Shuffle wheel restaurants
@@ -860,20 +902,29 @@ function App() {
 
                   <div className="mb-4">
                     <label className="mb-2 block text-sm font-medium text-gray-700">
-                      Search radius: <span className="font-bold text-brand-orange">{radiusKm} km</span>
+                      Search range: <span className="font-bold text-brand-orange">{AUTO_RANGE_LABEL[rangeMode]}</span>
                     </label>
-                    <input
-                      type="range"
-                      min="1"
-                      max="20"
-                      value={radiusKm}
-                      onChange={(e) => setRadiusKm(Number(e.target.value))}
-                      className="range-theme w-full"
-                    />
-                    <div className="mt-1 flex justify-between text-xs text-gray-500">
-                      <span>1 km</span>
-                      <span>10 km</span>
-                      <span>20 km</span>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {AUTO_RANGE_OPTIONS.map((option) => {
+                        const isSelected = rangeMode === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => handleAutoRangeModeChange(option.id)}
+                            className={`rounded-xl px-3 py-2 text-left transition-all duration-200 ${
+                              isSelected
+                                ? 'bg-brand-orange text-white shadow-md'
+                                : 'border border-gray-200 bg-white text-brand-black hover:border-brand-orange hover:text-brand-orange'
+                            }`}
+                          >
+                            <span className="block text-sm font-semibold">{option.label}</span>
+                            <span className={`block text-xs ${isSelected ? 'text-white/90' : 'text-eatspin-gray-1'}`}>
+                              {option.helper}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 

@@ -128,3 +128,9 @@ Caching behavior:
 - Cache is accepted only when user is within 2 km of cached center and record is not expired.
 - If cache has at least 12 restaurants, no Google call is made.
 - If cache is missing, expired, or below 12 restaurants, app refreshes from Google and stores ranked nearby results (up to API limit) by rating, then review count, then distance.
+
+Auto mode range presets:
+- Walking distance: ~1.2 km
+- 10 min drive: ~6 km
+- 20 min drive: ~12 km
+- Default selection is `10 min drive` and the last selected option is saved in localStorage.

@@ -450,7 +450,9 @@ export function RouletteWheel({
   const labelOuterRadius = wheelRadius - outerPadding;
   const centerButtonRadius = wheelRadius * 0.2;
   const labelInnerRadius = centerButtonRadius + wheelRadius * 0.14;
-  const labelRadius = labelInnerRadius + (labelOuterRadius - labelInnerRadius) * 0.62;
+  // Pull labels closer to center when segments are wide so text stays inside the circle
+  const labelRadialFraction = segmentAngle >= 120 ? 0.46 : segmentAngle >= 72 ? 0.54 : 0.62;
+  const labelRadius = labelInnerRadius + (labelOuterRadius - labelInnerRadius) * labelRadialFraction;
   const centerX = wheelSize / 2;
   const centerY = wheelSize / 2;
   const angleRad = (segmentAngle * Math.PI) / 180;
@@ -467,11 +469,25 @@ export function RouletteWheel({
       const x = centerX + labelRadius * Math.cos(pointAngleRad);
       const y = centerY + labelRadius * Math.sin(pointAngleRad);
 
-      const compactName = compactRestaurantName(restaurant.name, maxCharsPerLine * 2 + 5);
-      const lines = wrapLabelText(compactName, maxCharsPerLine, 3);
+      // Constrain label width so it never extends outside the wheel circle.
+      // At height y the circle spans [centerX - halfChord, centerX + halfChord].
+      // A centered label at x with width w spans [x - w/2, x + w/2].
+      // Both edges must stay inside → w ≤ 2 × min(x - leftEdge, rightEdge - x).
+      const circleClipRadius = wheelRadius - 6;
+      const dy = y - centerY;
+      const halfChord = Math.sqrt(Math.max(circleClipRadius * circleClipRadius - dy * dy, 0));
+      const leftEdge = centerX - halfChord;
+      const rightEdge = centerX + halfChord;
+      const maxCircleWidth = Math.max(2 * Math.min(x - leftEdge, rightEdge - x), 40);
+      const constrainedWidth = Math.min(usableArcWidth, maxCircleWidth);
+
+      const labelMaxChars = clamp(Math.floor(constrainedWidth / 10), 6, 18);
+      const compactName = compactRestaurantName(restaurant.name, labelMaxChars * 2 + 5);
+      const lines = wrapLabelText(compactName, labelMaxChars, 3);
       const longestLineLength = Math.max(...lines.map((line) => line.length), 1);
-      const densityScale = clamp(maxCharsPerLine / longestLineLength, 0.75, 1.08);
-      const fontSize = clamp(baseFontSize * densityScale, 11.5, 24);
+      const densityScale = clamp(labelMaxChars / longestLineLength, 0.75, 1.08);
+      const labelBaseFontSize = clamp(Math.min(constrainedWidth * 0.16, radialBandHeight * 0.28), 11.5, 22);
+      const fontSize = clamp(labelBaseFontSize * densityScale, 11.5, 24);
       const distanceLabel = canShowDistance && lines.length <= 3 && restaurant.distance !== undefined
         ? `${restaurant.distance.toFixed(1)} km`
         : null;
@@ -483,6 +499,7 @@ export function RouletteWheel({
         lines,
         fontSize,
         distanceLabel,
+        constrainedWidth,
       };
     });
 
@@ -544,7 +561,7 @@ export function RouletteWheel({
             )}
 
             {/* Labels remain upright by counter-rotating the wheel transform. */}
-            {labelLayouts.map(({ restaurant, x, y, lines, fontSize, distanceLabel }) => {
+            {labelLayouts.map(({ restaurant, x, y, lines, fontSize, distanceLabel, constrainedWidth }) => {
               return (
                 <div
                   key={restaurant.id}
@@ -552,7 +569,7 @@ export function RouletteWheel({
                   style={{
                     left: `${(x / wheelSize) * 100}%`,
                     top: `${(y / wheelSize) * 100}%`,
-                    width: `${usableArcWidth}px`,
+                    width: `${constrainedWidth}px`,
                     transform: 'translate(-50%, -50%) rotate(calc(-1 * var(--wheel-rotation)))',
                     transformOrigin: 'center center',
                   }}

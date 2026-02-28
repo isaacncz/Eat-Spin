@@ -1,6 +1,6 @@
-import type { DailyHours, FoodCategory, Restaurant } from '@/types';
+import type { CategoryConfidence, DailyHours, FoodCategory, Restaurant } from '@/types';
 import { calculateDistance } from '@/lib/restaurantUtils';
-import { classifyPlace, mergeCategories } from '@/lib/categoryClassifier';
+import { classifyPlace } from '@/lib/categoryClassifier';
 
 const GOOGLE_NEARBY_ENDPOINT = 'https://places.googleapis.com/v1/places:searchNearby';
 const GOOGLE_PLACE_FIELDS = [
@@ -12,6 +12,8 @@ const GOOGLE_PLACE_FIELDS = [
   'places.userRatingCount',
   'places.priceLevel',
   'places.types',
+  'places.primaryType',
+  'places.editorialSummary',
   'places.nationalPhoneNumber',
   'places.regularOpeningHours.periods',
   'places.currentOpeningHours.openNow',
@@ -39,6 +41,10 @@ type GooglePlace = {
   userRatingCount?: number;
   priceLevel?: string;
   types?: string[];
+  /** Google's single best-guess type for the place — more reliable than the full types array. */
+  primaryType?: string;
+  /** Free-text editorial description authored by Google. */
+  editorialSummary?: { text?: string };
   nationalPhoneNumber?: string;
   regularOpeningHours?: { periods?: GooglePlaceOpeningPeriod[] };
   currentOpeningHours?: { openNow?: boolean };
@@ -231,7 +237,7 @@ const buildIncludedTypes = (selectedCategories?: FoodCategory[]): string[] => {
 };
 
 const mapGoogleTypesToCategories = (types: string[] | undefined): FoodCategory[] => {
-  if (!types || types.length === 0) return ['western'];
+  if (!types || types.length === 0) return [];
 
   const categories: FoodCategory[] = [];
   for (const type of types) {
@@ -240,8 +246,7 @@ const mapGoogleTypesToCategories = (types: string[] | undefined): FoodCategory[]
     categories.push(mapped);
   }
 
-  if (categories.length > 0) return categories;
-  return ['western'];
+  return categories;
 };
 
 const getGoogleApiKey = (): string => {
@@ -250,6 +255,55 @@ const getGoogleApiKey = (): string => {
     throw new Error('VITE_GOOGLE_MAPS_API_KEY is missing');
   }
   return apiKey.trim();
+};
+
+/**
+ * Cuisine-type categories (as opposed to dish-type categories like 'soup', 'noodles').
+ * Used during confidence scoring to distinguish meaningful cuisine classification
+ * from dish-level tags that don't indicate a restaurant's primary identity.
+ */
+const CUISINE_CATEGORIES: ReadonlySet<FoodCategory> = new Set([
+  'western', 'chinese', 'malay', 'indian', 'thai', 'japanese', 'korean',
+  'cafe', 'bakery', 'dessert', 'seafood', 'vegetarian', 'breakfast',
+  'chicken', 'beef',
+]);
+
+/**
+ * Compute how confident we are about a restaurant's category classification.
+ *
+ * Tiers:
+ * - `high`: primaryType directly maps to a cuisine, or the type mapper found
+ *   a cuisine AND the heuristic independently corroborates it
+ * - `medium`: at least one signal found a cuisine category
+ * - `low`: no cuisine signal at all (only dish-type tags or completely empty)
+ */
+const computeCategoryConfidence = (
+  primaryTypeCategory: FoodCategory | undefined,
+  typeMapperCategories: FoodCategory[],
+  heuristicCategories: FoodCategory[],
+): CategoryConfidence => {
+  // primaryType is Google's single best-guess — highest trust
+  if (primaryTypeCategory && CUISINE_CATEGORIES.has(primaryTypeCategory)) {
+    return 'high';
+  }
+
+  const typeMapperCuisines = typeMapperCategories.filter((c) => CUISINE_CATEGORIES.has(c));
+  const heuristicCuisines = heuristicCategories.filter((c) => CUISINE_CATEGORIES.has(c));
+
+  // Both independent signals agree on at least one cuisine
+  if (typeMapperCuisines.length > 0 && heuristicCuisines.length > 0) {
+    const overlapExists = typeMapperCuisines.some((c) => heuristicCuisines.includes(c));
+    if (overlapExists) return 'high';
+    // Different cuisines from different signals — still two signals
+    return 'medium';
+  }
+
+  // At least one signal found a cuisine
+  if (typeMapperCuisines.length > 0 || heuristicCuisines.length > 0) {
+    return 'medium';
+  }
+
+  return 'low';
 };
 
 const normalizeGooglePlace = (
@@ -269,12 +323,47 @@ const normalizeGooglePlace = (
     lng: place.location.longitude,
   };
   const distance = calculateDistance(location.lat, location.lng, coordinates.lat, coordinates.lng);
+
+  // --- Category classification with multi-signal confidence ---
+
+  // Signal 1: primaryType (Google's single best-guess type)
+  const primaryTypeCategory = place.primaryType
+    ? googleTypeToCategory.get(place.primaryType)
+    : undefined;
+
+  // Signal 2: full types[] array mapping
   const typeMapperCategories = mapGoogleTypesToCategories(place.types);
+
+  // Signal 3: name + editorial summary heuristic
   const heuristicCategories = classifyPlace({
     displayName: place.displayName?.text,
     types: place.types,
+    editorialSummary: place.editorialSummary?.text,
   });
-  const categories = mergeCategories(typeMapperCategories, heuristicCategories);
+
+  // Merge all signals: primaryType first (highest trust), then type mapper, then heuristic
+  const allCategories: FoodCategory[] = [];
+  const seen = new Set<FoodCategory>();
+
+  if (primaryTypeCategory && !seen.has(primaryTypeCategory)) {
+    allCategories.push(primaryTypeCategory);
+    seen.add(primaryTypeCategory);
+  }
+  for (const cat of typeMapperCategories) {
+    if (!seen.has(cat)) { allCategories.push(cat); seen.add(cat); }
+  }
+  for (const cat of heuristicCategories) {
+    if (!seen.has(cat)) { allCategories.push(cat); seen.add(cat); }
+  }
+
+  // No fallback to 'western' — empty categories + low confidence is honest
+  const categories = allCategories;
+  const categoryConfidence = computeCategoryConfidence(
+    primaryTypeCategory,
+    typeMapperCategories,
+    heuristicCategories,
+  );
+
   const rating = typeof place.rating === 'number' ? Number(place.rating.toFixed(1)) : 0;
   const userRatingCount = typeof place.userRatingCount === 'number' ? place.userRatingCount : 0;
   const mappedPrice = mapGooglePriceLevel(place.priceLevel);
@@ -285,6 +374,7 @@ const normalizeGooglePlace = (
     source: 'google-live',
     name: place.displayName?.text?.trim() || 'Nearby Restaurant',
     category: categories,
+    categoryConfidence,
     address: place.formattedAddress?.trim() || 'Nearby area',
     coordinates,
     hours: mapOpeningHours(place.regularOpeningHours?.periods),
@@ -293,7 +383,7 @@ const normalizeGooglePlace = (
     priceRange: mappedPrice.priceRange,
     hasKnownPriceRange: mappedPrice.hasKnownPriceRange,
     phone: place.nationalPhoneNumber?.trim(),
-    description: 'Highly rated nearby pick from Google Maps.',
+    description: place.editorialSummary?.text?.trim() || 'Highly rated nearby pick from Google Maps.',
     isOpen: place.currentOpeningHours?.openNow ?? true,
     distance,
   };
@@ -354,8 +444,8 @@ export const fetchNearbyGoogleRestaurants = async (
     .filter((restaurant): restaurant is Restaurant => Boolean(restaurant));
 
   // When the API was called with cuisine-specific types, force-tag each result
-  // with the corresponding app categories so filtering is authoritative rather
-  // than relying solely on the name-based heuristic.
+  // with the corresponding app categories and boost confidence to 'high'
+  // since Google already pre-filtered by cuisine type.
   if (options.selectedCategories && options.selectedCategories.length > 0) {
     return restaurants.map((restaurant) => {
       const existing = new Set(restaurant.category);
@@ -366,9 +456,11 @@ export const fetchNearbyGoogleRestaurants = async (
           existing.add(cat);
         }
       }
-      return enriched.length !== restaurant.category.length
-        ? { ...restaurant, category: enriched }
-        : restaurant;
+      return {
+        ...restaurant,
+        category: enriched.length !== restaurant.category.length ? enriched : restaurant.category,
+        categoryConfidence: 'high' as CategoryConfidence,
+      };
     });
   }
 

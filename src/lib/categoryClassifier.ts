@@ -18,7 +18,17 @@
  * - Deterministic — same inputs always produce the same output.
  */
 
-import type { FoodCategory, Restaurant } from '@/types';
+import type { CategoryConfidence, FoodCategory, Restaurant } from '@/types';
+
+// ---------------------------------------------------------------------------
+// Cuisine categories set — used for confidence scoring during enrichment
+// ---------------------------------------------------------------------------
+
+const CUISINE_CATEGORIES: ReadonlySet<FoodCategory> = new Set([
+  'western', 'chinese', 'malay', 'indian', 'thai', 'japanese', 'korean',
+  'cafe', 'bakery', 'dessert', 'seafood', 'vegetarian', 'breakfast',
+  'chicken', 'beef',
+]);
 
 // ---------------------------------------------------------------------------
 // Signal map
@@ -441,8 +451,9 @@ export const classifyPlace = (place: ClassifiablePlace): FoodCategory[] => {
  * Merge type-mapper categories with heuristic-classified categories,
  * deduplicating and preserving order (type-mapper results first).
  *
- * If the combined result is empty, returns `['western']` as the safe default
- * (matching the existing fallback behaviour of `mapGoogleTypesToCategories`).
+ * Returns the merged array as-is — even if empty. The caller is responsible
+ * for deciding how to handle unclassified restaurants (e.g. via
+ * categoryConfidence scoring).
  */
 export const mergeCategories = (
   typeMapperCategories: FoodCategory[],
@@ -458,29 +469,53 @@ export const mergeCategories = (
     }
   }
 
-  return merged.length > 0 ? merged : ['western'];
+  return merged;
 };
 
 /**
- * Re-classify a Restaurant's categories using the heuristic classifier.
+ * Re-classify a Restaurant's categories using the heuristic classifier,
+ * and assign a categoryConfidence if missing.
  *
  * Useful for enriching cached restaurants that were normalised before the
- * classifier existed.  The function is idempotent — running it on an
- * already-enriched restaurant produces the same result.
+ * classifier or confidence scoring existed. The function is idempotent —
+ * running it on an already-enriched restaurant produces the same result.
  */
 export const enrichRestaurantCategories = (restaurant: Restaurant): Restaurant => {
   const heuristic = classifyPlace({ displayName: restaurant.name });
   const enriched = mergeCategories(restaurant.category, heuristic);
 
+  // Compute confidence for restaurants that don't have it yet (e.g. from cache)
+  let confidence: CategoryConfidence | undefined = restaurant.categoryConfidence;
+  if (!confidence) {
+    const hasCuisine = enriched.some((c) => CUISINE_CATEGORIES.has(c));
+    const heuristicHasCuisine = heuristic.some((c) => CUISINE_CATEGORIES.has(c));
+    const originalHasCuisine = restaurant.category.some((c) => CUISINE_CATEGORIES.has(c));
+
+    if (originalHasCuisine && heuristicHasCuisine) {
+      confidence = 'medium'; // two signals but no primaryType → medium (not high)
+    } else if (hasCuisine) {
+      confidence = 'medium';
+    } else {
+      confidence = 'low';
+    }
+  }
+
   // Fast-path: skip object allocation when nothing changed.
-  if (
+  const categoriesChanged = !(
     enriched.length === restaurant.category.length &&
     enriched.every((c, i) => c === restaurant.category[i])
-  ) {
+  );
+  const confidenceChanged = confidence !== restaurant.categoryConfidence;
+
+  if (!categoriesChanged && !confidenceChanged) {
     return restaurant;
   }
 
-  return { ...restaurant, category: enriched };
+  return {
+    ...restaurant,
+    category: categoriesChanged ? enriched : restaurant.category,
+    categoryConfidence: confidence,
+  };
 };
 
 /**

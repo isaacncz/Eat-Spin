@@ -248,7 +248,7 @@ function App() {
   }, []);
 
   const handleHeroGetStarted = useCallback(() => {
-    setActiveTab('manual');
+    setActiveTab('auto');
     scrollToSection('app');
   }, [scrollToSection]);
 

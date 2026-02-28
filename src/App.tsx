@@ -315,8 +315,8 @@ function App() {
     if (!location) return null;
     if (nearbyRestaurantsLoading) return 'Loading nearby restaurants...';
     if (nearbyRestaurantsSource === 'google-cache') {
-      if (!nearbyLastSyncedAt) return 'Using cached nearby results (weekly sync).';
-      return `Using cached nearby results (last sync ${formatAbsoluteSyncTime(nearbyLastSyncedAt)}).`;
+      if (!nearbyLastSyncedAt) return 'Using cached nearby results (refresh after moving >100m).';
+      return `Using cached nearby results (refresh after moving >100m, last sync ${formatAbsoluteSyncTime(nearbyLastSyncedAt)}).`;
     }
     if (nearbyRestaurantsSource === 'google-live') {
       if (!nearbyLastSyncedAt) return 'Using live nearby results.';

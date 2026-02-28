@@ -31,7 +31,7 @@ const DEFAULT_DEBOUNCE_MS = 450;
 const DEFAULT_MIN_RESULTS = 12;
 const DEFAULT_TOP_RESULTS = 20;
 const DEFAULT_CACHE_TTL_DAYS = 7;
-const DEFAULT_CACHE_AREA_KM = 2;
+const DEFAULT_CACHE_MOVEMENT_THRESHOLD_KM = 0.1;
 
 const parsePositiveNumber = (rawValue: string | undefined, fallback: number): number => {
   if (!rawValue) return fallback;
@@ -63,9 +63,12 @@ export function useNearbyRestaurants({
       import.meta.env.VITE_NEARBY_CACHE_TTL_DAYS as string | undefined,
       DEFAULT_CACHE_TTL_DAYS
     );
-    const areaKm = parsePositiveNumber(
-      import.meta.env.VITE_NEARBY_CACHE_AREA_KM as string | undefined,
-      DEFAULT_CACHE_AREA_KM
+    const movementThresholdKm = parsePositiveNumber(
+      import.meta.env.VITE_NEARBY_CACHE_MOVEMENT_THRESHOLD_KM as string | undefined,
+      parsePositiveNumber(
+        import.meta.env.VITE_NEARBY_CACHE_AREA_KM as string | undefined,
+        DEFAULT_CACHE_MOVEMENT_THRESHOLD_KM
+      )
     );
     const minResults = parsePositiveNumber(
       import.meta.env.VITE_NEARBY_CACHE_MIN_RESULTS as string | undefined,
@@ -74,7 +77,7 @@ export function useNearbyRestaurants({
 
     return {
       ttlMs: toMs(ttlDays),
-      areaKm,
+      movementThresholdKm,
       minResults: Math.max(1, Math.round(minResults)),
       topResults: DEFAULT_TOP_RESULTS,
     };
@@ -115,7 +118,7 @@ export function useNearbyRestaurants({
         searchRadiusKm: effectiveRadiusKm,
         openNowOnly,
         region: normalizedRegion,
-        areaKm: cacheConfig.areaKm,
+        movementThresholdKm: cacheConfig.movementThresholdKm,
       };
 
       let cachedResult: Awaited<ReturnType<typeof getCachedNearbyRestaurants>> = null;
@@ -169,7 +172,7 @@ export function useNearbyRestaurants({
             searchRadiusKm: effectiveRadiusKm,
             openNowOnly,
             region: normalizedRegion,
-            areaKm: cacheConfig.areaKm,
+            movementThresholdKm: cacheConfig.movementThresholdKm,
             ttlMs: cacheConfig.ttlMs,
             fetchedAtMs,
           });

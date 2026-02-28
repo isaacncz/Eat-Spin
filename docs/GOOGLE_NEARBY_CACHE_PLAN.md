@@ -23,6 +23,7 @@
 - Fetch radius equals the mode's outer bound: `walk` → 1.2 km, `drive10` → 6 km, `drive20` → 12 km.
 - The full fetched pool (up to 20) is cached at the fetch radius, not the display band.
 - Distance band filtering is applied client-side from the cached pool.
+- Cache keys include `searchRadiusKm`, so `walk` / `drive10` / `drive20` evaluate against separate snapshot entries even at the same location.
 - Sparse expansion iterates over the same pool — no additional Google call.
 - `rankPreference` is always `POPULARITY` for all modes. Local re-sort (rating desc → review count desc → distance asc) determines display order.
 
@@ -65,13 +66,14 @@ Range mode  →  Category  →  Halal-friendly  →  Price
 - `VITE_GOOGLE_PLACES_REGION=MY`
 - `VITE_NEARBY_CACHE_TTL_DAYS=7` (default 7 days; override via env)
 - `VITE_NEARBY_CACHE_MIN_RESULTS=12`
-- `VITE_NEARBY_CACHE_AREA_KM=2`
+- `VITE_NEARBY_CACHE_MOVEMENT_THRESHOLD_KM=0.1`
+- `VITE_NEARBY_CACHE_AREA_KM=0.1` (legacy fallback alias)
 
 ## Defaults Locked
 - Open-now only.
 - Region: MY.
 - Minimum cache size: 12.
-- Area threshold: 2 km.
+- Movement refresh threshold: 0.1 km (100m).
 - Range presets: walking 1.2 km, 10-min drive 6 km, 20-min drive 12 km.
 - Default range preset: 10-min drive, with last selected preset persisted in localStorage.
 - Geohash strategy: precision 6 + 8-neighbor lookup.

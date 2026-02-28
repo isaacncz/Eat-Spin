@@ -18,7 +18,7 @@
  * - Deterministic — same inputs always produce the same output.
  */
 
-import type { FoodCategory } from '@/types';
+import type { FoodCategory, Restaurant } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Signal map
@@ -457,4 +457,43 @@ export const mergeCategories = (
   }
 
   return merged.length > 0 ? merged : ['western'];
+};
+
+/**
+ * Re-classify a Restaurant's categories using the heuristic classifier.
+ *
+ * Useful for enriching cached restaurants that were normalised before the
+ * classifier existed.  The function is idempotent — running it on an
+ * already-enriched restaurant produces the same result.
+ */
+export const enrichRestaurantCategories = (restaurant: Restaurant): Restaurant => {
+  const heuristic = classifyPlace({ displayName: restaurant.name });
+  const enriched = mergeCategories(restaurant.category, heuristic);
+
+  // Fast-path: skip object allocation when nothing changed.
+  if (
+    enriched.length === restaurant.category.length &&
+    enriched.every((c, i) => c === restaurant.category[i])
+  ) {
+    return restaurant;
+  }
+
+  return { ...restaurant, category: enriched };
+};
+
+/**
+ * Batch-enrich an array of restaurants.  Returns a new array only if at
+ * least one restaurant was modified; otherwise returns the original reference
+ * so React memoisation short-circuits.
+ */
+export const enrichRestaurantListCategories = (
+  restaurants: Restaurant[]
+): Restaurant[] => {
+  let changed = false;
+  const result = restaurants.map((r) => {
+    const enriched = enrichRestaurantCategories(r);
+    if (enriched !== r) changed = true;
+    return enriched;
+  });
+  return changed ? result : restaurants;
 };

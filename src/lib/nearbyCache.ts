@@ -25,6 +25,8 @@ type NearbySnapshotRecord = {
   searchRadiusKm: number;
   openNowOnly: boolean;
   region: string;
+  /** Sorted, comma-joined selected categories or '*' for discovery mode. */
+  categoriesKey: string;
   placeIds: string[];
   restaurantCount: number;
   rankStrategy: RankStrategy;
@@ -45,6 +47,8 @@ export interface NearbyCacheLookupOptions {
   openNowOnly: boolean;
   region: string;
   movementThresholdKm: number;
+  /** Sorted, comma-joined selected categories or '*' for discovery mode. */
+  categoriesKey?: string;
   nowMs?: number;
 }
 
@@ -57,6 +61,8 @@ export interface NearbyCacheWriteOptions {
   movementThresholdKm: number;
   ttlMs: number;
   fetchedAtMs?: number;
+  /** Sorted, comma-joined selected categories or '*' for discovery mode. */
+  categoriesKey?: string;
 }
 
 export interface NearbyCacheLookupResult {
@@ -227,11 +233,13 @@ const openNearbyCacheDb = async (): Promise<IDBDatabase> => {
 };
 
 // searchRadiusKm is part of the key so walk/drive modes maintain independent caches.
+// categoriesKey ensures cuisine-specific queries are cached separately.
 const buildSnapshotKey = (
   areaGeohash: string,
   region: string,
   openNowOnly: boolean,
-  searchRadiusKm: number
+  searchRadiusKm: number,
+  categoriesKey: string = '*'
 ): string => (
   [
     CACHE_SCHEMA_VERSION,
@@ -239,6 +247,7 @@ const buildSnapshotKey = (
     region.toUpperCase(),
     openNowOnly ? 'open' : 'all',
     searchRadiusKm.toFixed(2),
+    `cats:${categoriesKey}`,
   ].join(':')
 );
 
@@ -270,6 +279,11 @@ const isSnapshotMatch = (
   if (snapshot.openNowOnly !== options.openNowOnly) return false;
   if (normalizeRegion(snapshot.region) !== normalizeRegion(options.region)) return false;
   if (Number(snapshot.searchRadiusKm.toFixed(2)) !== Number(options.searchRadiusKm.toFixed(2))) return false;
+
+  // Match on categories key — '*' (discovery) vs specific cuisine combo
+  const lookupCatsKey = options.categoriesKey ?? '*';
+  const snapshotCatsKey = snapshot.categoriesKey ?? '*';
+  if (lookupCatsKey !== snapshotCatsKey) return false;
 
   const distanceToCenter = calculateDistance(
     options.location.lat,
@@ -371,7 +385,8 @@ export const saveNearbyRestaurantsSnapshot = async (options: NearbyCacheWriteOpt
     areaGeohash,
     options.region,
     options.openNowOnly,
-    options.searchRadiusKm
+    options.searchRadiusKm,
+    options.categoriesKey
   );
   const placeIds = options.restaurants.map(getStablePlaceId);
   const normalizedRestaurants = normalizeRestaurantsForLocation(
@@ -390,6 +405,7 @@ export const saveNearbyRestaurantsSnapshot = async (options: NearbyCacheWriteOpt
     searchRadiusKm: options.searchRadiusKm,
     openNowOnly: options.openNowOnly,
     region: normalizeRegion(options.region),
+    categoriesKey: options.categoriesKey ?? '*',
     placeIds,
     restaurantCount: normalizedRestaurants.length,
     rankStrategy: RANK_STRATEGY,

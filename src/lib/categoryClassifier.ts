@@ -168,7 +168,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /sup[\s-]?tulang/i,
       /ikan[\s-]?bakar/i,
     ],
-    googleTypes: [],
+    googleTypes: ['malaysian_restaurant'],
   },
 
   indian: {
@@ -234,7 +234,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /matcha\b/i,
       /teriyaki/i,
     ],
-    googleTypes: ['japanese_restaurant'],
+    googleTypes: ['japanese_restaurant', 'sushi_restaurant', 'ramen_restaurant'],
   },
 
   korean: {
@@ -281,7 +281,9 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /sandwich/i,
       /fish[\s-]?(?:and|&|n)[\s-]?chips/i,
     ],
-    googleTypes: ['american_restaurant', 'italian_restaurant', 'pizza_restaurant', 'hamburger_restaurant'],
+    googleTypes: ['american_restaurant', 'italian_restaurant', 'french_restaurant',
+                  'pizza_restaurant', 'hamburger_restaurant', 'sandwich_shop',
+                  'mediterranean_restaurant', 'mexican_restaurant', 'spanish_restaurant'],
   },
 
   seafood: {
@@ -310,7 +312,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /rotisserie/i,
       /wings?\b/i,
     ],
-    googleTypes: ['chicken_restaurant'],
+    googleTypes: ['chicken_restaurant', 'fast_food_restaurant'],
   },
 
   beef: {
@@ -320,7 +322,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /\blembu\b/i,
       /wagyu/i,
     ],
-    googleTypes: ['steak_house'],
+    googleTypes: ['steak_house', 'barbecue_restaurant'],
   },
 
   vegetarian: {
@@ -381,7 +383,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /\bsarapan\b/i,
       /morning/i,
     ],
-    googleTypes: ['breakfast_restaurant'],
+    googleTypes: ['breakfast_restaurant', 'brunch_restaurant'],
   },
 };
 

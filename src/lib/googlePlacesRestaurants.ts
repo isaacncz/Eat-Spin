@@ -60,6 +60,8 @@ export interface FetchNearbyGoogleRestaurantsOptions {
   language: string;
   signal?: AbortSignal;
   maxResults?: number;
+  /** When set, the API request uses cuisine-specific Google types instead of generic 'restaurant'. */
+  selectedCategories?: FoodCategory[];
 }
 
 const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
@@ -128,21 +130,105 @@ const mapOpeningHours = (periods: GooglePlaceOpeningPeriod[] | undefined): Recor
 
 const googleTypeToCategory = new Map<string, FoodCategory>([
   ['japanese_restaurant', 'japanese'],
+  ['sushi_restaurant', 'japanese'],
+  ['ramen_restaurant', 'japanese'],
   ['korean_restaurant', 'korean'],
   ['chinese_restaurant', 'chinese'],
   ['indian_restaurant', 'indian'],
   ['thai_restaurant', 'thai'],
+  ['malaysian_restaurant', 'malay'],
   ['seafood_restaurant', 'seafood'],
   ['chicken_restaurant', 'chicken'],
   ['steak_house', 'beef'],
+  ['barbecue_restaurant', 'beef'],
   ['vegetarian_restaurant', 'vegetarian'],
+  ['vegan_restaurant', 'vegetarian'],
   ['cafe', 'cafe'],
+  ['coffee_shop', 'cafe'],
   ['bakery', 'bakery'],
   ['dessert_restaurant', 'dessert'],
   ['dessert_shop', 'dessert'],
   ['ice_cream_shop', 'dessert'],
   ['breakfast_restaurant', 'breakfast'],
+  ['brunch_restaurant', 'breakfast'],
+  ['american_restaurant', 'western'],
+  ['italian_restaurant', 'western'],
+  ['french_restaurant', 'western'],
+  ['hamburger_restaurant', 'western'],
+  ['pizza_restaurant', 'western'],
+  ['sandwich_shop', 'western'],
+  ['mediterranean_restaurant', 'western'],
+  ['mexican_restaurant', 'western'],
+  ['spanish_restaurant', 'western'],
 ]);
+
+// ---------------------------------------------------------------------------
+// Category → Google Place types mapping (cuisine-specific fetching)
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps each app FoodCategory to the Google Places API (New) `includedTypes`
+ * that should be used when the user selects that cuisine.
+ *
+ * Categories with no direct Google type equivalent (soup, rice, noodles,
+ * street food) fall back to the generic 'restaurant' type — the heuristic
+ * classifier in categoryClassifier.ts handles sub-filtering.
+ */
+const CATEGORY_TO_GOOGLE_TYPES: Partial<Record<FoodCategory, string[]>> = {
+  chinese:    ['chinese_restaurant'],
+  indian:     ['indian_restaurant'],
+  japanese:   ['japanese_restaurant', 'sushi_restaurant', 'ramen_restaurant'],
+  korean:     ['korean_restaurant'],
+  thai:       ['thai_restaurant'],
+  malay:      ['malaysian_restaurant'],
+  western:    ['american_restaurant', 'italian_restaurant', 'french_restaurant',
+               'hamburger_restaurant', 'pizza_restaurant', 'steak_house',
+               'sandwich_shop', 'mediterranean_restaurant', 'mexican_restaurant',
+               'spanish_restaurant'],
+  cafe:       ['cafe', 'coffee_shop'],
+  bakery:     ['bakery'],
+  dessert:    ['dessert_restaurant', 'ice_cream_shop', 'bakery'],
+  seafood:    ['seafood_restaurant'],
+  chicken:    ['chicken_restaurant', 'fast_food_restaurant'],
+  beef:       ['steak_house', 'barbecue_restaurant'],
+  vegetarian: ['vegetarian_restaurant', 'vegan_restaurant'],
+  breakfast:  ['breakfast_restaurant', 'brunch_restaurant'],
+  // No Google types for these — use generic 'restaurant' + heuristic post-filter
+  // soup, rice, noodles, 'street food'
+};
+
+/**
+ * Build the `includedTypes` array for a Google Nearby Search request.
+ *
+ * - No categories selected → `['restaurant']` (inherits all cuisine subtypes,
+ *   excludes cafe / bakery / ice cream)
+ * - Categories selected → union of all Google types from the mapping,
+ *   deduplicated. Falls back to `['restaurant']` if none of the selected
+ *   categories have a Google type (dish-type-only selection).
+ */
+const buildIncludedTypes = (selectedCategories?: FoodCategory[]): string[] => {
+  if (!selectedCategories || selectedCategories.length === 0) {
+    return ['restaurant'];
+  }
+
+  const typesSet = new Set<string>();
+  for (const category of selectedCategories) {
+    const googleTypes = CATEGORY_TO_GOOGLE_TYPES[category];
+    if (googleTypes) {
+      for (const type of googleTypes) {
+        typesSet.add(type);
+      }
+    }
+  }
+
+  // Dish-type-only categories (soup, rice, etc.) have no Google types.
+  // Fall back to generic restaurant and let the heuristic post-filter handle it.
+  if (typesSet.size === 0) {
+    return ['restaurant'];
+  }
+
+  return [...typesSet];
+};
 
 const mapGoogleTypesToCategories = (types: string[] | undefined): FoodCategory[] => {
   if (!types || types.length === 0) return ['western'];
@@ -228,6 +314,7 @@ export const fetchNearbyGoogleRestaurants = async (
   const apiKey = getGoogleApiKey();
   const maxResultCount = Math.max(1, Math.min(options.maxResults ?? DEFAULT_MAX_RESULTS, 20));
   const radiusMeters = Math.max(1, Math.min(Math.round(options.radiusKm * 1000), 50_000));
+  const includedTypes = buildIncludedTypes(options.selectedCategories);
 
   const response = await fetch(GOOGLE_NEARBY_ENDPOINT, {
     method: 'POST',
@@ -237,7 +324,7 @@ export const fetchNearbyGoogleRestaurants = async (
       'X-Goog-FieldMask': GOOGLE_PLACE_FIELDS,
     },
     body: JSON.stringify({
-      includedTypes: ['restaurant', 'cafe', 'bakery', 'ice_cream_shop', 'meal_takeaway'],
+      includedTypes,
       maxResultCount,
       rankPreference: 'POPULARITY',
       openNow: true,
@@ -262,9 +349,30 @@ export const fetchNearbyGoogleRestaurants = async (
   }
 
   const places = payload?.places ?? [];
-  return places
+  const restaurants = places
     .map((place) => normalizeGooglePlace(place, options.location))
     .filter((restaurant): restaurant is Restaurant => Boolean(restaurant));
+
+  // When the API was called with cuisine-specific types, force-tag each result
+  // with the corresponding app categories so filtering is authoritative rather
+  // than relying solely on the name-based heuristic.
+  if (options.selectedCategories && options.selectedCategories.length > 0) {
+    return restaurants.map((restaurant) => {
+      const existing = new Set(restaurant.category);
+      const enriched = [...restaurant.category];
+      for (const cat of options.selectedCategories!) {
+        if (!existing.has(cat)) {
+          enriched.push(cat);
+          existing.add(cat);
+        }
+      }
+      return enriched.length !== restaurant.category.length
+        ? { ...restaurant, category: enriched }
+        : restaurant;
+    });
+  }
+
+  return restaurants;
 };
 
 export const rankNearbyRestaurants = (

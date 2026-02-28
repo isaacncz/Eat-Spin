@@ -7,7 +7,6 @@ import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
 import { restaurants as localRestaurants } from '@/data/restaurants';
 import { enhancedFilterRestaurants } from '@/lib/restaurantUtils';
-import type { HalalFilter } from '@/lib/restaurantUtils';
 import { getCurrentMealTime } from '@/lib/utils';
 import { FoodCategorySelector } from '@/components/FoodCategorySelector';
 import { RouletteWheel } from '@/components/RouletteWheel';
@@ -199,7 +198,6 @@ function App() {
   // State management
   const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
   const [selectedPriceRanges, setSelectedPriceRanges] = useState<Restaurant['priceRange'][]>([]);
-  const [halalFilter, setHalalFilter] = useState<HalalFilter>('all');
   const [rangeMode, setRangeMode] = useState<AutoRangeMode>(() => loadAutoRangeMode());
   const [isSpinning, setIsSpinning] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
@@ -361,9 +359,9 @@ function App() {
       selectedCategories,
       rangeMode,
       selectedPriceRanges,
-      halalFilter
+      'all'
     )
-  ), [autoSourceRestaurants, location, selectedCategories, rangeMode, selectedPriceRanges, halalFilter]);
+  ), [autoSourceRestaurants, location, selectedCategories, rangeMode, selectedPriceRanges]);
 
   const filteredRestaurants = filterResult.results;
 
@@ -379,7 +377,7 @@ function App() {
 
   useEffect(() => {
     setShowAllRoundRestaurants(false);
-  }, [selectedCategories, selectedPriceRanges, halalFilter, rangeMode, location, autoSourceRestaurants]);
+  }, [selectedCategories, selectedPriceRanges, rangeMode, location, autoSourceRestaurants]);
 
   const removeRestaurantForRound = (
     restaurantId: string,
@@ -950,45 +948,11 @@ function App() {
                         </button>
                       );
                     })}
-                    <button
-                      type="button"
-                      onClick={() => setHalalFilter((prev) => (prev === 'halal' ? 'all' : 'halal'))}
-                      className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
-                        halalFilter === 'halal'
-                          ? 'bg-brand-orange text-white shadow-md'
-                          : 'border border-gray-200 bg-white text-brand-black hover:border-brand-orange hover:text-brand-orange'
-                      }`}
-                    >
-                      Halal-friendly only
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setHalalFilter((prev) => (prev === 'non-halal' ? 'all' : 'non-halal'))}
-                      className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
-                        halalFilter === 'non-halal'
-                          ? 'bg-brand-orange text-white shadow-md'
-                          : 'border border-gray-200 bg-white text-brand-black hover:border-brand-orange hover:text-brand-orange'
-                      }`}
-                    >
-                      Non-halal only
-                    </button>
                   </div>
 
                   {selectedPriceRanges.length > 0 && (
                     <p className="mb-2 text-xs text-eatspin-gray-1">
                       Some places may not appear if Google hasn't mapped their price tier.
-                    </p>
-                  )}
-
-                  {halalFilter === 'halal' && (
-                    <p className="mb-2 text-xs text-eatspin-gray-1">
-                      Based on name and category signals — not a certified halal guarantee.
-                    </p>
-                  )}
-
-                  {halalFilter === 'non-halal' && (
-                    <p className="mb-2 text-xs text-eatspin-gray-1">
-                      Based on name and category signals — not a certified non-halal guarantee.
                     </p>
                   )}
 
@@ -1031,15 +995,9 @@ function App() {
               {location && filteredRestaurants.length === 0 && !nearbyRestaurantsLoading && autoSourceRestaurants.length > 0 && (
                 <div className="mb-5 rounded-2xl border border-eatspin-peach/60 bg-white p-4 text-center">
                   <p className="text-sm font-medium text-brand-black">No matches — try clearing a filter.</p>
-                  {(selectedPriceRanges.length > 0 || halalFilter !== 'all') && (
+                  {selectedPriceRanges.length > 0 && (
                     <p className="mt-1 text-xs text-eatspin-gray-1">
-                      {selectedPriceRanges.length > 0 && halalFilter !== 'all'
-                        ? `Price and ${halalFilter === 'halal' ? 'halal-friendly' : 'non-halal'} filters are active.`
-                        : selectedPriceRanges.length > 0
-                          ? 'Price filter is active.'
-                          : halalFilter === 'halal'
-                            ? 'Halal-friendly filter is active.'
-                            : 'Non-halal filter is active.'}
+                      Price filter is active.
                     </p>
                   )}
                 </div>

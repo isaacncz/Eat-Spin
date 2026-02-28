@@ -141,6 +141,16 @@ export function Navbar({ isPremium, activeRoomId, onUpgradeClick }: NavbarProps)
             </Button>
           </div>
 
+
+          {hasActiveRoom && (
+            <div className="mx-2 flex flex-1 justify-center md:hidden">
+              <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+                <CircleDot size={12} className="shrink-0 text-emerald-500" />
+                <span className="truncate">Room Active: {activeRoomId}</span>
+              </div>
+            </div>
+          )}
+
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

@@ -370,3 +370,57 @@ export const enhancedFilterRestaurants = (
   writeFilterCache(cacheKey, filterResult, { sourcePoolSize: restaurants.length });
   return filterResult;
 };
+
+// ---------------------------------------------------------------------------
+// Favourites proximity helpers
+// ---------------------------------------------------------------------------
+
+export interface NearbyFavourite {
+  favouriteId: string;
+  restaurantName: string;
+  distanceKm: number;
+}
+
+/**
+ * Return favourites within `radiusKm` of the user, sorted by distance ascending.
+ * Excludes entries with `userRating === 'avoid'`.
+ */
+export const findNearbyFavourites = (
+  favourites: Array<{
+    id: string;
+    restaurant: { name: string; coordinates: { lat: number; lng: number } };
+    userRating: string;
+  }>,
+  userLat: number,
+  userLng: number,
+  radiusKm: number = 1.5,
+): NearbyFavourite[] => {
+  return favourites
+    .filter((f) => f.userRating !== 'avoid')
+    .map((f) => ({
+      favouriteId: f.id,
+      restaurantName: f.restaurant.name,
+      distanceKm: calculateDistance(
+        userLat,
+        userLng,
+        f.restaurant.coordinates.lat,
+        f.restaurant.coordinates.lng,
+      ),
+    }))
+    .filter((f) => f.distanceKm <= radiusKm)
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+};
+
+/**
+ * Check if a restaurant on the wheel is also in the user's favourites.
+ * Returns the matched FavouriteEntry id or null.
+ */
+export const matchFavourite = (
+  restaurant: Restaurant,
+  favouriteIds: Set<string>,
+  favouriteGooglePlaceIds: Set<string>,
+): boolean => {
+  if (restaurant.googlePlaceId && favouriteGooglePlaceIds.has(restaurant.googlePlaceId)) return true;
+  if (favouriteIds.has(restaurant.id)) return true;
+  return false;
+};

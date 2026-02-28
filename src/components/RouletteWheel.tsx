@@ -694,7 +694,12 @@ export function RouletteWheel({
                         className="flex-shrink-0 w-3 h-3 rounded-full"
                         style={{ backgroundColor: getSegmentColor(restaurants.indexOf(r)) }}
                       />
-                      <span className="truncate text-brand-black">{r.name}</span>
+                      <span className="truncate text-brand-black">
+                        {r.name}
+                        {isFavourite?.(r) && (
+                          <Heart size={10} className="inline ml-1 fill-pink-500 text-pink-500" />
+                        )}
+                      </span>
                     </span>
                     <span className="flex-shrink-0 text-xs font-semibold text-brand-orange tabular-nums">
                       {r.distance!.toFixed(1)} km

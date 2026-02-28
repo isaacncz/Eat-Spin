@@ -7,7 +7,7 @@ import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
 import { restaurants as localRestaurants } from '@/data/restaurants';
-import { enhancedFilterRestaurants } from '@/lib/restaurantUtils';
+import { enhancedFilterRestaurants, findNearbyFavourites } from '@/lib/restaurantUtils';
 import { getCurrentMealTime } from '@/lib/utils';
 import { FoodCategorySelector } from '@/components/FoodCategorySelector';
 import { RouletteWheel } from '@/components/RouletteWheel';
@@ -386,6 +386,26 @@ function App() {
     }
     return ids;
   }, [favourites]);
+
+  // Favourite lookup sets for highlighting wheel restaurants
+  const favouriteIdSet = useMemo(() => new Set(favourites.map((f) => f.id)), [favourites]);
+  const favouriteGooglePlaceIdSet = useMemo(
+    () => new Set(favourites.filter((f) => f.restaurant.googlePlaceId).map((f) => f.restaurant.googlePlaceId!)),
+    [favourites],
+  );
+  const isFavouriteByIds = useCallback(
+    (restaurant: Restaurant): boolean => {
+      if (restaurant.googlePlaceId && favouriteGooglePlaceIdSet.has(restaurant.googlePlaceId)) return true;
+      return favouriteIdSet.has(restaurant.id);
+    },
+    [favouriteIdSet, favouriteGooglePlaceIdSet],
+  );
+
+  // Nearby favourites for the "I Know Where" tab
+  const nearbyFavourites = useMemo(() => {
+    if (!location || favourites.length === 0) return [];
+    return findNearbyFavourites(favourites, location.lat, location.lng, 3);
+  }, [favourites, location]);
 
   const filterResult = useMemo(() => (
     enhancedFilterRestaurants(
@@ -1182,7 +1202,14 @@ function App() {
                       {displayedRoundRestaurants.map((restaurant) => (
                         <li key={restaurant.id} className="flex items-start justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
                           <div>
-                            <p className="font-medium text-brand-black">{restaurant.name}</p>
+                            <p className="font-medium text-brand-black">
+                              {restaurant.name}
+                              {isFavouriteCheck(restaurant) && (
+                                <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-pink-100 px-1.5 py-0.5 text-[10px] font-semibold text-pink-600 align-middle">
+                                  <Heart size={10} className="fill-pink-500 text-pink-500" /> Fave
+                                </span>
+                              )}
+                            </p>
                             <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-eatspin-gray-1">
                               {restaurant.category.slice(0, 2).map((tag) => (
                                 <span key={`${restaurant.id}-${tag}`} className="rounded-full bg-white px-2 py-0.5 capitalize">
@@ -1309,6 +1336,54 @@ function App() {
                 onLetsGo={handleLetsGo}
                 isFavourite={isFavouriteCheck}
               />
+
+                {/* Nearby Favourites Section */}
+                {nearbyFavourites.length > 0 && (
+                  <div className="mt-6 max-w-xl mx-auto">
+                    <div className="bg-white rounded-xl border border-green-200/60 p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="h-2 w-2 rounded-full bg-eatspin-success animate-pulse" />
+                        <h4 className="font-heading font-semibold text-brand-black flex items-center gap-2">
+                          <MapPin size={16} className="text-eatspin-success" />
+                          Nearby Favourites
+                        </h4>
+                      </div>
+                      <p className="text-xs text-eatspin-gray-1 mb-3">
+                        You're close to places you've saved before!
+                      </p>
+                      <ul className="space-y-2">
+                        {nearbyFavourites.map((nf) => {
+                          const alreadyInList = manualRestaurants.some(
+                            (r) => r.name.toLowerCase() === nf.restaurantName.toLowerCase()
+                          );
+                          return (
+                            <li key={nf.favouriteId} className="flex items-center justify-between gap-2 rounded-lg bg-green-50 px-3 py-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-brand-black truncate">{nf.restaurantName}</p>
+                                <p className="text-xs text-eatspin-gray-1">{nf.distanceKm.toFixed(1)} km away</p>
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                {!alreadyInList && !isManualListReadOnly && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddFavouriteToManualList(nf.restaurantName)}
+                                    className="inline-flex items-center gap-1 rounded-full border border-brand-orange/40 bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
+                                    aria-label={`Add ${nf.restaurantName} to spin list`}
+                                  >
+                                    <Plus size={12} /> Add
+                                  </button>
+                                )}
+                                {alreadyInList && (
+                                  <span className="text-xs text-eatspin-success font-medium">In list ✓</span>
+                                )}
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  </div>
+                )}
 
                 {/* My Favourites Section */}
                 {favourites.length > 0 && (

@@ -458,7 +458,7 @@ export function RouletteWheel({
   const radialBandHeight = Math.max((labelOuterRadius - labelInnerRadius) * 0.8, wheelSize * 0.15);
   const maxCharsPerLine = clamp(Math.floor(usableArcWidth / 10), 8, 18);
   const baseFontSize = clamp(Math.min(usableArcWidth * 0.16, radialBandHeight * 0.28), 11.5, 22);
-  const canShowDistance = segmentAngle >= 34 && radialBandHeight >= 42;
+  const canShowDistance = segmentAngle >= 22 && radialBandHeight >= 36;
 
   const labelLayouts = restaurants.map((restaurant, index) => {
       const startAngle = segmentAngle * index;
@@ -472,7 +472,7 @@ export function RouletteWheel({
       const longestLineLength = Math.max(...lines.map((line) => line.length), 1);
       const densityScale = clamp(maxCharsPerLine / longestLineLength, 0.75, 1.08);
       const fontSize = clamp(baseFontSize * densityScale, 11.5, 24);
-      const distanceLabel = canShowDistance && lines.length <= 2 && restaurant.distance !== undefined
+      const distanceLabel = canShowDistance && lines.length <= 3 && restaurant.distance !== undefined
         ? `${restaurant.distance.toFixed(1)} km`
         : null;
 
@@ -642,6 +642,41 @@ export function RouletteWheel({
           >
             ↻ Shuffle for different options
           </button>
+        </div>
+      )}
+
+      {/* Distance legend – compact list of restaurants sorted by proximity */}
+      {restaurants.some((r) => r.distance !== undefined) && (
+        <div className="w-full max-w-md">
+          <details className="group rounded-xl border border-eatspin-peach/50 bg-white/80 backdrop-blur-sm overflow-hidden">
+            <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold text-brand-black select-none hover:bg-eatspin-peach/10 transition-colors">
+              <span className="inline-flex items-center gap-2">
+                <MapPin size={15} className="text-brand-orange" />
+                Distance Guide
+              </span>
+              <span className="text-xs text-eatspin-gray-1 group-open:hidden">tap to expand</span>
+              <span className="text-xs text-eatspin-gray-1 hidden group-open:inline">tap to collapse</span>
+            </summary>
+            <ul className="divide-y divide-eatspin-peach/30 px-4 pb-3">
+              {[...restaurants]
+                .filter((r) => r.distance !== undefined)
+                .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
+                .map((r) => (
+                  <li key={r.id} className="flex items-center justify-between gap-2 py-2 text-sm">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span
+                        className="flex-shrink-0 w-3 h-3 rounded-full"
+                        style={{ backgroundColor: getSegmentColor(restaurants.indexOf(r)) }}
+                      />
+                      <span className="truncate text-brand-black">{r.name}</span>
+                    </span>
+                    <span className="flex-shrink-0 text-xs font-semibold text-brand-orange tabular-nums">
+                      {r.distance!.toFixed(1)} km
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          </details>
         </div>
       )}
 

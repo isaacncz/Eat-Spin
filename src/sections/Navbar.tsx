@@ -200,11 +200,6 @@ export function Navbar({ isPremium, activeRoomId, onUpgradeClick }: NavbarProps)
               </button>
               
               <div className="pt-4 border-t border-eatspin-gray-3 space-y-3">
-                {hasActiveRoom && (
-                  <p className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
-                    Room Active: {activeRoomId}
-                  </p>
-                )}
                 {!isPremium && (
                   <Button
                     onClick={() => {

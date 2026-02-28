@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { FoodCategory } from '@/types';
-import { foodCategories } from '@/data/restaurants';
+import { cuisineCategories } from '@/data/restaurants';
 import { Check } from 'lucide-react';
 
 interface FoodCategorySelectorProps {
@@ -29,7 +29,7 @@ export function FoodCategorySelector({
   };
 
   const selectedConfigs = selectedCategories.map(
-    (id) => foodCategories.find((c) => c.id === id)!
+    (id) => cuisineCategories.find((c) => c.id === id)!
   );
 
   return (
@@ -69,7 +69,7 @@ export function FoodCategorySelector({
 
       {/* Category Grid */}
       <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-        {foodCategories.map((category) => {
+        {cuisineCategories.map((category) => {
           const isSelected = selectedCategories.includes(category.id);
           const isDisabled = !isSelected && selectedCategories.length >= maxSelection;
 

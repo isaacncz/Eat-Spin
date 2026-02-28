@@ -17,6 +17,7 @@ type FilterCacheEntry = {
 };
 
 const FILTER_CACHE_TTL_MS = 5 * 60 * 1000;
+const EMPTY_FILTER_CACHE_TTL_MS = 10 * 1000;
 const MAX_FILTER_CACHE_ENTRIES = 200;
 const filterCache = new Map<string, FilterCacheEntry>();
 
@@ -35,18 +36,41 @@ const toBucket = (value: number, precision: number = 4): number => {
   return Math.round(value * factor) / factor;
 };
 
+const hashString = (value: string): string => {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return (hash >>> 0).toString(36);
+};
+
+const buildRestaurantPoolSignature = (restaurants: Restaurant[], dataVersion?: string): string => {
+  if (dataVersion) {
+    return `version:${dataVersion}`;
+  }
+
+  const sortedIds = restaurants.map((restaurant) => restaurant.id).sort();
+  return `count:${sortedIds.length}:ids:${hashString(sortedIds.join('|'))}`;
+};
+
 const buildFilterCacheKey = (
+  restaurants: Restaurant[],
   userLocation: { lat: number; lng: number } | null,
   selectedCategories: FoodCategory[],
   rangeMode: RangeMode,
   selectedPriceRanges: Restaurant['priceRange'][],
-  halalFilter: HalalFilter
+  halalFilter: HalalFilter,
+  dataVersion?: string
 ): string => {
   const locationKey = userLocation
     ? `${toBucket(userLocation.lat)}:${toBucket(userLocation.lng)}`
     : 'no-location';
+  const poolSignature = buildRestaurantPoolSignature(restaurants, dataVersion);
 
   return [
+    poolSignature,
     locationKey,
     rangeMode,
     serializeSorted(selectedCategories),
@@ -67,7 +91,11 @@ const readFilterCache = (key: string): FilterResult | null => {
   return entry.value;
 };
 
-const writeFilterCache = (key: string, value: FilterResult): void => {
+const writeFilterCache = (key: string, value: FilterResult, options?: { sourcePoolSize: number }): void => {
+  if ((options?.sourcePoolSize ?? 0) === 0) {
+    return;
+  }
+
   if (filterCache.size >= MAX_FILTER_CACHE_ENTRIES) {
     const oldestKey = filterCache.keys().next().value;
     if (oldestKey) {
@@ -77,8 +105,12 @@ const writeFilterCache = (key: string, value: FilterResult): void => {
 
   filterCache.set(key, {
     value,
-    expiresAt: Date.now() + FILTER_CACHE_TTL_MS,
+    expiresAt: Date.now() + (value.results.length === 0 ? EMPTY_FILTER_CACHE_TTL_MS : FILTER_CACHE_TTL_MS),
   });
+};
+
+export const __resetFilterCacheForTests = (): void => {
+  filterCache.clear();
 };
 
 const nonHalalCategories: FoodCategory[] = ['chinese', 'japanese', 'korean', 'western'];
@@ -164,14 +196,17 @@ export const enhancedFilterRestaurants = (
   selectedCategories: FoodCategory[],
   rangeMode: RangeMode,
   selectedPriceRanges: Restaurant['priceRange'][] = [],
-  halalFilter: HalalFilter = 'all'
+  halalFilter: HalalFilter = 'all',
+  dataVersion?: string
 ): FilterResult => {
   const cacheKey = buildFilterCacheKey(
+    restaurants,
     userLocation,
     selectedCategories,
     rangeMode,
     selectedPriceRanges,
-    halalFilter
+    halalFilter,
+    dataVersion
   );
 
   const cached = readFilterCache(cacheKey);
@@ -276,6 +311,6 @@ export const enhancedFilterRestaurants = (
   }
 
   const filterResult: FilterResult = { results, expanded, expandedLabel };
-  writeFilterCache(cacheKey, filterResult);
+  writeFilterCache(cacheKey, filterResult, { sourcePoolSize: restaurants.length });
   return filterResult;
 };

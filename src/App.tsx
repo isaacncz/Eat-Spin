@@ -225,7 +225,9 @@ function App() {
   const [presetMealTimeInput, setPresetMealTimeInput] = useState<PresetMealTime>(() => getPresetMealTime());
   const [manualPresets, setManualPresets] = useState<ManualPreset[]>(() => loadManualPresets());
   const [groupSpinNow, setGroupSpinNow] = useState(() => Date.now());
-  const radiusKm = AUTO_RANGE_RADIUS_KM[rangeMode];
+  // Always fetch at widest radius so all range modes share one cached pool.
+  // Band filtering in enhancedFilterRestaurants narrows to the active mode.
+  const fetchRadiusKm = AUTO_RANGE_RADIUS_KM.drive20;
   const autoLoadedMealTimeRef = useRef<PresetMealTime>(null);
   const seededRoomSyncIdRef = useRef('');
   const pendingRoomListSyncRef = useRef<{ roomId: string; signature: string; startedAt: number } | null>(null);
@@ -262,7 +264,7 @@ function App() {
   } = useNearbyRestaurants({
     enabled: activeTab === 'auto' && Boolean(location),
     location,
-    radiusKm,
+    radiusKm: fetchRadiusKm,
     openNowOnly: true,
   });
   const {

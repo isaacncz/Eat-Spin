@@ -169,7 +169,10 @@ export const enhancedFilterRestaurants = (
   }
 
   if (selectedPriceRanges.length > 0) {
-    filtered = filtered.filter((restaurant) => selectedPriceRanges.includes(restaurant.priceRange));
+    filtered = filtered.filter((restaurant) => {
+      if (restaurant.hasKnownPriceRange === false) return false;
+      return selectedPriceRanges.includes(restaurant.priceRange);
+    });
   }
 
   if (nonHalalOnly) {

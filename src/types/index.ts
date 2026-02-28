@@ -18,6 +18,7 @@ export interface Restaurant {
   userRatingCount?: number;
   googlePlaceId?: string;
   source?: 'google-live' | 'google-cache' | 'local-fallback';
+  hasKnownPriceRange?: boolean;
 }
 
 // Type for JSON restaurant data (without ID fields)

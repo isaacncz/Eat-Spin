@@ -63,19 +63,23 @@ export interface FetchNearbyGoogleRestaurantsOptions {
 
 const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 
-const mapGooglePriceLevel = (priceLevel?: string): Restaurant['priceRange'] => {
+const mapGooglePriceLevel = (priceLevel?: string): {
+  priceRange: Restaurant['priceRange'];
+  hasKnownPriceRange: boolean;
+} => {
   switch (priceLevel) {
     case 'PRICE_LEVEL_FREE':
     case 'PRICE_LEVEL_INEXPENSIVE':
-      return '$';
+      return { priceRange: '$', hasKnownPriceRange: true };
     case 'PRICE_LEVEL_MODERATE':
-      return '$$';
+      return { priceRange: '$$', hasKnownPriceRange: true };
     case 'PRICE_LEVEL_EXPENSIVE':
-      return '$$$';
+      return { priceRange: '$$$', hasKnownPriceRange: true };
     case 'PRICE_LEVEL_VERY_EXPENSIVE':
-      return '$$$$';
+      return { priceRange: '$$$$', hasKnownPriceRange: true };
     default:
-      return '$$';
+      // Keep UI-compatible default while marking unknown price confidence.
+      return { priceRange: '$$', hasKnownPriceRange: false };
   }
 };
 
@@ -181,6 +185,7 @@ const normalizeGooglePlace = (
   const categories = mapGoogleTypesToCategories(place.types);
   const rating = typeof place.rating === 'number' ? Number(place.rating.toFixed(1)) : 0;
   const userRatingCount = typeof place.userRatingCount === 'number' ? place.userRatingCount : 0;
+  const mappedPrice = mapGooglePriceLevel(place.priceLevel);
 
   return {
     id: `gplace-${place.id}`,
@@ -193,7 +198,8 @@ const normalizeGooglePlace = (
     hours: mapOpeningHours(place.regularOpeningHours?.periods),
     rating,
     userRatingCount,
-    priceRange: mapGooglePriceLevel(place.priceLevel),
+    priceRange: mappedPrice.priceRange,
+    hasKnownPriceRange: mappedPrice.hasKnownPriceRange,
     phone: place.nationalPhoneNumber?.trim(),
     description: 'Highly rated nearby pick from Google Maps.',
     isOpen: place.currentOpeningHours?.openNow ?? true,

@@ -127,4 +127,4 @@ Caching behavior:
 - Cache lookup uses geohash precision 6 and checks 8 neighboring cells.
 - Cache is accepted only when user is within 2 km of cached center and record is not expired.
 - If cache has at least 12 restaurants, no Google call is made.
-- If cache is missing, expired, or below 12 restaurants, app refreshes from Google and stores top 12 by rating (tie-breakers: review count, then distance).
+- If cache is missing, expired, or below 12 restaurants, app refreshes from Google and stores ranked nearby results (up to API limit) by rating, then review count, then distance.

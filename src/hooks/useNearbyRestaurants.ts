@@ -28,7 +28,7 @@ interface UseNearbyRestaurantsResult {
 
 const DEFAULT_DEBOUNCE_MS = 450;
 const DEFAULT_MIN_RESULTS = 12;
-const DEFAULT_TOP_RESULTS = 12;
+const DEFAULT_TOP_RESULTS = 20;
 const DEFAULT_CACHE_TTL_DAYS = 30;
 const DEFAULT_CACHE_AREA_KM = 2;
 
@@ -98,6 +98,8 @@ export function useNearbyRestaurants({
 
     const normalizedRegion = region.trim().toUpperCase();
     const normalizedLanguage = language.trim().toLowerCase() || 'en';
+    const effectiveRadiusKm = radiusKm;
+
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     const abortController = new AbortController();
@@ -109,7 +111,7 @@ export function useNearbyRestaurants({
 
       const cacheLookupOptions = {
         location,
-        searchRadiusKm: radiusKm,
+        searchRadiusKm: effectiveRadiusKm,
         openNowOnly,
         region: normalizedRegion,
         areaKm: cacheConfig.areaKm,
@@ -128,7 +130,7 @@ export function useNearbyRestaurants({
         const rankedCached = rankNearbyRestaurants(
           cachedResult.restaurants,
           location,
-          radiusKm,
+          effectiveRadiusKm,
           cacheConfig.topResults,
           'google-cache'
         );
@@ -142,7 +144,7 @@ export function useNearbyRestaurants({
       try {
         const liveResult = await fetchNearbyGoogleRestaurants({
           location,
-          radiusKm,
+          radiusKm: effectiveRadiusKm,
           region: normalizedRegion,
           language: normalizedLanguage,
           signal: abortController.signal,
@@ -153,7 +155,7 @@ export function useNearbyRestaurants({
         const rankedLive = rankNearbyRestaurants(
           liveResult,
           location,
-          radiusKm,
+          effectiveRadiusKm,
           cacheConfig.topResults,
           'google-live'
         );
@@ -163,7 +165,7 @@ export function useNearbyRestaurants({
           await saveNearbyRestaurantsSnapshot({
             location,
             restaurants: rankedLive,
-            searchRadiusKm: radiusKm,
+            searchRadiusKm: effectiveRadiusKm,
             openNowOnly,
             region: normalizedRegion,
             areaKm: cacheConfig.areaKm,
@@ -178,7 +180,7 @@ export function useNearbyRestaurants({
           const rankedCached = rankNearbyRestaurants(
             cachedResult.restaurants,
             location,
-            radiusKm,
+            effectiveRadiusKm,
             cacheConfig.topResults,
             'google-cache'
           );
@@ -206,7 +208,7 @@ export function useNearbyRestaurants({
           const rankedCached = rankNearbyRestaurants(
             cachedResult.restaurants,
             location,
-            radiusKm,
+            effectiveRadiusKm,
             cacheConfig.topResults,
             'google-cache'
           );

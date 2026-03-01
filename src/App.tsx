@@ -503,10 +503,49 @@ function App() {
     });
   }, [removeFavouriteEntry, restoreFavouriteEntry]);
 
+  const syncGroupListFromRestaurants = useCallback((restaurants: Restaurant[]) => {
+    if (!isGroupRoomActive || !canEditGroupList || !groupRoomId) return;
+    const normalizedNames = normalizeManualNames(restaurants.map((restaurant) => restaurant.name));
+    const signature = JSON.stringify(normalizedNames);
+    pendingRoomListSyncRef.current = {
+      roomId: groupRoomId,
+      signature,
+      startedAt: Date.now(),
+    };
+    void syncHostList(normalizedNames);
+  }, [canEditGroupList, groupRoomId, isGroupRoomActive, syncHostList]);
+
+  const addManualRestaurantByName = useCallback((restaurantName: string) => {
+    if (isManualListReadOnly) {
+      toast.info('Only the host or co-host can edit the shared list.');
+      return;
+    }
+
+    const name = restaurantName.trim();
+    if (!name) return;
+
+    const exists = manualRestaurants.some(
+      (restaurant) => restaurant.name.toLowerCase() === name.toLowerCase()
+    );
+
+    if (exists) {
+      setManualInput('');
+      return;
+    }
+
+    const nextRestaurants = [...manualRestaurants, createManualRestaurant(name)];
+    setManualRestaurants(nextRestaurants);
+    syncGroupListFromRestaurants(nextRestaurants);
+    trackEvent('manual_restaurant_added', { name });
+    setManualInput('');
+    setManualSpinResult(null);
+    setManualWheelKey((prev) => prev + 1);
+  }, [isManualListReadOnly, manualRestaurants, syncGroupListFromRestaurants]);
+
   const handleAddFavouriteToManualList = useCallback((name: string) => {
     addManualRestaurantByName(name);
     toast.success(`${name} added to spin list!`);
-  }, []);
+  }, [addManualRestaurantByName]);
 
   const handleFeedbackRate = useCallback((rating: 'suggest' | 'neutral' | 'avoid') => {
     if (!feedbackPending) return;
@@ -584,45 +623,6 @@ function App() {
       setManualSpinResult(null);
       setManualWheelKey((prev) => prev + 1);
     }
-  };
-
-  const syncGroupListFromRestaurants = useCallback((restaurants: Restaurant[]) => {
-    if (!isGroupRoomActive || !canEditGroupList || !groupRoomId) return;
-    const normalizedNames = normalizeManualNames(restaurants.map((restaurant) => restaurant.name));
-    const signature = JSON.stringify(normalizedNames);
-    pendingRoomListSyncRef.current = {
-      roomId: groupRoomId,
-      signature,
-      startedAt: Date.now(),
-    };
-    void syncHostList(normalizedNames);
-  }, [canEditGroupList, groupRoomId, isGroupRoomActive, syncHostList]);
-
-  const addManualRestaurantByName = (restaurantName: string) => {
-    if (isManualListReadOnly) {
-      toast.info('Only the host or co-host can edit the shared list.');
-      return;
-    }
-
-    const name = restaurantName.trim();
-    if (!name) return;
-
-    const exists = manualRestaurants.some(
-      (restaurant) => restaurant.name.toLowerCase() === name.toLowerCase()
-    );
-
-    if (exists) {
-      setManualInput('');
-      return;
-    }
-
-    const nextRestaurants = [...manualRestaurants, createManualRestaurant(name)];
-    setManualRestaurants(nextRestaurants);
-    syncGroupListFromRestaurants(nextRestaurants);
-    trackEvent('manual_restaurant_added', { name });
-    setManualInput('');
-    setManualSpinResult(null);
-    setManualWheelKey((prev) => prev + 1);
   };
 
   const addManualRestaurant = () => {

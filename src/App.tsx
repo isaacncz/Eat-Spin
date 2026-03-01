@@ -1200,7 +1200,7 @@ function App() {
                   >
                       <ul className="max-h-72 overflow-y-auto overscroll-contain space-y-2 pr-1">
                       {displayedRoundRestaurants.map((restaurant) => (
-                        <li key={restaurant.id} className="flex items-start justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
+                        <li key={restaurant.id} className="flex items-center justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
                           <div>
                             <p className="font-medium text-brand-black">
                               {restaurant.name}
@@ -1222,14 +1222,33 @@ function App() {
                               )}
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => removeRestaurantForRound(restaurant.id)}
-                            className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-                            aria-label={`Remove ${restaurant.name} for this round`}
-                          >
-                            <X size={14} /> Remove
-                          </button>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {isFavouriteCheck(restaurant) ? (
+                              <span
+                                className="inline-flex items-center gap-1 rounded-full bg-pink-50 border border-pink-200 px-2.5 py-1 text-xs font-medium text-pink-500"
+                                title="Already in My Favourites"
+                              >
+                                <Heart size={12} className="fill-pink-500 text-pink-500" /> Saved
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleSaveFavourite(restaurant, 'auto')}
+                                className="inline-flex items-center gap-1 rounded-full border border-pink-200 bg-white px-2.5 py-1 text-xs font-medium text-pink-500 hover:bg-pink-50"
+                                aria-label={`Save ${restaurant.name} to favourites`}
+                              >
+                                <Heart size={12} /> Save
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeRestaurantForRound(restaurant.id)}
+                              className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
+                              aria-label={`Remove ${restaurant.name} for this round`}
+                            >
+                              <X size={14} /> Remove
+                            </button>
+                          </div>
                         </li>
                       ))}
 

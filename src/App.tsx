@@ -358,7 +358,13 @@ function App() {
     setSelectedPriceRanges((prev) =>
       prev.includes(price) ? prev.filter((p) => p !== price) : [...prev, price]
     );
+    setShowAllRoundRestaurants(false);
   };
+
+  const handleCategoryChange = useCallback((categories: FoodCategory[]) => {
+    setSelectedCategories(categories);
+    setShowAllRoundRestaurants(false);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -419,11 +425,7 @@ function App() {
       : roundRestaurants.slice(0, REVIEW_PREVIEW_COUNT)
   ), [roundRestaurants, showAllRoundRestaurants]);
 
-  useEffect(() => {
-    setShowAllRoundRestaurants(false);
-  }, [selectedCategories, selectedPriceRanges, rangeMode, location, autoSourceRestaurants]);
-
-  const removeRestaurantForRound = (
+  const removeRestaurantForRound = useCallback((
     restaurantId: string,
     options?: { bumpKey?: boolean },
   ) => {
@@ -433,7 +435,7 @@ function App() {
     if (bumpKey) {
       setAutoWheelKey((prev) => prev + 1);
     }
-  };
+  }, []);
 
   const handleAutoSpinStart = useCallback(() => {
     if (!pendingAutoRemovalId) return null;
@@ -596,6 +598,7 @@ function App() {
     if (nextMode === rangeMode) return;
     trackEvent('range_mode_changed', { mode: nextMode });
     setRangeMode(nextMode);
+    setShowAllRoundRestaurants(false);
     resetAutoWheel();
   };
 
@@ -761,7 +764,6 @@ function App() {
   useEffect(() => {
     if (!isGroupRoomActive || !groupCurrentSpin) return;
 
-    setGroupSpinNow(Date.now());
     const intervalId = window.setInterval(() => {
       setGroupSpinNow(Date.now());
     }, 30_000);
@@ -787,7 +789,7 @@ function App() {
     if (!spinResult) return;
     trackEvent('group_spin_requested', { room_id: groupRoomId, restaurant_count: manualRestaurantNames.length });
     toast.success(`Room spin started: ${spinResult.winnerName}`);
-  }, [isGroupCohost, isGroupRoomActive, isGroupHost, manualRestaurantNames, requestHostSpin]);
+  }, [groupRoomId, isGroupCohost, isGroupRoomActive, isGroupHost, manualRestaurantNames, requestHostSpin]);
 
   const handleCreateGroupRoom = useCallback(async () => {
     trackEvent('group_room_created');
@@ -860,9 +862,15 @@ function App() {
     }
 
     const syncedRestaurants = buildRestaurantsFromNames(normalizedRemoteNames);
-    setManualRestaurants(syncedRestaurants);
-    setManualSpinResult(null);
-    setManualWheelKey((prev) => prev + 1);
+    const timeoutId = window.setTimeout(() => {
+      setManualRestaurants(syncedRestaurants);
+      setManualSpinResult(null);
+      setManualWheelKey((prev) => prev + 1);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [buildRestaurantsFromNames, canEditGroupList, groupRoomId, groupRoomListNames, isGroupRoomActive, manualRestaurantNames]);
 
   useEffect(() => {
@@ -1119,7 +1127,7 @@ function App() {
                     <div className="min-h-0">
                       <FoodCategorySelector
                         selectedCategories={selectedCategories}
-                        onCategoryChange={setSelectedCategories}
+                        onCategoryChange={handleCategoryChange}
                         maxSelection={3}
                       />
                     </div>

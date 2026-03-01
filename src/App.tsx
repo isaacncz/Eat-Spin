@@ -26,7 +26,7 @@ import { GroupSpin } from '@/sections/GroupSpin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
-import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X, Trash2, ChevronDown, CheckCircle2, Heart, Navigation } from 'lucide-react';
+import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X, Trash2, ChevronDown, CheckCircle2, Heart } from 'lucide-react';
 import { useFavourites } from '@/hooks/useFavourites';
 import { useFeedbackPrompt } from '@/hooks/useFeedbackPrompt';
 import { enqueueFeedback } from '@/lib/feedbackStore';
@@ -388,24 +388,10 @@ function App() {
     return ids;
   }, [favourites]);
 
-  // Favourite lookup sets for highlighting wheel restaurants
-  const favouriteIdSet = useMemo(() => new Set(favourites.map((f) => f.id)), [favourites]);
-  const favouriteGooglePlaceIdSet = useMemo(
-    () => new Set(favourites.filter((f) => f.restaurant.googlePlaceId).map((f) => f.restaurant.googlePlaceId!)),
-    [favourites],
-  );
-  const isFavouriteByIds = useCallback(
-    (restaurant: Restaurant): boolean => {
-      if (restaurant.googlePlaceId && favouriteGooglePlaceIdSet.has(restaurant.googlePlaceId)) return true;
-      return favouriteIdSet.has(restaurant.id);
-    },
-    [favouriteIdSet, favouriteGooglePlaceIdSet],
-  );
-
-  // Nearby favourites for the "I Know Where" tab
+  // Nearby favourites: favourites within ~1.5 km of the user's current location
   const nearbyFavourites = useMemo(() => {
-    if (!location || favourites.length === 0) return [];
-    return findNearbyFavourites(favourites, location.lat, location.lng, 3);
+    if (!location) return [];
+    return findNearbyFavourites(favourites, location.lat, location.lng);
   }, [favourites, location]);
 
   const filterResult = useMemo(() => (

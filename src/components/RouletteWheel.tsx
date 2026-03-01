@@ -467,8 +467,6 @@ export function RouletteWheel({
   const angleRad = (segmentAngle * Math.PI) / 180;
   const usableArcWidth = Math.max(labelRadius * angleRad * 0.92, wheelSize * 0.19);
   const radialBandHeight = Math.max((labelOuterRadius - labelInnerRadius) * 0.8, wheelSize * 0.15);
-  const maxCharsPerLine = clamp(Math.floor(usableArcWidth / 10), 8, 18);
-  const baseFontSize = clamp(Math.min(usableArcWidth * 0.16, radialBandHeight * 0.28), 11.5, 22);
   const canShowDistance = segmentAngle >= 22 && radialBandHeight >= 36;
 
   const labelLayouts = restaurants.map((restaurant, index) => {

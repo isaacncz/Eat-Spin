@@ -7,7 +7,7 @@ import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
 import { restaurants as localRestaurants } from '@/data/restaurants';
-import { enhancedFilterRestaurants } from '@/lib/restaurantUtils';
+import { enhancedFilterRestaurants, findNearbyFavourites } from '@/lib/restaurantUtils';
 import { getCurrentMealTime } from '@/lib/utils';
 import { FoodCategorySelector } from '@/components/FoodCategorySelector';
 import { RouletteWheel } from '@/components/RouletteWheel';
@@ -26,7 +26,12 @@ import { GroupSpin } from '@/sections/GroupSpin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
-import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X, Trash2, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { RotateCcw, Crown, MapPin, Utensils, Sparkles, PencilLine, Plus, X, Trash2, ChevronDown, CheckCircle2, Heart } from 'lucide-react';
+import { useFavourites } from '@/hooks/useFavourites';
+import { useFeedbackPrompt } from '@/hooks/useFeedbackPrompt';
+import { enqueueFeedback } from '@/lib/feedbackStore';
+import { deriveFavouriteId } from '@/types/favourites';
+import { FeedbackPrompt } from '@/components/FeedbackPrompt';
 import { toast } from 'sonner';
 import './App.css';
 
@@ -258,6 +263,16 @@ function App() {
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
   const { canSpin, recordSpin } = useSpinTracker();
   const {
+    favourites,
+    isFavourite: isFavouriteCheck,
+    save: saveFavourite,
+    remove: removeFavouriteEntry,
+    restore: restoreFavouriteEntry,
+    recordVisitAndSave,
+    updateRating: updateFavouriteRating,
+  } = useFavourites();
+  const { pending: feedbackPending, dismiss: dismissFeedback } = useFeedbackPrompt();
+  const {
     restaurants: nearbyRestaurants,
     isLoading: nearbyRestaurantsLoading,
     error: nearbyRestaurantsError,
@@ -362,6 +377,23 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  const avoidedRestaurantIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const fav of favourites) {
+      if (fav.userRating === 'avoid') {
+        ids.add(fav.id);
+        if (fav.restaurant.googlePlaceId) ids.add(fav.restaurant.googlePlaceId);
+      }
+    }
+    return ids;
+  }, [favourites]);
+
+  // Nearby favourites: favourites within ~1.5 km of the user's current location
+  const nearbyFavourites = useMemo(() => {
+    if (!location) return [];
+    return findNearbyFavourites(favourites, location.lat, location.lng);
+  }, [favourites, location]);
+
   const filterResult = useMemo(() => (
     enhancedFilterRestaurants(
       autoSourceRestaurants,
@@ -369,9 +401,11 @@ function App() {
       selectedCategories,
       rangeMode,
       selectedPriceRanges,
-      'all'
+      'all',
+      undefined,
+      avoidedRestaurantIds,
     )
-  ), [autoSourceRestaurants, location, selectedCategories, rangeMode, selectedPriceRanges]);
+  ), [autoSourceRestaurants, location, selectedCategories, rangeMode, selectedPriceRanges, avoidedRestaurantIds]);
 
   const filteredRestaurants = filterResult.results;
 
@@ -420,6 +454,116 @@ function App() {
     trackEvent('spin_complete', { mode: 'manual', restaurant_name: restaurant.name });
     setManualSpinResult(restaurant);
   }, []);
+
+  const handleSaveFavourite = useCallback((restaurant: Restaurant, mode: 'auto' | 'manual') => {
+    trackEvent('favourite_saved', { restaurant_name: restaurant.name, mode });
+    void saveFavourite(restaurant, mode === 'auto' ? 'spin-auto' : 'spin-manual');
+    toast.success(`${restaurant.name} saved to favourites!`, {
+      description: 'Find it in the "I Know Where" tab under My Favourites.',
+    });
+  }, [saveFavourite]);
+
+  const handleLetsGo = useCallback((restaurant: Restaurant) => {
+    trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
+    void recordVisitAndSave(restaurant);
+
+    // Enqueue feedback for next app open
+    const favId = deriveFavouriteId(restaurant);
+    enqueueFeedback({ favouriteId: favId, restaurantName: restaurant.name });
+
+    // Open Google Maps navigation
+    const { lat, lng } = restaurant.coordinates;
+    const query = encodeURIComponent(restaurant.name);
+    const mapsUrl = lat && lng
+      ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${restaurant.googlePlaceId ?? ''}&query=${query}`
+      : `https://www.google.com/maps/search/?api=1&query=${query}`;
+    window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+
+    toast.success(`Navigating to ${restaurant.name}!`, {
+      description: 'We\'ll ask how it was next time you open the app.',
+    });
+  }, [recordVisitAndSave]);
+
+  const handleRemoveFavourite = useCallback((id: string, name: string) => {
+    trackEvent('favourite_removed', { favourite_id: id });
+    void removeFavouriteEntry(id).then((deleted) => {
+      toast(`Removed ${name} from favourites`, {
+        duration: 5000,
+        action: deleted
+          ? {
+              label: 'Undo',
+              onClick: () => {
+                void restoreFavouriteEntry(deleted).then(() => {
+                  toast.success(`${name} restored to favourites`);
+                });
+              },
+            }
+          : undefined,
+      });
+    });
+  }, [removeFavouriteEntry, restoreFavouriteEntry]);
+
+  const syncGroupListFromRestaurants = useCallback((restaurants: Restaurant[]) => {
+    if (!isGroupRoomActive || !canEditGroupList || !groupRoomId) return;
+    const normalizedNames = normalizeManualNames(restaurants.map((restaurant) => restaurant.name));
+    const signature = JSON.stringify(normalizedNames);
+    pendingRoomListSyncRef.current = {
+      roomId: groupRoomId,
+      signature,
+      startedAt: Date.now(),
+    };
+    void syncHostList(normalizedNames);
+  }, [canEditGroupList, groupRoomId, isGroupRoomActive, syncHostList]);
+
+  const addManualRestaurantByName = useCallback((restaurantName: string) => {
+    if (isManualListReadOnly) {
+      toast.info('Only the host or co-host can edit the shared list.');
+      return;
+    }
+
+    const name = restaurantName.trim();
+    if (!name) return;
+
+    const exists = manualRestaurants.some(
+      (restaurant) => restaurant.name.toLowerCase() === name.toLowerCase()
+    );
+
+    if (exists) {
+      setManualInput('');
+      return;
+    }
+
+    const nextRestaurants = [...manualRestaurants, createManualRestaurant(name)];
+    setManualRestaurants(nextRestaurants);
+    syncGroupListFromRestaurants(nextRestaurants);
+    trackEvent('manual_restaurant_added', { name });
+    setManualInput('');
+    setManualSpinResult(null);
+    setManualWheelKey((prev) => prev + 1);
+  }, [isManualListReadOnly, manualRestaurants, syncGroupListFromRestaurants]);
+
+  const handleAddFavouriteToManualList = useCallback((name: string) => {
+    addManualRestaurantByName(name);
+    toast.success(`${name} added to spin list!`);
+  }, [addManualRestaurantByName]);
+
+  const handleFeedbackRate = useCallback((rating: 'suggest' | 'neutral' | 'avoid') => {
+    if (!feedbackPending) return;
+    trackEvent('feedback_given', { rating, restaurant_name: feedbackPending.restaurantName });
+    void updateFavouriteRating(feedbackPending.favouriteId, rating);
+    dismissFeedback();
+    if (rating === 'suggest') {
+      toast.success(`Great! We'll suggest ${feedbackPending.restaurantName} when you're nearby.`);
+    } else if (rating === 'avoid') {
+      toast(`${feedbackPending.restaurantName} won't be suggested again.`);
+    }
+  }, [dismissFeedback, feedbackPending, updateFavouriteRating]);
+
+  const handleFeedbackDidntGo = useCallback(() => {
+    if (!feedbackPending) return;
+    trackEvent('feedback_didnt_go', { restaurant_name: feedbackPending.restaurantName });
+    dismissFeedback();
+  }, [dismissFeedback, feedbackPending]);
 
   // Handle spin attempt
   const handleSpinAttempt = () => {
@@ -479,45 +623,6 @@ function App() {
       setManualSpinResult(null);
       setManualWheelKey((prev) => prev + 1);
     }
-  };
-
-  const syncGroupListFromRestaurants = useCallback((restaurants: Restaurant[]) => {
-    if (!isGroupRoomActive || !canEditGroupList || !groupRoomId) return;
-    const normalizedNames = normalizeManualNames(restaurants.map((restaurant) => restaurant.name));
-    const signature = JSON.stringify(normalizedNames);
-    pendingRoomListSyncRef.current = {
-      roomId: groupRoomId,
-      signature,
-      startedAt: Date.now(),
-    };
-    void syncHostList(normalizedNames);
-  }, [canEditGroupList, groupRoomId, isGroupRoomActive, syncHostList]);
-
-  const addManualRestaurantByName = (restaurantName: string) => {
-    if (isManualListReadOnly) {
-      toast.info('Only the host or co-host can edit the shared list.');
-      return;
-    }
-
-    const name = restaurantName.trim();
-    if (!name) return;
-
-    const exists = manualRestaurants.some(
-      (restaurant) => restaurant.name.toLowerCase() === name.toLowerCase()
-    );
-
-    if (exists) {
-      setManualInput('');
-      return;
-    }
-
-    const nextRestaurants = [...manualRestaurants, createManualRestaurant(name)];
-    setManualRestaurants(nextRestaurants);
-    syncGroupListFromRestaurants(nextRestaurants);
-    trackEvent('manual_restaurant_added', { name });
-    setManualInput('');
-    setManualSpinResult(null);
-    setManualWheelKey((prev) => prev + 1);
   };
 
   const addManualRestaurant = () => {
@@ -1095,9 +1200,16 @@ function App() {
                   >
                       <ul className="max-h-72 overflow-y-auto overscroll-contain space-y-2 pr-1">
                       {displayedRoundRestaurants.map((restaurant) => (
-                        <li key={restaurant.id} className="flex items-start justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
+                        <li key={restaurant.id} className="flex items-center justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
                           <div>
-                            <p className="font-medium text-brand-black">{restaurant.name}</p>
+                            <p className="font-medium text-brand-black">
+                              {restaurant.name}
+                              {isFavouriteCheck(restaurant) && (
+                                <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-pink-100 px-1.5 py-0.5 text-[10px] font-semibold text-pink-600 align-middle">
+                                  <Heart size={10} className="fill-pink-500 text-pink-500" /> Fave
+                                </span>
+                              )}
+                            </p>
                             <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-eatspin-gray-1">
                               {restaurant.category.slice(0, 2).map((tag) => (
                                 <span key={`${restaurant.id}-${tag}`} className="rounded-full bg-white px-2 py-0.5 capitalize">
@@ -1110,14 +1222,33 @@ function App() {
                               )}
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => removeRestaurantForRound(restaurant.id)}
-                            className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-                            aria-label={`Remove ${restaurant.name} for this round`}
-                          >
-                            <X size={14} /> Remove
-                          </button>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {isFavouriteCheck(restaurant) ? (
+                              <span
+                                className="inline-flex items-center gap-1 rounded-full bg-pink-50 border border-pink-200 px-2.5 py-1 text-xs font-medium text-pink-500"
+                                title="Already in My Favourites"
+                              >
+                                <Heart size={12} className="fill-pink-500 text-pink-500" /> Saved
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleSaveFavourite(restaurant, 'auto')}
+                                className="inline-flex items-center gap-1 rounded-full border border-pink-200 bg-white px-2.5 py-1 text-xs font-medium text-pink-500 hover:bg-pink-50"
+                                aria-label={`Save ${restaurant.name} to favourites`}
+                              >
+                                <Heart size={12} /> Save
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeRestaurantForRound(restaurant.id)}
+                              className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
+                              aria-label={`Remove ${restaurant.name} for this round`}
+                            >
+                              <X size={14} /> Remove
+                            </button>
+                          </div>
                         </li>
                       ))}
 
@@ -1220,7 +1351,132 @@ function App() {
                 canRequestSpin={!isGroupRoomActive || isGroupHost || isGroupCohost}
                 emptyStateTitle="Add restaurants to start"
                 emptyStateSubtitle="Type any restaurant you like…"
+                onSaveFavourite={(r) => handleSaveFavourite(r, 'manual')}
+                onLetsGo={handleLetsGo}
+                isFavourite={isFavouriteCheck}
               />
+
+                {/* Nearby Favourites Section */}
+                {nearbyFavourites.length > 0 && (
+                  <div className="mt-6 max-w-xl mx-auto">
+                    <div className="bg-white rounded-xl border border-green-200/60 p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="h-2 w-2 rounded-full bg-eatspin-success animate-pulse" />
+                        <h4 className="font-heading font-semibold text-brand-black flex items-center gap-2">
+                          <MapPin size={16} className="text-eatspin-success" />
+                          Nearby Favourites
+                        </h4>
+                      </div>
+                      <p className="text-xs text-eatspin-gray-1 mb-3">
+                        You're close to places you've saved before!
+                      </p>
+                      <ul className="space-y-2">
+                        {nearbyFavourites.map((nf) => {
+                          const alreadyInList = manualRestaurants.some(
+                            (r) => r.name.toLowerCase() === nf.restaurantName.toLowerCase()
+                          );
+                          return (
+                            <li key={nf.favouriteId} className="flex items-center justify-between gap-2 rounded-lg bg-green-50 px-3 py-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-brand-black truncate">{nf.restaurantName}</p>
+                                <p className="text-xs text-eatspin-gray-1">{nf.distanceKm.toFixed(1)} km away</p>
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                {!alreadyInList && !isManualListReadOnly && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddFavouriteToManualList(nf.restaurantName)}
+                                    className="inline-flex items-center gap-1 rounded-full border border-brand-orange/40 bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
+                                    aria-label={`Add ${nf.restaurantName} to spin list`}
+                                  >
+                                    <Plus size={12} /> Add
+                                  </button>
+                                )}
+                                {alreadyInList && (
+                                  <span className="text-xs text-eatspin-success font-medium">In list ✓</span>
+                                )}
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                {/* My Favourites Section */}
+                {favourites.length > 0 && (
+                  <div className="mt-6 max-w-xl mx-auto">
+                    <div className="bg-white rounded-xl border border-pink-200/60 p-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="font-heading font-semibold text-brand-black flex items-center gap-2">
+                          <Heart size={16} className="text-pink-500 fill-pink-500" />
+                          My Favourites ({favourites.length})
+                        </h4>
+                      </div>
+                      <p className="text-xs text-eatspin-gray-1 mb-3">
+                        Places you saved from spinning. Tap <Plus size={12} className="inline" /> to add to your current spin list.
+                      </p>
+                      <ul className="space-y-2 max-h-64 overflow-y-auto overscroll-contain pr-1">
+                        {favourites
+                          .filter((f) => f.userRating !== 'avoid')
+                          .map((fav) => {
+                            const alreadyInList = manualRestaurants.some(
+                              (r) => r.name.toLowerCase() === fav.restaurant.name.toLowerCase()
+                            );
+                            return (
+                              <li key={fav.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-linen px-3 py-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium text-brand-black truncate">{fav.restaurant.name}</p>
+                                  <div className="flex flex-wrap gap-1.5 mt-1">
+                                    {fav.restaurant.rating > 0 && (
+                                      <span className="text-xs text-eatspin-gray-1">⭐ {fav.restaurant.rating}</span>
+                                    )}
+                                    {fav.visitCount > 0 && (
+                                      <span className="text-xs text-eatspin-gray-1">
+                                        · Visited {fav.visitCount}×
+                                      </span>
+                                    )}
+                                    {fav.userRating === 'neutral' && (
+                                      <span className="text-xs text-eatspin-gray-2">· Neutral</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  {!alreadyInList && !isManualListReadOnly && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAddFavouriteToManualList(fav.restaurant.name)}
+                                      className="inline-flex items-center gap-1 rounded-full border border-brand-orange/40 bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
+                                      aria-label={`Add ${fav.restaurant.name} to spin list`}
+                                    >
+                                      <Plus size={12} /> Add
+                                    </button>
+                                  )}
+                                  {alreadyInList && (
+                                    <span className="text-xs text-eatspin-success font-medium">In list ✓</span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveFavourite(fav.id, fav.restaurant.name)}
+                                    className="text-eatspin-gray-2 hover:text-red-500"
+                                    aria-label={`Remove ${fav.restaurant.name} from favourites`}
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                      {favourites.some((f) => f.userRating === 'avoid') && (
+                        <p className="mt-2 text-xs text-eatspin-gray-2">
+                          {favourites.filter((f) => f.userRating === 'avoid').length} hidden (marked "don't suggest")
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div id="manual-input" className="mt-8 max-w-xl mx-auto">
                   <div className="sticky bottom-3 z-30 rounded-2xl border border-eatspin-peach/60 bg-white/95 p-3 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-white/85">
@@ -1403,6 +1659,9 @@ function App() {
               setIsSpinning={setIsSpinning}
               onShuffle={shuffleWheel}
               onSpinStart={handleAutoSpinStart}
+              onSaveFavourite={(r) => handleSaveFavourite(r, 'auto')}
+              onLetsGo={handleLetsGo}
+              isFavourite={isFavouriteCheck}
             />
           </div>
         </section>
@@ -1417,6 +1676,15 @@ function App() {
         onClose={() => setShowSubscription(false)}
         onSubscribe={handleSubscribe}
       />
+
+      {feedbackPending && (
+        <FeedbackPrompt
+          restaurantName={feedbackPending.restaurantName}
+          open={true}
+          onRate={handleFeedbackRate}
+          onDidntGo={handleFeedbackDidntGo}
+        />
+      )}
 
       <Toaster />
     </div>

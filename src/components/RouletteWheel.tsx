@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown, Heart, Navigation } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,12 @@ interface RouletteWheelProps {
   onRequestSpin?: () => void | Promise<void>;
   canRequestSpin?: boolean;
   onSpinStart?: () => Restaurant[] | null;
+  /** Called when user taps the "★ Save" button on the spin result. */
+  onSaveFavourite?: (restaurant: Restaurant) => void;
+  /** Called when user taps "Let's go!" on the spin result. */
+  onLetsGo?: (restaurant: Restaurant) => void;
+  /** Returns true if the restaurant is already saved as a favourite. */
+  isFavourite?: (restaurant: Restaurant) => boolean;
 }
 
 // Vibrant appetizing color palette
@@ -136,6 +142,9 @@ export function RouletteWheel({
   onRequestSpin,
   canRequestSpin = true,
   onSpinStart,
+  onSaveFavourite,
+  onLetsGo,
+  isFavourite,
 }: RouletteWheelProps) {
   const ANTICIPATION_DURATION_S = 0.5;
   const ANTICIPATION_DEG = 50;
@@ -458,8 +467,6 @@ export function RouletteWheel({
   const angleRad = (segmentAngle * Math.PI) / 180;
   const usableArcWidth = Math.max(labelRadius * angleRad * 0.92, wheelSize * 0.19);
   const radialBandHeight = Math.max((labelOuterRadius - labelInnerRadius) * 0.8, wheelSize * 0.15);
-  const maxCharsPerLine = clamp(Math.floor(usableArcWidth / 10), 8, 18);
-  const baseFontSize = clamp(Math.min(usableArcWidth * 0.16, radialBandHeight * 0.28), 11.5, 22);
   const canShowDistance = segmentAngle >= 22 && radialBandHeight >= 36;
 
   const labelLayouts = restaurants.map((restaurant, index) => {
@@ -685,7 +692,12 @@ export function RouletteWheel({
                         className="flex-shrink-0 w-3 h-3 rounded-full"
                         style={{ backgroundColor: getSegmentColor(restaurants.indexOf(r)) }}
                       />
-                      <span className="truncate text-brand-black">{r.name}</span>
+                      <span className="truncate text-brand-black">
+                        {r.name}
+                        {isFavourite?.(r) && (
+                          <Heart size={10} className="inline ml-1 fill-pink-500 text-pink-500" />
+                        )}
+                      </span>
                     </span>
                     <span className="flex-shrink-0 text-xs font-semibold text-brand-orange tabular-nums">
                       {r.distance!.toFixed(1)} km
@@ -779,6 +791,29 @@ export function RouletteWheel({
             </div>
 
             <div className="mt-5 flex flex-wrap justify-center gap-3">
+              {onLetsGo && (
+                <Button
+                  className="bg-brand-orange hover:bg-brand-orange/90 text-white font-heading font-bold"
+                  onClick={() => onLetsGo(spinResult)}
+                >
+                  <Navigation size={16} className="mr-1.5" />
+                  Let's go!
+                </Button>
+              )}
+              {onSaveFavourite && (
+                <Button
+                  variant={isFavourite?.(spinResult) ? 'default' : 'outline'}
+                  className={isFavourite?.(spinResult)
+                    ? 'bg-pink-500 hover:bg-pink-600 text-white font-heading font-bold'
+                    : 'border-pink-300 text-pink-500 hover:bg-pink-50 font-heading font-bold'
+                  }
+                  onClick={() => onSaveFavourite(spinResult)}
+                  disabled={isFavourite?.(spinResult)}
+                >
+                  <Heart size={16} className={`mr-1.5 ${isFavourite?.(spinResult) ? 'fill-current' : ''}`} />
+                  {isFavourite?.(spinResult) ? 'Saved!' : 'Save'}
+                </Button>
+              )}
               {onEditList && (
                 <Button variant="outline" onClick={onEditList}>
                   Edit list

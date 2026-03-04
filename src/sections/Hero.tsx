@@ -112,23 +112,23 @@ export function Hero({ onGetStarted, onGroupSpin }: HeroProps) {
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <Button
-                onClick={() => { trackEvent('hero_group_spin_button'); onGroupSpin(); }}
+                onClick={() => { trackEvent('hero_solo_spin_button'); onGetStarted(); }}
                 size="lg"
                 className="w-full sm:w-auto bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-base sm:text-lg font-bold px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
               >
-                Start Group Spin
+                Start Solo Spin
                 <ArrowRight
                   size={20}
                   className="ml-2 group-hover:translate-x-1 transition-transform"
                 />
               </Button>
               <Button
-                onClick={() => { trackEvent('hero_solo_spin_button'); onGetStarted(); }}
+                onClick={() => { trackEvent('hero_group_spin_button'); onGroupSpin(); }}
                 size="lg"
                 variant="outline"
                 className="w-full sm:w-auto border-brand-orange text-brand-orange font-heading text-base sm:text-lg font-bold px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-sm hover:bg-brand-orange/10 transition-all duration-300"
               >
-                Start Solo Spin
+                Then Group Spin
               </Button>
             </div>
 

@@ -33,8 +33,14 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event
+  const requestUrl = new URL(request.url)
 
   if (request.method !== 'GET') {
+    return
+  }
+
+  // Do not proxy third-party requests (analytics, maps, etc).
+  if (requestUrl.origin !== self.location.origin) {
     return
   }
 

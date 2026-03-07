@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown, Heart, Navigation } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,19 @@ interface RouletteWheelProps {
   emptyStateTitle?: string;
   emptyStateSubtitle?: string;
   onEditList?: () => void;
+  externalSpin?: {
+    spinId: string;
+    winnerIndex: number;
+  } | null;
+  onRequestSpin?: () => void | Promise<void>;
+  canRequestSpin?: boolean;
   onSpinStart?: () => Restaurant[] | null;
+  /** Called when user taps the "★ Save" button on the spin result. */
+  onSaveFavourite?: (restaurant: Restaurant) => void;
+  /** Called when user taps "Let's go!" on the spin result. */
+  onLetsGo?: (restaurant: Restaurant) => void;
+  /** Returns true if the restaurant is already saved as a favourite. */
+  isFavourite?: (restaurant: Restaurant) => boolean;
 }
 
 // Vibrant appetizing color palette
@@ -43,6 +55,59 @@ function getSegmentColor(index: number): string {
   return WHEEL_COLORS[index % WHEEL_COLORS.length];
 }
 
+const compactRestaurantName = (name: string, maxLength: number): string => {
+  const normalized = name.trim().replace(/\s+/g, ' ');
+  if (normalized.length <= maxLength) return normalized;
+
+  const delimiters = [' - ', ' | ', ',', '('];
+  for (const delimiter of delimiters) {
+    const delimiterIndex = normalized.indexOf(delimiter);
+    if (delimiterIndex > 4) {
+      const compacted = normalized.slice(0, delimiterIndex).trim();
+      if (compacted.length >= 4) {
+        return compacted;
+      }
+    }
+  }
+
+  return normalized;
+};
+
+const wrapLabelText = (text: string, maxCharsPerLine: number, maxLines: number): string[] => {
+  const words = text.split(' ').filter(Boolean);
+  const lines: string[] = [];
+
+  for (const word of words) {
+    const currentLine = lines[lines.length - 1] ?? '';
+    const nextLine = currentLine ? `${currentLine} ${word}` : word;
+
+    if (!currentLine || nextLine.length <= maxCharsPerLine) {
+      if (currentLine) {
+        lines[lines.length - 1] = nextLine;
+      } else {
+        lines.push(word);
+      }
+      continue;
+    }
+
+    if (lines.length < maxLines) {
+      lines.push(word);
+      continue;
+    }
+
+    lines[lines.length - 1] = `${currentLine.slice(0, Math.max(currentLine.length - 1, 1))}…`;
+    return lines;
+  }
+
+  if (lines.length > maxLines) {
+    return lines.slice(0, maxLines);
+  }
+
+  return lines;
+};
+
+const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
+
 
 const getOpeningHoursLabel = (restaurant: Restaurant): string => {
   const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -52,8 +117,12 @@ const getOpeningHoursLabel = (restaurant: Restaurant): string => {
   const fallbackHours = Object.values(restaurant.hours)[0];
   const selectedHours = todayHours ?? dailyHours ?? fallbackHours;
 
-  if (!selectedHours || selectedHours.closed) return 'Closed today';
-  return `Open ${selectedHours.open} • Close ${selectedHours.close}`;
+  if (!selectedHours || selectedHours.closed || selectedHours.windows.length === 0) {
+    return 'Closed today';
+  }
+
+  const windowsLabel = selectedHours.windows.map((window) => `${window.open}-${window.close}`).join(', ');
+  return `Open ${windowsLabel}`;
 };
 
 export function RouletteWheel({
@@ -69,17 +138,39 @@ export function RouletteWheel({
   emptyStateTitle = 'No restaurants match your criteria',
   emptyStateSubtitle = 'Try selecting different categories or check back during meal hours',
   onEditList,
+  externalSpin = null,
+  onRequestSpin,
+  canRequestSpin = true,
   onSpinStart,
+  onSaveFavourite,
+  onLetsGo,
+  isFavourite,
 }: RouletteWheelProps) {
+  const ANTICIPATION_DURATION_S = 0.5;
+  const ANTICIPATION_DEG = 50;
+  const SPIN_DURATION_S = 5.8;
+  const WINNER_PULSE_DURATION_MS = 900;
+
   const wheelRef = useRef<HTMLDivElement>(null);
   const wheelScrollRef = useRef<HTMLDivElement>(null);
   const wheelContainerRef = useRef<HTMLDivElement>(null);
   const previousRestaurantsRef = useRef(restaurants);
+  const winnerPulseTimeoutRef = useRef<number | null>(null);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
   const currentRotationRef = useRef(0);
   const [wheelSize, setWheelSize] = useState(320);
   const celebrationTimeoutsRef = useRef<number[]>([]);
   const celebrationElementsRef = useRef<HTMLElement[]>([]);
+  const recenterTimeoutRef = useRef<number | null>(null);
+  const resultScrollTimeoutRef = useRef<number | null>(null);
+  const lastExternalSpinIdRef = useRef('');
+  const [winnerSliceIndex, setWinnerSliceIndex] = useState<number | null>(null);
+  const [isWinnerSliceHighlighted, setIsWinnerSliceHighlighted] = useState(false);
+
+  const syncWheelRotationVar = useCallback((rotation: number) => {
+    if (!wheelRef.current) return;
+    wheelRef.current.style.setProperty('--wheel-rotation', `${rotation}deg`);
+  }, []);
 
   const clearCelebrationEffects = useCallback(() => {
     celebrationTimeoutsRef.current.forEach((timeoutId) => {
@@ -151,62 +242,130 @@ export function RouletteWheel({
     return `conic-gradient(from 0deg, ${stops.join(', ')})`;
   }, [restaurants.length]);
 
-  const recenterWheel = () => {
+  const scrollWheelIntoView = useCallback((behavior: ScrollBehavior) => {
     const target = wheelScrollRef.current ?? wheelContainerRef.current;
-    if (!target) return;
+    if (!target || typeof window === 'undefined') return;
 
-    // Some layouts reflow right after click; a second scroll on the next frame is more reliable on mobile.
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    requestAnimationFrame(() => {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const navbarHeight = Number.parseInt(
+      window.getComputedStyle(document.documentElement).getPropertyValue('--navbar-height'),
+      10,
+    );
+    const offset = Number.isFinite(navbarHeight) ? navbarHeight : 72;
+    const targetTop = window.scrollY + target.getBoundingClientRect().top - offset - 8;
+    window.scrollTo({ top: Math.max(0, targetTop), behavior });
+  }, []);
+
+  const recenterWheel = useCallback(() => {
+    // First pass: smooth scroll for expected UX.
+    scrollWheelIntoView('smooth');
+    window.requestAnimationFrame(() => {
+      scrollWheelIntoView('smooth');
     });
-  };
 
-  const handleSpin = () => {
-    if (isSpinning || !canSpin) return;
-    const spinRestaurants = onSpinStart?.() ?? restaurants;
-    if (spinRestaurants.length < 2) return;
+    // Correction pass: some browsers miss the smooth target during rapid reflow.
+    if (recenterTimeoutRef.current !== null) {
+      window.clearTimeout(recenterTimeoutRef.current);
+    }
+    recenterTimeoutRef.current = window.setTimeout(() => {
+      scrollWheelIntoView('auto');
+      recenterTimeoutRef.current = null;
+    }, 180);
+  }, [scrollWheelIntoView]);
 
-    // Re-center the wheel in view when starting a spin (especially useful on mobile).
+  const animateSpinToIndex = useCallback((index: number, sourceRestaurants?: Restaurant[]) => {
+    const targetRestaurants = sourceRestaurants ?? restaurants;
+    if (targetRestaurants.length === 0) return;
+
+    const selectedIndex = ((Math.floor(index) % targetRestaurants.length) + targetRestaurants.length) % targetRestaurants.length;
+    const result = targetRestaurants[selectedIndex];
+    const segmentAngle = 360 / targetRestaurants.length;
+    const currentRotation = ((currentRotationRef.current % 360) + 360) % 360;
+    const desiredFinalRotation = ((360 - (selectedIndex + 0.5) * segmentAngle) % 360 + 360) % 360;
+    // Use whole-turn randomness so all clients can end on the exact same visual angle.
+    const additionalTurns = 4 + Math.floor(Math.random() * 3);
+    const additionalRotation = additionalTurns * 360;
+    const delta = (desiredFinalRotation - currentRotation + 360) % 360;
+    const targetRotation = currentRotationRef.current + additionalRotation + delta;
+
     recenterWheel();
-
     setIsSpinning(true);
     setSpinResult(null);
+    setWinnerSliceIndex(null);
+    setIsWinnerSliceHighlighted(false);
+    if (winnerPulseTimeoutRef.current !== null) {
+      window.clearTimeout(winnerPulseTimeoutRef.current);
+      winnerPulseTimeoutRef.current = null;
+    }
+    gsap.killTweensOf(wheelRef.current);
 
-    const currentRotation = currentRotationRef.current;
-    const additionalRotation = 1440 + Math.random() * 720;
-    const targetRotation = currentRotation + additionalRotation;
-    
-    const segmentAngle = 360 / spinRestaurants.length;
-    const finalRotation = targetRotation % 360;
-    const selectedIndex = Math.floor((360 - finalRotation) / segmentAngle) % spinRestaurants.length;
-    const result = spinRestaurants[selectedIndex];
+    const timeline = gsap.timeline();
+    timeline.to(wheelRef.current, {
+      rotation: currentRotationRef.current - ANTICIPATION_DEG,
+      duration: ANTICIPATION_DURATION_S,
+      ease: 'back.inOut(1.2)',
+      onUpdate: () => {
+        if (wheelRef.current) {
+          currentRotationRef.current = gsap.getProperty(wheelRef.current, 'rotation') as number;
+          syncWheelRotationVar(currentRotationRef.current);
+        }
+      },
+    });
 
-    gsap.to(wheelRef.current, {
+    timeline.to(wheelRef.current, {
       rotation: targetRotation,
-      duration: 5,
+      duration: SPIN_DURATION_S,
       ease: 'power4.out',
       onUpdate: () => {
         if (wheelRef.current) {
           currentRotationRef.current = gsap.getProperty(wheelRef.current, 'rotation') as number;
+          syncWheelRotationVar(currentRotationRef.current);
         }
       },
       onComplete: () => {
         setIsSpinning(false);
         setSpinResult(result);
+        setWinnerSliceIndex(selectedIndex);
+        setIsWinnerSliceHighlighted(true);
+        winnerPulseTimeoutRef.current = window.setTimeout(() => {
+          setIsWinnerSliceHighlighted(false);
+        }, WINNER_PULSE_DURATION_MS);
         onSpinComplete(result);
 
-        setTimeout(() => {
+        if (resultScrollTimeoutRef.current !== null) {
+          window.clearTimeout(resultScrollTimeoutRef.current);
+        }
+        resultScrollTimeoutRef.current = window.setTimeout(() => {
           const resultCard = document.getElementById('spin-result-card');
           if (resultCard) {
-            resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            requestAnimationFrame(() => {
+            const cardRect = resultCard.getBoundingClientRect();
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+            const isFullyVisible = cardRect.top >= 0 && cardRect.bottom <= viewportHeight;
+            if (!isFullyVisible) {
               resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            });
+            }
           }
+          resultScrollTimeoutRef.current = null;
         }, 100);
       },
     });
+  }, [onSpinComplete, recenterWheel, restaurants, setIsSpinning, syncWheelRotationVar]);
+
+  const handleLocalSpin = () => {
+    if (isSpinning || restaurants.length === 0 || !canSpin) return;
+    const spinRestaurants = onSpinStart?.() ?? restaurants;
+    if (spinRestaurants.length < 2) return;
+    const randomIndex = Math.floor(Math.random() * spinRestaurants.length);
+    animateSpinToIndex(randomIndex, spinRestaurants);
+  };
+
+  const handleSpinClick = () => {
+    if (onRequestSpin) {
+      if (isSpinning || !canSpin || !canRequestSpin) return;
+      recenterWheel();
+      void onRequestSpin();
+      return;
+    }
+    handleLocalSpin();
   };
 
   // Reset wheel position when restaurants change
@@ -218,8 +377,16 @@ export function RouletteWheel({
     if (wheelRef.current) {
       gsap.set(wheelRef.current, { rotation: 0 });
       currentRotationRef.current = 0;
+      syncWheelRotationVar(0);
     }
-  }, [isSpinning, restaurants]);
+  }, [isSpinning, restaurants, syncWheelRotationVar]);
+
+  useEffect(() => {
+    if (!externalSpin || restaurants.length === 0) return;
+    if (externalSpin.spinId === lastExternalSpinIdRef.current) return;
+    lastExternalSpinIdRef.current = externalSpin.spinId;
+    animateSpinToIndex(externalSpin.winnerIndex);
+  }, [animateSpinToIndex, externalSpin, restaurants.length]);
 
   useEffect(() => {
     const container = wheelContainerRef.current;
@@ -259,6 +426,15 @@ export function RouletteWheel({
   useEffect(() => {
     return () => {
       clearCelebrationEffects();
+      if (recenterTimeoutRef.current !== null) {
+        window.clearTimeout(recenterTimeoutRef.current);
+      }
+      if (resultScrollTimeoutRef.current !== null) {
+        window.clearTimeout(resultScrollTimeoutRef.current);
+      }
+      if (winnerPulseTimeoutRef.current !== null) {
+        window.clearTimeout(winnerPulseTimeoutRef.current);
+      }
     };
   }, [clearCelebrationEffects]);
 
@@ -278,10 +454,62 @@ export function RouletteWheel({
   }
 
   const segmentAngle = 360 / restaurants.length;
+  const wheelRadius = wheelSize / 2;
+  const outerPadding = wheelRadius * 0.08;
+  const labelOuterRadius = wheelRadius - outerPadding;
+  const centerButtonRadius = wheelRadius * 0.2;
+  const labelInnerRadius = centerButtonRadius + wheelRadius * 0.14;
+  // Pull labels closer to center when segments are wide so text stays inside the circle
+  const labelRadialFraction = segmentAngle >= 120 ? 0.46 : segmentAngle >= 72 ? 0.54 : 0.62;
+  const labelRadius = labelInnerRadius + (labelOuterRadius - labelInnerRadius) * labelRadialFraction;
   const centerX = wheelSize / 2;
   const centerY = wheelSize / 2;
-  // Position text at 65% from center to give more space with larger center circle
-  const textRadius = (wheelSize / 2) * 0.66;
+  const angleRad = (segmentAngle * Math.PI) / 180;
+  const usableArcWidth = Math.max(labelRadius * angleRad * 0.92, wheelSize * 0.19);
+  const radialBandHeight = Math.max((labelOuterRadius - labelInnerRadius) * 0.8, wheelSize * 0.15);
+  const canShowDistance = segmentAngle >= 22 && radialBandHeight >= 36;
+
+  const labelLayouts = restaurants.map((restaurant, index) => {
+      const startAngle = segmentAngle * index;
+      const midAngle = startAngle + segmentAngle / 2;
+      const pointAngleRad = ((midAngle - 90) * Math.PI) / 180;
+      const x = centerX + labelRadius * Math.cos(pointAngleRad);
+      const y = centerY + labelRadius * Math.sin(pointAngleRad);
+
+      // Constrain label width so it never extends outside the wheel circle.
+      // At height y the circle spans [centerX - halfChord, centerX + halfChord].
+      // A centered label at x with width w spans [x - w/2, x + w/2].
+      // Both edges must stay inside → w ≤ 2 × min(x - leftEdge, rightEdge - x).
+      const circleClipRadius = wheelRadius - 6;
+      const dy = y - centerY;
+      const halfChord = Math.sqrt(Math.max(circleClipRadius * circleClipRadius - dy * dy, 0));
+      const leftEdge = centerX - halfChord;
+      const rightEdge = centerX + halfChord;
+      const maxCircleWidth = Math.max(2 * Math.min(x - leftEdge, rightEdge - x), 40);
+      const constrainedWidth = Math.min(usableArcWidth, maxCircleWidth);
+
+      const labelMaxChars = clamp(Math.floor(constrainedWidth / 10), 6, 18);
+      const compactName = compactRestaurantName(restaurant.name, labelMaxChars * 2 + 5);
+      const lines = wrapLabelText(compactName, labelMaxChars, 3);
+      const longestLineLength = Math.max(...lines.map((line) => line.length), 1);
+      const densityScale = clamp(labelMaxChars / longestLineLength, 0.75, 1.08);
+      const labelBaseFontSize = clamp(Math.min(constrainedWidth * 0.16, radialBandHeight * 0.28), 11.5, 22);
+      const fontSize = clamp(labelBaseFontSize * densityScale, 11.5, 24);
+      const distanceLabel = canShowDistance && lines.length <= 3 && restaurant.distance !== undefined
+        ? `${restaurant.distance.toFixed(1)} km`
+        : null;
+
+      return {
+        restaurant,
+        x,
+        y,
+        lines,
+        fontSize,
+        distanceLabel,
+        constrainedWidth,
+      };
+    });
+
   const isManualResult = Boolean(
     spinResult
       && (spinResult.id.startsWith('manual-')
@@ -290,9 +518,9 @@ export function RouletteWheel({
   );
 
   return (
-    <div className="flex flex-col items-center gap-8 py-8">
+    <div className="flex flex-col items-center gap-6 py-4 sm:py-5">
       {/* Roulette Wheel */}
-      <div ref={wheelScrollRef} className="relative mx-auto w-full max-w-[28rem] px-3 sm:px-4 overflow-hidden">
+      <div ref={wheelScrollRef} className="relative mx-auto w-full max-w-[32.5rem] px-1 sm:px-3 overflow-hidden">
         {/* Pointer */}
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
           <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[30px] border-t-eatspin-orange drop-shadow-lg" />
@@ -301,8 +529,8 @@ export function RouletteWheel({
         {/* Wheel Container */}
         <div
           ref={wheelContainerRef}
-          className="relative w-full aspect-square"
-          style={{ maxWidth: 'min(90vw, 28rem)' }}
+          className="relative mx-auto w-full aspect-square"
+          style={{ maxWidth: '32.5rem' }}
         >
           {/* Wheel */}
           <div
@@ -310,6 +538,7 @@ export function RouletteWheel({
             className="w-full h-full rounded-full shadow-2xl relative overflow-hidden"
             style={{
               background: wheelBackground,
+              ['--wheel-rotation' as string]: '0deg',
             }}
           >
             {/* Segment dividers */}
@@ -324,39 +553,22 @@ export function RouletteWheel({
               );
             })}
 
-            {/* Restaurant names positioned with polar coordinates */}
-            {restaurants.map((restaurant, index) => {
-              const startAngle = (360 / restaurants.length) * index;
-              const midAngle = startAngle + segmentAngle / 2;
-              // Convert polar to cartesian coordinates
-              // Subtract 90 degrees because 0 degrees is at 3 o'clock, we want it at 12 o'clock
-              const angleRad = ((midAngle - 90) * Math.PI) / 180;
-              const x = centerX + textRadius * Math.cos(angleRad);
-              const y = centerY + textRadius * Math.sin(angleRad);
-              
-               // Text rotation: always point toward center
-              // Add 90 degrees to make text read from outside toward center
-              const textRotation = midAngle + 90;
-              
-              // All colors in our palette have good contrast with white text
-              const textColor = '#FFFFFF';
-              
-              const displayName = restaurant.name;
-              const nameLength = displayName.length;
-              const maxFontSize = wheelSize * 0.045;
-              const minFontSize = wheelSize * 0.022;
-              const lengthFactor = Math.min(Math.max((nameLength - 4) / 24, 0), 1);
-              const baseFontSize =
-                maxFontSize - (maxFontSize - minFontSize) * lengthFactor;
-              const maxLabelWidth = wheelSize * 0.28;
-              const estimatedCharWidth = 0.6;
-              const fitFontSize = maxLabelWidth / Math.max(nameLength * estimatedCharWidth, 1);
-              const computedFontSize = Math.max(
-                minFontSize,
-                Math.min(baseFontSize, fitFontSize),
-              );
-              const fontWeight = nameLength <= 5 ? 700 : 600;
-              
+            {winnerSliceIndex !== null && (
+              <div
+                className={`pointer-events-none absolute inset-0 rounded-full ${isWinnerSliceHighlighted ? 'winner-slice-highlight' : 'winner-slice-highlight-idle'}`}
+                style={{
+                  background: `conic-gradient(
+                    from 0deg,
+                    rgba(255, 215, 0, 0) 0deg ${(winnerSliceIndex * segmentAngle)}deg,
+                    rgba(255, 215, 0, 0.34) ${(winnerSliceIndex * segmentAngle)}deg ${((winnerSliceIndex + 1) * segmentAngle)}deg,
+                    rgba(255, 215, 0, 0) ${((winnerSliceIndex + 1) * segmentAngle)}deg 360deg
+                  )`,
+                }}
+              />
+            )}
+
+            {/* Labels remain upright by counter-rotating the wheel transform. */}
+            {labelLayouts.map(({ restaurant, x, y, lines, fontSize, distanceLabel, constrainedWidth }) => {
               return (
                 <div
                   key={restaurant.id}
@@ -364,45 +576,49 @@ export function RouletteWheel({
                   style={{
                     left: `${(x / wheelSize) * 100}%`,
                     top: `${(y / wheelSize) * 100}%`,
-                    transform: `translate(-50%, -50%) rotate(${textRotation}deg)`,
+                    width: `${constrainedWidth}px`,
+                    transform: 'translate(-50%, -50%) rotate(calc(-1 * var(--wheel-rotation)))',
                     transformOrigin: 'center center',
                   }}
                 >
-                  <span
-                    className="text-center leading-tight whitespace-nowrap"
+                  <div
+                    className="text-center leading-[1.05]"
                     style={{
-                      color: textColor,
-                      fontSize: `${computedFontSize}px`,
-                      fontWeight,
-                      maxWidth: `${maxLabelWidth}px`,
+                      color: '#FFFFFF',
+                      fontSize: `${fontSize}px`,
+                      fontWeight: 700,
                       textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 1px 1px rgba(0,0,0,0.8)',
                     }}
                   >
-                    {displayName}
-                  </span>
-                  {restaurant.distance !== undefined && (
-                    <span 
-                      className="text-[8px] sm:text-[10px] font-semibold whitespace-nowrap"
+                    {lines.map((line, lineIndex) => (
+                      <span key={`${restaurant.id}-${lineIndex}`} className="block">
+                        {line}
+                      </span>
+                    ))}
+                  </div>
+                  {distanceLabel && (
+                    <span
+                      className="mt-0.5 text-[10px] sm:text-[11px] font-semibold whitespace-nowrap"
                       style={{
-                        color: textColor,
+                        color: '#FFFFFF',
                         textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 1px 1px rgba(0,0,0,0.6)',
-                        opacity: 0.9,
+                        opacity: 0.8,
                       }}
                     >
-                      {restaurant.distance.toFixed(1)} km
+                      {distanceLabel}
                     </span>
                   )}
                 </div>
               );
             })}
 
-            {/* Larger Center Circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-4 border-eatspin-peach">
+            {/* Center Circle */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-[3px] border-eatspin-peach" style={{ boxShadow: '0 14px 28px rgba(0,0,0,0.2), 0 0 20px rgba(245, 71, 3, 0.3)' }}>
               <span className="text-base sm:text-lg font-heading text-eatspin-orange font-bold">SPIN</span>
             </div>
             
             {/* Inner decorative ring */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-28 sm:h-28 rounded-full border-2 border-white/20 pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 pointer-events-none" />
           </div>
 
           {/* Decorative outer rings */}
@@ -413,16 +629,23 @@ export function RouletteWheel({
 
       {/* Spin Button */}
       <button
-        onClick={handleSpin}
-        disabled={isSpinning || !canSpin}
-        className="sticky bottom-3 sm:static z-30 relative overflow-hidden w-full max-w-sm px-8 sm:px-12 py-5 bg-brand-orange text-white font-heading text-xl font-bold rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+        onClick={handleSpinClick}
+        disabled={isSpinning || !canSpin || (Boolean(onRequestSpin) && !canRequestSpin)}
+        className="sticky bottom-3 sm:static z-30 relative overflow-hidden w-full max-w-sm px-8 sm:px-12 py-6 sm:py-7 bg-brand-orange text-white font-heading text-2xl sm:text-[1.7rem] font-bold rounded-2xl shadow-xl animate-cta-pulse transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+        style={{ boxShadow: '0 18px 35px rgba(0,0,0,0.24), 0 0 28px rgba(245, 71, 3, 0.5)' }}
       >
-        <span className={`transition-opacity duration-300 ${isSpinning ? 'opacity-0' : 'opacity-100'}`}>
-          {spinButtonLabel}
-        </span>
-        {isSpinning && (
-          <span className="absolute inset-0 flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin" />
+        {isSpinning ? (
+          <span className="inline-flex flex-col items-center justify-center gap-1" aria-live="polite">
+            <span className="inline-flex items-center justify-center gap-2">
+            <Loader2 className="h-6 w-6 animate-spin text-white" />
+            <span className="text-lg sm:text-xl">Spinning...</span>
+            </span>
+            <span className="text-xs sm:text-sm font-medium opacity-85">One tap. Let fate decide.</span>
+          </span>
+        ) : (
+          <span className="inline-flex flex-col items-center gap-1 leading-tight">
+            <span>{spinButtonLabel}</span>
+            <span className="text-xs sm:text-sm font-medium opacity-85">One tap. Let fate decide.</span>
           </span>
         )}
       </button>
@@ -443,6 +666,46 @@ export function RouletteWheel({
           >
             ↻ Shuffle for different options
           </button>
+        </div>
+      )}
+
+      {/* Distance legend – compact list of restaurants sorted by proximity */}
+      {restaurants.some((r) => r.distance !== undefined) && (
+        <div className="w-full max-w-md">
+          <details className="group rounded-xl border border-eatspin-peach/50 bg-white/80 backdrop-blur-sm overflow-hidden">
+            <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold text-brand-black select-none hover:bg-eatspin-peach/10 transition-colors">
+              <span className="inline-flex items-center gap-2">
+                <MapPin size={15} className="text-brand-orange" />
+                Distance Guide
+              </span>
+              <span className="text-xs text-eatspin-gray-1 group-open:hidden">tap to expand</span>
+              <span className="text-xs text-eatspin-gray-1 hidden group-open:inline">tap to collapse</span>
+            </summary>
+            <ul className="divide-y divide-eatspin-peach/30 px-4 pb-3">
+              {[...restaurants]
+                .filter((r) => r.distance !== undefined)
+                .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
+                .map((r) => (
+                  <li key={r.id} className="flex items-center justify-between gap-2 py-2 text-sm">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span
+                        className="flex-shrink-0 w-3 h-3 rounded-full"
+                        style={{ backgroundColor: getSegmentColor(restaurants.indexOf(r)) }}
+                      />
+                      <span className="truncate text-brand-black">
+                        {r.name}
+                        {isFavourite?.(r) && (
+                          <Heart size={10} className="inline ml-1 fill-pink-500 text-pink-500" />
+                        )}
+                      </span>
+                    </span>
+                    <span className="flex-shrink-0 text-xs font-semibold text-brand-orange tabular-nums">
+                      {r.distance!.toFixed(1)} km
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          </details>
         </div>
       )}
 
@@ -528,6 +791,29 @@ export function RouletteWheel({
             </div>
 
             <div className="mt-5 flex flex-wrap justify-center gap-3">
+              {onLetsGo && (
+                <Button
+                  className="bg-brand-orange hover:bg-brand-orange/90 text-white font-heading font-bold"
+                  onClick={() => onLetsGo(spinResult)}
+                >
+                  <Navigation size={16} className="mr-1.5" />
+                  Let's go!
+                </Button>
+              )}
+              {onSaveFavourite && (
+                <Button
+                  variant={isFavourite?.(spinResult) ? 'default' : 'outline'}
+                  className={isFavourite?.(spinResult)
+                    ? 'bg-pink-500 hover:bg-pink-600 text-white font-heading font-bold'
+                    : 'border-pink-300 text-pink-500 hover:bg-pink-50 font-heading font-bold'
+                  }
+                  onClick={() => onSaveFavourite(spinResult)}
+                  disabled={isFavourite?.(spinResult)}
+                >
+                  <Heart size={16} className={`mr-1.5 ${isFavourite?.(spinResult) ? 'fill-current' : ''}`} />
+                  {isFavourite?.(spinResult) ? 'Saved!' : 'Save'}
+                </Button>
+              )}
               {onEditList && (
                 <Button variant="outline" onClick={onEditList}>
                   Edit list

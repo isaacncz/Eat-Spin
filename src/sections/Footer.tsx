@@ -1,4 +1,4 @@
-import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from 'lucide-react';
+import { Facebook, Instagram, Twitter } from 'lucide-react';
 
 const footerLinks = {
   product: [
@@ -6,18 +6,6 @@ const footerLinks = {
     { label: 'Features', href: '#features' },
     { label: 'Pricing', href: '#' },
     { label: 'Download App', href: '#' },
-  ],
-  company: [
-    { label: 'About Us', href: '#' },
-    { label: 'Careers', href: '#' },
-    { label: 'Press', href: '#' },
-    { label: 'Contact', href: '#' },
-  ],
-  support: [
-    { label: 'Help Center', href: '#' },
-    { label: 'Privacy Policy', href: '#' },
-    { label: 'Terms of Service', href: '#' },
-    { label: 'Restaurant Partners', href: '#' },
   ],
 };
 
@@ -38,7 +26,7 @@ export function Footer() {
   return (
     <footer className="bg-[#181818] text-white py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12 mb-12">
           {/* Brand Column */}
           <div className="lg:col-span-2">
             {/* Logo */}
@@ -52,30 +40,10 @@ export function Footer() {
             </div>
 
             <p className="text-eatspin-gray-2 text-sm leading-relaxed mb-6 max-w-sm">
-              The fun way to decide what to eat! Discover amazing restaurants in Penang with our magical roulette wheel. No more "where to eat" arguments.
+              The fun way to decide what to eat! Discover amazing restaurants with our roulette wheel and skip the "where to eat" debate.
             </p>
 
-            {/* Contact Info */}
-            <div className="space-y-3">
-              <a
-                href="mailto:hello@eatspin.my"
-                className="flex items-center gap-3 text-sm text-eatspin-gray-2 hover:text-white transition-colors"
-              >
-                <Mail size={16} className="text-eatspin-orange" />
-                hello@eatspin.my
-              </a>
-              <a
-                href="tel:+60123456789"
-                className="flex items-center gap-3 text-sm text-eatspin-gray-2 hover:text-white transition-colors"
-              >
-                <Phone size={16} className="text-eatspin-orange" />
-                +60 12-345 6789
-              </a>
-              <div className="flex items-center gap-3 text-sm text-eatspin-gray-2">
-                <MapPin size={16} className="text-eatspin-orange" />
-                Georgetown, Penang, Malaysia
-              </div>
-            </div>
+            {/* Contact Info removed */}
           </div>
 
           {/* Product Links */}
@@ -95,39 +63,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Company Links */}
-          <div>
-            <h4 className="font-heading font-bold text-white mb-4">Company</h4>
-            <ul className="space-y-3">
-              {footerLinks.company.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-eatspin-gray-2 hover:text-white transition-colors"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Support Links */}
-          <div>
-            <h4 className="font-heading font-bold text-white mb-4">Support</h4>
-            <ul className="space-y-3">
-              {footerLinks.support.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-eatspin-gray-2 hover:text-white transition-colors"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
 
         {/* Divider */}

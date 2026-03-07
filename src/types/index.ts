@@ -1,3 +1,5 @@
+export type CategoryConfidence = 'high' | 'medium' | 'low';
+
 export interface Restaurant {
   id: string;
   name: string;
@@ -7,13 +9,7 @@ export interface Restaurant {
     lat: number;
     lng: number;
   };
-  hours: {
-    [key: string]: {
-      open: string;
-      close: string;
-      closed?: boolean;
-    };
-  };
+  hours: Record<string, DailyHours>;
   rating: number;
   priceRange: '$' | '$$' | '$$$' | '$$$$';
   phone?: string;
@@ -21,6 +17,17 @@ export interface Restaurant {
   description?: string;
   isOpen?: boolean;
   distance?: number;
+  userRatingCount?: number;
+  googlePlaceId?: string;
+  source?: 'google-live' | 'google-cache' | 'local-fallback';
+  hasKnownPriceRange?: boolean;
+  /**
+   * How confident the classification pipeline is about this restaurant's categories.
+   * - `high`: primaryType or cuisine-specific API query confirms the category
+   * - `medium`: multiple signals agree (type mapper + name heuristic)
+   * - `low`: weak/no signal — generic restaurant or heuristic-only guess
+   */
+  categoryConfidence?: CategoryConfidence;
 }
 
 // Type for JSON restaurant data (without ID fields)
@@ -32,13 +39,7 @@ export interface JsonRestaurant {
     lat: number;
     lng: number;
   };
-  hours: {
-    [key: string]: {
-      open: string;
-      close: string;
-      closed?: boolean;
-    };
-  };
+  hours: Record<string, DailyHours>;
   rating: number;
   priceRange: Restaurant['priceRange'];
   phone?: string;
@@ -50,6 +51,16 @@ export type JsonRestaurantArray = JsonRestaurant[];
 
 // Type for restaurant with generated ID
 export type RestaurantWithId = JsonRestaurant & { id: string };
+
+export interface TimeWindow {
+  open: string;
+  close: string;
+}
+
+export interface DailyHours {
+  windows: TimeWindow[];
+  closed?: boolean;
+}
 
 export type FoodCategory = 
   | 'soup'

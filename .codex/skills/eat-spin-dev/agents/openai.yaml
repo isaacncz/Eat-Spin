@@ -1,0 +1,4 @@
+interface:
+  display_name: "Eat-Spin Dev"
+  short_description: "Architecture-first coding workflow for Eat-Spin."
+  default_prompt: "Implement and refactor features in Eat-Spin with extraction-first module boundaries, stable integration contracts, and lint/build/manual validation."

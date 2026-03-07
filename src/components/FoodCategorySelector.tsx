@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
+import { trackEvent } from '@/lib/analytics';
 import type { FoodCategory } from '@/types';
-import { foodCategories } from '@/data/restaurants';
+import { cuisineCategories } from '@/data/restaurants';
 import { Check } from 'lucide-react';
 
 interface FoodCategorySelectorProps {
@@ -19,17 +20,21 @@ export function FoodCategorySelector({
     
     if (isSelected) {
       // Remove category
-      onCategoryChange(selectedCategories.filter((c) => c !== categoryId));
+      const next = selectedCategories.filter((c) => c !== categoryId);
+      trackEvent('category_deselected', { category: categoryId, selected_count: next.length });
+      onCategoryChange(next);
     } else {
       // Add category if not exceeding max
       if (selectedCategories.length < maxSelection) {
-        onCategoryChange([...selectedCategories, categoryId]);
+        const next = [...selectedCategories, categoryId];
+        trackEvent('category_selected', { category: categoryId, selected_count: next.length });
+        onCategoryChange(next);
       }
     }
   };
 
   const selectedConfigs = selectedCategories.map(
-    (id) => foodCategories.find((c) => c.id === id)!
+    (id) => cuisineCategories.find((c) => c.id === id)!
   );
 
   return (
@@ -69,7 +74,7 @@ export function FoodCategorySelector({
 
       {/* Category Grid */}
       <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-        {foodCategories.map((category) => {
+        {cuisineCategories.map((category) => {
           const isSelected = selectedCategories.includes(category.id);
           const isDisabled = !isSelected && selectedCategories.length >= maxSelection;
 

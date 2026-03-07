@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
+import { trackEvent } from '@/lib/analytics';
 import { Button } from '@/components/ui/button';
-import { Crown, Menu, X } from 'lucide-react';
+import { CircleDot, Menu, X } from 'lucide-react';
 
 interface NavbarProps {
-  isPremium: boolean;
-  onUpgradeClick: () => void;
+  activeRoomId: string;
 }
 
-export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
+export function Navbar({ activeRoomId }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const hasActiveRoom = Boolean(activeRoomId);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,9 +27,17 @@ export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
   }, [isScrolled, isMobileMenuOpen]);
 
   const scrollToSection = (sectionId: string) => {
+    trackEvent('nav_section_click', { section: sectionId });
     const element = document.getElementById(sectionId);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      const navbarHeight = Number.parseInt(
+        window.getComputedStyle(document.documentElement).getPropertyValue('--navbar-height'),
+        10,
+      );
+      const fallbackNavbarHeight = isScrolled || isMobileMenuOpen ? 64 : 80;
+      const offset = Number.isFinite(navbarHeight) ? navbarHeight : fallbackNavbarHeight;
+      const targetTop = window.scrollY + element.getBoundingClientRect().top - offset - 8;
+      window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
     }
     setIsMobileMenuOpen(false);
   };
@@ -81,6 +90,14 @@ export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
               How It Works
             </button>
             <button
+              onClick={() => scrollToSection('group-spin')}
+              className={`text-sm font-medium transition-colors duration-200 hover:text-eatspin-orange ${
+                isScrolled ? 'text-brand-black' : 'text-brand-black'
+              }`}
+            >
+              Group Spin
+            </button>
+            <button
               onClick={() => scrollToSection('features')}
               className={`text-sm font-medium transition-colors duration-200 hover:text-eatspin-orange ${
                 isScrolled ? 'text-brand-black' : 'text-brand-black'
@@ -100,16 +117,12 @@ export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            {!isPremium && (
-              <Button
-                onClick={onUpgradeClick}
-                className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-medium px-4 py-2 rounded-full shadow-lg"
-              >
-                <Crown size={16} className="mr-2" />
-                Premium
-              </Button>
+            {hasActiveRoom && (
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                <CircleDot size={14} className="text-emerald-500" />
+                Room Active: {activeRoomId}
+              </div>
             )}
-            
             <Button
               onClick={() => scrollToSection('app')}
               className="bg-brand-orange hover:bg-brand-orange/90 text-white font-medium px-5 py-2 rounded-full"
@@ -117,6 +130,16 @@ export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
               Start Spinning
             </Button>
           </div>
+
+
+          {hasActiveRoom && (
+            <div className="mx-2 flex flex-1 justify-center md:hidden">
+              <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+                <CircleDot size={12} className="shrink-0 text-emerald-500" />
+                <span className="truncate">Room Active: {activeRoomId}</span>
+              </div>
+            </div>
+          )}
 
           {/* Mobile Menu Button */}
           <button
@@ -148,6 +171,12 @@ export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
                 How It Works
               </button>
               <button
+                onClick={() => scrollToSection('group-spin')}
+                className="text-left text-brand-black font-medium hover:text-eatspin-orange transition-colors"
+              >
+                Group Spin
+              </button>
+              <button
                 onClick={() => scrollToSection('features')}
                 className="text-left text-brand-black font-medium hover:text-eatspin-orange transition-colors"
               >
@@ -161,19 +190,6 @@ export function Navbar({ isPremium, onUpgradeClick }: NavbarProps) {
               </button>
               
               <div className="pt-4 border-t border-eatspin-gray-3 space-y-3">
-                {!isPremium && (
-                  <Button
-                    onClick={() => {
-                      onUpgradeClick();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-medium"
-                  >
-                    <Crown size={16} className="mr-2" />
-                    Upgrade to Premium
-                  </Button>
-                )}
-                
                 <Button
                   onClick={() => scrollToSection('app')}
                   className="w-full bg-brand-orange hover:bg-brand-orange/90 text-white font-medium"

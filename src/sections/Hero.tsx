@@ -1,13 +1,15 @@
 import { useEffect, useRef } from 'react';
+import { trackEvent } from '@/lib/analytics';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import gsap from 'gsap';
 
 interface HeroProps {
   onGetStarted: () => void;
+  onGroupSpin: () => void;
 }
 
-export function Hero({ onGetStarted }: HeroProps) {
+export function Hero({ onGetStarted, onGroupSpin }: HeroProps) {
   const heroRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
@@ -91,7 +93,7 @@ export function Hero({ onGetStarted }: HeroProps) {
                 ✦
               </span>
               <span className="text-[11px] sm:text-sm font-semibold text-brand-black tracking-[0.14em] uppercase">
-                #1 Food Discovery App in Penang
+                Food Discovery for Everyone
               </span>
             </div>
 
@@ -100,22 +102,33 @@ export function Hero({ onGetStarted }: HeroProps) {
               <span className="text-brand-orange">Let's EatSpin!</span>
             </h1>
 
-            <p className="text-base sm:text-lg text-eatspin-gray-1 mb-8 max-w-lg">
-              Can't decide what to eat? Let our magical roulette wheel choose for you! 
-              Discover amazing restaurants in Penang based on your preferences and location.
+            <p className="text-base sm:text-lg text-eatspin-gray-1 mb-4 max-w-lg">
+              Can't decide what to eat? Let the roulette wheel pick for you based on your taste, timing, and location.
+            </p>
+            <p className="text-sm sm:text-base text-brand-black/70 mb-8 max-w-lg">
+              Create/join a room and decide together. Group Spin keeps one shared list, host/co-host controls,
+              and synchronized results for everyone.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <Button
-                onClick={onGetStarted}
+                onClick={() => { trackEvent('hero_solo_spin_button'); onGetStarted(); }}
                 size="lg"
-                className="w-full sm:w-auto bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-base sm:text-lg font-bold px-6 sm:px-8 py-5 sm:py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                className="w-full sm:w-auto bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-base sm:text-lg font-bold px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
               >
-                Start Spinning
+                Start Solo Spin
                 <ArrowRight
                   size={20}
                   className="ml-2 group-hover:translate-x-1 transition-transform"
                 />
+              </Button>
+              <Button
+                onClick={() => { trackEvent('hero_group_spin_button'); onGroupSpin(); }}
+                size="lg"
+                variant="outline"
+                className="w-full sm:w-auto border-brand-orange text-brand-orange font-heading text-base sm:text-lg font-bold px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-sm hover:bg-brand-orange/10 transition-all duration-300"
+              >
+                Start Group Spin
               </Button>
             </div>
 

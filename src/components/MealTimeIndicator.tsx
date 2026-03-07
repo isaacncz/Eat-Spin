@@ -22,34 +22,42 @@ export function MealTimeIndicator() {
       case 'breakfast':
         return {
           icon: Coffee,
-          label: 'Breakfast Time',
+          label: 'Breakfast',
+          shortLabel: 'Breakfast',
           timeRange: '7:00 AM - 11:00 AM',
           color: '#F39C12',
-          bgColor: '#FEF5E7',
+          bgColor: '#FFF7EB',
+          borderColor: '#F9D7A5',
         };
       case 'lunch':
         return {
           icon: Sun,
-          label: 'Lunch Time',
+          label: 'Lunch',
+          shortLabel: 'Lunch',
           timeRange: '11:00 AM - 3:00 PM',
           color: '#E74C3C',
-          bgColor: '#FADBD8',
+          bgColor: '#FFF1EE',
+          borderColor: '#F6C4BC',
         };
       case 'dinner':
         return {
           icon: Moon,
-          label: 'Dinner Time',
+          label: 'Dinner',
+          shortLabel: 'Dinner',
           timeRange: '5:00 PM - 10:00 PM',
           color: '#8E44AD',
-          bgColor: '#E8DAEF',
+          bgColor: '#F6EEFA',
+          borderColor: '#DDC7EA',
         };
       default:
         return {
           icon: Clock,
           label: 'Off Hours',
+          shortLabel: 'Off hours',
           timeRange: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} - Limited options`,
           color: '#95A5A6',
-          bgColor: '#E8E8E8',
+          bgColor: '#F5F5F5',
+          borderColor: '#DCDCDC',
         };
     }
   };
@@ -59,20 +67,23 @@ export function MealTimeIndicator() {
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3 rounded-2xl"
-      style={{ backgroundColor: info.bgColor }}
+      className="inline-flex items-center gap-2 rounded-full border px-2.5 py-2 shadow-sm"
+      style={{ backgroundColor: info.bgColor, borderColor: info.borderColor }}
     >
       <div
-        className="w-10 h-10 rounded-full flex items-center justify-center"
+        className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center"
         style={{ backgroundColor: `${info.color}20` }}
       >
-        <Icon size={20} style={{ color: info.color }} />
+        <Icon size={16} style={{ color: info.color }} />
       </div>
-      <div>
-        <p className="font-heading font-bold text-brand-black text-sm">
-          {info.label}
+      <div className="flex items-center gap-2 pr-1">
+        <p className="font-heading text-base leading-none text-brand-black">
+          {info.shortLabel}
         </p>
-        <p className="text-xs text-eatspin-gray-1">{info.timeRange}</p>
+        <span className="hidden sm:inline text-xs text-eatspin-gray-2">|</span>
+        <p className="hidden sm:block text-xs leading-none text-eatspin-gray-1">
+          {info.timeRange}
+        </p>
       </div>
     </div>
   );

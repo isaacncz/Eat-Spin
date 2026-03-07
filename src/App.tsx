@@ -351,12 +351,16 @@ function App() {
     participants: groupParticipants,
     roomListNames: groupRoomListNames,
     currentSpin: groupCurrentSpin,
+    reactions: groupReactions,
+    votes: groupVotes,
     createRoom: createGroupRoom,
     joinRoom: joinGroupRoom,
     leaveRoom: leaveGroupRoom,
     syncHostList,
     setParticipantCohost,
     requestHostSpin,
+    sendReaction: sendGroupReaction,
+    setGoingVote: setGroupGoingVote,
   } = useFirebaseGroupRoom();
   const {
     shouldShowBanner: showPwaInstallBanner,
@@ -1157,12 +1161,16 @@ function App() {
         isBusy={groupRoomBusy}
         roomError={groupRoomError}
         participants={groupParticipants}
+        reactions={groupReactions}
+        votes={groupVotes}
         canStartRoomSpin={isGroupRoomActive && (isGroupHost || isGroupCohost) && manualRestaurantNames.length >= 2}
         onCreateRoom={handleCreateGroupRoom}
         onJoinRoom={handleJoinGroupRoom}
         onLeaveRoom={handleLeaveGroupRoom}
         onStartRoomSpin={handleRequestGroupSpin}
         onSetParticipantCohost={setParticipantCohost}
+        onSendReaction={sendGroupReaction}
+        onSetGoingVote={setGroupGoingVote}
         onClearRoomError={clearGroupRoomError}
       />
 

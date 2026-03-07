@@ -81,6 +81,14 @@ Last verified: March 2, 2026
 - [x] Persist seen-state in localStorage (`eatspin:first-run-onboarding-seen`)
 - [ ] Manual verify first-run only behavior on fresh storage
 
+## P11 - Group Reactions + "Who's In?" Vote
+- [x] Extend Firebase room hook with `reactions` and `votes` live subscriptions
+- [x] Add room reaction sender and vote setter actions
+- [x] Add emoji reaction controls in Group Spin UI
+- [x] Add floating reaction burst effect
+- [x] Add "I'm in / Pass" vote controls with live totals
+- [ ] Manual verify multi-client realtime sync for reactions and votes
+
 ## P6 - Regression + Ship Gate
 - [ ] Run `npm run lint`
 - [ ] Run `npm run build`

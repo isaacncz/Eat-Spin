@@ -4,9 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { GROUP_ROOM_MAX_PARTICIPANTS, GROUP_ROOM_NAME_MAX_LENGTH, type GroupRoomParticipant } from '@/hooks/useFirebaseGroupRoom';
+import {
+  GROUP_ROOM_MAX_PARTICIPANTS,
+  GROUP_ROOM_NAME_MAX_LENGTH,
+  type GroupRoomParticipant,
+  type GroupRoomReaction,
+  type GroupRoomVote,
+} from '@/hooks/useFirebaseGroupRoom';
 
 const ROOM_CODE_LENGTH = 6;
+const GROUP_REACTION_CHOICES = ['🔥', '😂', '🤮', '🙌'];
 
 const normalizeRoomCode = (value: string) => (
   value
@@ -46,12 +53,16 @@ interface GroupSpinProps {
   isBusy: boolean;
   roomError: string | null;
   participants: GroupRoomParticipant[];
+  reactions: GroupRoomReaction[];
+  votes: GroupRoomVote[];
   canStartRoomSpin: boolean;
   onCreateRoom: () => Promise<void>;
   onJoinRoom: (value: string) => Promise<void>;
   onLeaveRoom: () => Promise<void>;
   onStartRoomSpin: () => Promise<void>;
   onSetParticipantCohost: (uid: string, shouldBeCohost: boolean) => Promise<void>;
+  onSendReaction: (emoji: string) => Promise<void>;
+  onSetGoingVote: (going: boolean) => Promise<void>;
   onClearRoomError: () => void;
 }
 
@@ -73,20 +84,29 @@ export function GroupSpin({
   isBusy,
   roomError,
   participants,
+  reactions,
+  votes,
   canStartRoomSpin,
   onCreateRoom,
   onJoinRoom,
   onLeaveRoom,
   onStartRoomSpin,
   onSetParticipantCohost,
+  onSendReaction,
+  onSetGoingVote,
   onClearRoomError,
 }: GroupSpinProps) {
   const [joinValue, setJoinValue] = useState('');
   const [hasCopied, setHasCopied] = useState(false);
   const [cohostPendingUid, setCohostPendingUid] = useState<string | null>(null);
+  const [reactionBurst, setReactionBurst] = useState<GroupRoomReaction[]>([]);
+  const [votePending, setVotePending] = useState(false);
 
   const canInteract = isFirebaseConfigured && !authLoading;
   const hasRoom = Boolean(roomId);
+  const goingCount = votes.filter((vote) => vote.going).length;
+  const votedCount = votes.length;
+  const myVote = votes.find((vote) => vote.uid === authUid);
 
   const handleCopyLink = async () => {
     if (!roomLink || typeof navigator === 'undefined' || !navigator.clipboard) return;
@@ -147,6 +167,16 @@ export function GroupSpin({
     setCohostPendingUid(null);
   };
 
+  const handleSendReaction = async (emoji: string) => {
+    await onSendReaction(emoji);
+  };
+
+  const handleSetGoingVote = async (going: boolean) => {
+    setVotePending(true);
+    await onSetGoingVote(going);
+    setVotePending(false);
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const roomFromUrl = new URLSearchParams(window.location.search).get('room');
@@ -155,6 +185,23 @@ export function GroupSpin({
     if (!normalizedRoomCode) return;
     setJoinValue((previous) => previous || normalizedRoomCode);
   }, []);
+
+  useEffect(() => {
+    const latestReactions = reactions.slice(-6);
+    if (latestReactions.length === 0) {
+      setReactionBurst([]);
+      return;
+    }
+
+    setReactionBurst(latestReactions);
+    const timeoutId = window.setTimeout(() => {
+      setReactionBurst([]);
+    }, 1000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [reactions]);
 
   return (
     <section id="group-spin" className="bg-brand-linen px-4 py-16 sm:px-6 lg:px-8">
@@ -365,6 +412,72 @@ export function GroupSpin({
                   </div>
                 ))
               )}
+            </div>
+
+            <div className="relative mt-4 rounded-xl border border-eatspin-peach/60 bg-brand-linen/50 px-4 py-3">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-brand-black">Reactions</p>
+                <p className="text-xs text-eatspin-gray-1">Tap to react in real time</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {GROUP_REACTION_CHOICES.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-orange/35 bg-white text-lg hover:bg-brand-orange/10"
+                    onClick={() => { void handleSendReaction(emoji); }}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {reactions.slice(-8).map((reaction) => (
+                  <span key={reaction.id} className="rounded-full bg-white px-2 py-0.5 text-xs text-brand-black">
+                    {reaction.emoji} {reaction.name}
+                  </span>
+                ))}
+              </div>
+
+              {reactionBurst.length > 0 && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center gap-2 overflow-hidden pb-2">
+                  {reactionBurst.map((reaction) => (
+                    <span key={`burst-${reaction.id}`} className="reaction-float text-xl">
+                      {reaction.emoji}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 rounded-xl border border-eatspin-peach/60 bg-brand-linen/50 px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-brand-black">Who's in?</p>
+                <p className="text-xs text-eatspin-gray-1">
+                  {goingCount}/{participants.length} going • {votedCount} voted
+                </p>
+              </div>
+              <div className="mt-2 flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  className={`h-8 ${myVote?.going ? 'bg-brand-orange text-white' : 'bg-white text-brand-black border border-brand-orange/40 hover:bg-brand-orange/10'}`}
+                  disabled={votePending}
+                  onClick={() => { void handleSetGoingVote(true); }}
+                >
+                  I'm in
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={`h-8 ${myVote && !myVote.going ? 'border-brand-orange text-brand-orange' : ''}`}
+                  disabled={votePending}
+                  onClick={() => { void handleSetGoingVote(false); }}
+                >
+                  Pass
+                </Button>
+              </div>
             </div>
           </div>
         )}

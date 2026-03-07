@@ -5,6 +5,7 @@ import { useLocation } from '@/hooks/useLocation';
 import { useNearbyRestaurants } from '@/hooks/useNearbyRestaurants';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
+import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
 import { restaurants as localRestaurants } from '@/data/restaurants';
 import { enhancedFilterRestaurants, findNearbyFavourites } from '@/lib/restaurantUtils';
@@ -263,7 +264,7 @@ function App() {
 
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
-  const { canSpin, recordSpin } = useSpinTracker();
+  const { spins, canSpin, recordSpin } = useSpinTracker();
   const {
     favourites,
     isFavourite: isFavouriteCheck,
@@ -317,6 +318,15 @@ function App() {
     setParticipantCohost,
     requestHostSpin,
   } = useFirebaseGroupRoom();
+  const {
+    shouldShowBanner: showPwaInstallBanner,
+    isPromptReady: isPwaPromptReady,
+    dismissBanner: dismissPwaInstallBanner,
+    promptInstall,
+  } = usePwaInstallPrompt({
+    spinCount: spins.length,
+    showAfterSpins: 2,
+  });
 
   const priceOptions: Restaurant['priceRange'][] = ['$', '$$', '$$$', '$$$$'];
   const isGroupRoomActive = Boolean(groupRoomId);
@@ -519,6 +529,30 @@ function App() {
       // Best-effort local signal; analytics still tracks action.
     }
   }, [wheelRestaurants.length]);
+
+  const handlePwaInstall = useCallback(async () => {
+    trackEvent('pwa_install_prompt_open', { spin_count: spins.length });
+    const outcome = await promptInstall();
+
+    if (outcome === 'accepted') {
+      trackEvent('pwa_install_accepted', { spin_count: spins.length });
+      toast.success('App installation started.');
+      return;
+    }
+
+    if (outcome === 'dismissed') {
+      trackEvent('pwa_install_dismissed', { spin_count: spins.length });
+      toast('Install prompt dismissed for now.');
+      return;
+    }
+
+    toast('Install prompt is unavailable on this browser right now.');
+  }, [promptInstall, spins.length]);
+
+  const handleDismissPwaBanner = useCallback(() => {
+    dismissPwaInstallBanner();
+    trackEvent('pwa_install_banner_dismissed', { spin_count: spins.length });
+  }, [dismissPwaInstallBanner, spins.length]);
 
   const handleLetsGo = useCallback((restaurant: Restaurant) => {
     trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
@@ -1061,6 +1095,36 @@ function App() {
               </button>
             </div>
           </div>
+
+          {showPwaInstallBanner && isPwaPromptReady && (
+            <div className="mb-6 rounded-2xl border border-brand-orange/40 bg-brand-linen px-4 py-3 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-heading text-base font-bold text-brand-black">Install EatSpin for faster lunch decisions</p>
+                  <p className="text-sm text-eatspin-gray-1">
+                    You have spun {spins.length} times. Add EatSpin to your home screen for one-tap access.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    className="bg-brand-orange text-white hover:bg-brand-orange/90"
+                    onClick={() => { void handlePwaInstall(); }}
+                  >
+                    Install App
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-brand-orange/50 text-brand-black hover:bg-brand-linen"
+                    onClick={handleDismissPwaBanner}
+                  >
+                    Later
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {activeTab === 'auto' && (
             <>

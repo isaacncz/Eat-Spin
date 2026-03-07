@@ -55,6 +55,13 @@ Last verified: March 2, 2026
 - [ ] Respect reduced-motion preference
 - [ ] Verify no noticeable performance regression on mobile
 
+## P7 - PWA Install Prompt
+- [x] Capture `beforeinstallprompt` and persist deferred prompt
+- [x] Show custom install banner after 2nd recorded spin
+- [x] Add `Install` and `Later` actions with dismissal cooldown
+- [x] Track prompt open/accept/dismiss analytics events
+- [x] Add manifest shortcuts for quick app entry points
+
 ## P6 - Regression + Ship Gate
 - [ ] Run `npm run lint`
 - [ ] Run `npm run build`

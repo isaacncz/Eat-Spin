@@ -68,6 +68,12 @@ Last verified: March 2, 2026
 - [x] Render hero image in spin result card with graceful no-photo fallback
 - [ ] Manual verify photo rendering in auto mode live results
 
+## P9 - Spin History + Personal Stats
+- [x] Surface total spins, unique places, top category, current streak
+- [x] Add "This month" metric and recent timeline list
+- [x] Add shareable "Wrapped" summary action (native share/clipboard fallback)
+- [ ] Manual verify stats correctness across reloads and new spins
+
 ## P6 - Regression + Ship Gate
 - [ ] Run `npm run lint`
 - [ ] Run `npm run build`

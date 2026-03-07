@@ -56,6 +56,7 @@ const ROOM_LIST_SYNC_GRACE_MS = 2_500;
 const GROUP_SPIN_REPLAY_WINDOW_MS = 30_000;
 const LATE_JOIN_NOTICE_MS = 5 * 60 * 1000;
 const REVIEW_PREVIEW_COUNT = 30;
+const SPIN_HISTORY_PREVIEW_COUNT = 8;
 const MANUAL_SUGGESTED_RESTAURANTS = ['Sushi Place', 'Burger Spot', 'Local Noodles', 'Pizza Corner'];
 const DEFAULT_AUTO_RANGE_MODE: AutoRangeMode = 'drive10';
 const AUTO_RANGE_RADIUS_KM: Record<AutoRangeMode, number> = {
@@ -202,6 +203,39 @@ const formatAbsoluteSpinTime = (timestamp: number) =>
 
 const formatAbsoluteSyncTime = (timestamp: number) =>
   new Date(timestamp).toLocaleString([], { hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric' });
+
+const toDateKey = (timestamp: Date | string | number): string => {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatSpinTimestamp = (timestamp: Date | string | number): string =>
+  new Date(timestamp).toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+const calculateCurrentSpinStreak = (timestamps: Array<Date | string | number>): number => {
+  const uniqueDayKeys = Array.from(new Set(timestamps.map((value) => toDateKey(value))));
+  if (uniqueDayKeys.length === 0) return 0;
+
+  const availableDays = new Set(uniqueDayKeys);
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  let streak = 0;
+
+  while (availableDays.has(toDateKey(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
+};
 
 function App() {
   // State management
@@ -412,6 +446,39 @@ function App() {
     return findNearbyFavourites(favourites, location.lat, location.lng);
   }, [favourites, location]);
 
+  const spinHistorySummary = useMemo(() => {
+    const categoryCounter = new Map<string, number>();
+    const restaurantIds = new Set<string>();
+
+    for (const spin of spins) {
+      const restaurant = spin.restaurant;
+      const category = restaurant.category?.[0] ?? 'other';
+      categoryCounter.set(category, (categoryCounter.get(category) ?? 0) + 1);
+      restaurantIds.add(restaurant.googlePlaceId ?? restaurant.id);
+    }
+
+    const topCategory = [...categoryCounter.entries()]
+      .sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+    const monthKey = new Date().toLocaleString([], { month: 'short', year: 'numeric' });
+    const spinsThisMonth = spins.filter((spin) => (
+      new Date(spin.timestamp).toLocaleString([], { month: 'short', year: 'numeric' }) === monthKey
+    )).length;
+
+    const recentSpins = [...spins]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, SPIN_HISTORY_PREVIEW_COUNT);
+
+    return {
+      totalSpins: spins.length,
+      uniqueRestaurants: restaurantIds.size,
+      topCategory,
+      currentStreak: calculateCurrentSpinStreak(spins.map((spin) => spin.timestamp)),
+      spinsThisMonth,
+      recentSpins,
+    };
+  }, [spins]);
+
   const filterResult = useMemo(() => (
     enhancedFilterRestaurants(
       autoSourceRestaurants,
@@ -553,6 +620,36 @@ function App() {
     dismissPwaInstallBanner();
     trackEvent('pwa_install_banner_dismissed', { spin_count: spins.length });
   }, [dismissPwaInstallBanner, spins.length]);
+
+  const handleShareSpinWrapped = useCallback(async () => {
+    const topCategoryLabel = spinHistorySummary.topCategory ?? 'mixed cuisines';
+    const summaryText = `I spun ${spinHistorySummary.totalSpins} times on EatSpin with a ${spinHistorySummary.currentStreak}-day streak. Top category: ${topCategoryLabel}.`;
+    trackEvent('spin_wrapped_share_open', {
+      total_spins: spinHistorySummary.totalSpins,
+      current_streak: spinHistorySummary.currentStreak,
+    });
+
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: 'My EatSpin Wrapped',
+          text: summaryText,
+          url: window.location.origin,
+        });
+        trackEvent('spin_wrapped_share_success');
+        return;
+      } catch {
+        trackEvent('spin_wrapped_share_cancelled');
+        return;
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(`${summaryText} ${window.location.origin}`);
+      toast.success('Wrapped summary copied to clipboard.');
+      trackEvent('spin_wrapped_share_copied');
+    }
+  }, [spinHistorySummary]);
 
   const handleLetsGo = useCallback((restaurant: Restaurant) => {
     trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
@@ -1125,6 +1222,68 @@ function App() {
               </div>
             </div>
           )}
+
+          <div className="mb-6 rounded-2xl border border-eatspin-peach/60 bg-brand-linen/70 p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-heading text-lg font-bold text-brand-black">My Spins</h3>
+                <p className="text-sm text-eatspin-gray-1">Your personal stats and recent spin timeline.</p>
+              </div>
+              {spinHistorySummary.totalSpins > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-brand-orange/40 text-brand-orange hover:bg-brand-orange/10"
+                  onClick={() => { void handleShareSpinWrapped(); }}
+                >
+                  Share Wrapped
+                </Button>
+              )}
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-4">
+              <div className="rounded-xl bg-white px-3 py-2">
+                <p className="text-xs text-eatspin-gray-1">Total spins</p>
+                <p className="font-heading text-xl font-bold text-brand-black">{spinHistorySummary.totalSpins}</p>
+              </div>
+              <div className="rounded-xl bg-white px-3 py-2">
+                <p className="text-xs text-eatspin-gray-1">Unique places</p>
+                <p className="font-heading text-xl font-bold text-brand-black">{spinHistorySummary.uniqueRestaurants}</p>
+              </div>
+              <div className="rounded-xl bg-white px-3 py-2">
+                <p className="text-xs text-eatspin-gray-1">Current streak</p>
+                <p className="font-heading text-xl font-bold text-brand-black">{spinHistorySummary.currentStreak} day{spinHistorySummary.currentStreak === 1 ? '' : 's'}</p>
+              </div>
+              <div className="rounded-xl bg-white px-3 py-2">
+                <p className="text-xs text-eatspin-gray-1">Top category</p>
+                <p className="font-heading text-xl font-bold text-brand-black">{spinHistorySummary.topCategory ?? 'N/A'}</p>
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-xl border border-eatspin-peach/50 bg-white">
+              <div className="flex items-center justify-between px-3 py-2 text-xs text-eatspin-gray-1">
+                <span>This month: <strong className="text-brand-black">{spinHistorySummary.spinsThisMonth}</strong></span>
+                <span>Recent {spinHistorySummary.recentSpins.length}</span>
+              </div>
+              <ul className="max-h-56 divide-y divide-eatspin-peach/30 overflow-y-auto px-3 pb-2">
+                {spinHistorySummary.recentSpins.length === 0 && (
+                  <li className="py-3 text-sm text-eatspin-gray-1">No spins yet. Spin now to build your history.</li>
+                )}
+                {spinHistorySummary.recentSpins.map((spin, index) => (
+                  <li key={`${spin.restaurant.id}-${index}`} className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-brand-black">{spin.restaurant.name}</p>
+                      <p className="text-xs text-eatspin-gray-1">
+                        {spin.mealTime !== 'none' ? `${spin.mealTime} • ` : ''}
+                        {spin.restaurant.category?.[0] ?? 'uncategorized'}
+                      </p>
+                    </div>
+                    <span className="flex-shrink-0 text-xs text-eatspin-gray-1">{formatSpinTimestamp(spin.timestamp)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
 
           {activeTab === 'auto' && (
             <>

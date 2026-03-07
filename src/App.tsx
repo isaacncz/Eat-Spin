@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import { trackEvent } from '@/lib/analytics';
+import { APP_FEATURES } from '@/lib/featureFlags';
 import { useLocation } from '@/hooks/useLocation';
 import { useNearbyRestaurants } from '@/hooks/useNearbyRestaurants';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
@@ -387,13 +388,17 @@ function App() {
     joinChallenge,
     leaveChallenge,
     recordDailySpin,
-  } = useSpinChallenge(groupAuthUid, groupResolvedDisplayName);
+  } = useSpinChallenge(groupAuthUid, groupResolvedDisplayName, {
+    enabled: APP_FEATURES.spinChallenge,
+  });
   const {
     events: discoverEvents,
     error: discoverFeedError,
     geoKey: discoverGeoKey,
     publishSpin: publishDiscoverSpin,
-  } = useDiscoverFeed(location, groupAuthUid);
+  } = useDiscoverFeed(location, groupAuthUid, {
+    enabled: APP_FEATURES.discoverFeed,
+  });
 
   const priceOptions: Restaurant['priceRange'][] = ['$', '$$', '$$$', '$$$$'];
   const isGroupRoomActive = Boolean(groupRoomId);
@@ -1340,7 +1345,8 @@ function App() {
             </div>
           </div>
 
-          <div className="mb-6 rounded-2xl border border-brand-orange/35 bg-white p-4 sm:p-5">
+          {APP_FEATURES.spinChallenge && (
+            <div className="mb-6 rounded-2xl border border-brand-orange/35 bg-white p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="font-heading text-lg font-bold text-brand-black">7-Day Challenge a Friend</h3>
@@ -1430,9 +1436,11 @@ function App() {
                 </ul>
               </div>
             )}
-          </div>
+            </div>
+          )}
 
-          <div className="mb-6 rounded-2xl border border-eatspin-peach/60 bg-brand-linen/70 p-4 sm:p-5">
+          {APP_FEATURES.discoverFeed && (
+            <div className="mb-6 rounded-2xl border border-eatspin-peach/60 bg-brand-linen/70 p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="font-heading text-lg font-bold text-brand-black">Discover Feed</h3>
@@ -1465,7 +1473,8 @@ function App() {
                 </li>
               ))}
             </ul>
-          </div>
+            </div>
+          )}
 
           {activeTab === 'auto' && (
             <>

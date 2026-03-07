@@ -10,6 +10,10 @@ interface DiscoverFeedEvent {
   createdAt: number;
 }
 
+interface UseDiscoverFeedOptions {
+  enabled?: boolean;
+}
+
 const toSafeCoordinateSegment = (value: number) => {
   const rounded = Math.round(value * 100) / 100;
   const prefix = rounded < 0 ? 'm' : 'p';
@@ -37,13 +41,19 @@ const parseDiscoverEvents = (raw: unknown) => {
   }, []).sort((a, b) => b.createdAt - a.createdAt).slice(0, 20);
 };
 
-export const useDiscoverFeed = (location: UserLocation | null, authUid: string | null) => {
+export const useDiscoverFeed = (
+  location: UserLocation | null,
+  authUid: string | null,
+  options: UseDiscoverFeedOptions = {}
+) => {
+  const { enabled = true } = options;
   const [events, setEvents] = useState<DiscoverFeedEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const geoKey = useMemo(() => toGeoKey(location), [location]);
+  const rawGeoKey = useMemo(() => toGeoKey(location), [location]);
+  const geoKey = enabled ? rawGeoKey : '';
 
   const publishSpin = useCallback(async (restaurantName: string, mealTime: MealTime) => {
-    if (!firebaseDb || !isFirebaseConfigured || !authUid || !geoKey) return;
+    if (!enabled || !firebaseDb || !isFirebaseConfigured || !authUid || !geoKey) return;
     const now = Date.now();
     const eventKey = `${now}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -56,10 +66,10 @@ export const useDiscoverFeed = (location: UserLocation | null, authUid: string |
     } catch {
       // best-effort signal only
     }
-  }, [authUid, geoKey]);
+  }, [authUid, enabled, geoKey]);
 
   useEffect(() => {
-    if (!firebaseDb || !isFirebaseConfigured || !geoKey) return;
+    if (!enabled || !firebaseDb || !isFirebaseConfigured || !geoKey) return;
 
     const eventsRef = ref(firebaseDb, `discover/${geoKey}/events`);
     const unsubscribe = onValue(eventsRef, (snapshot) => {
@@ -72,11 +82,11 @@ export const useDiscoverFeed = (location: UserLocation | null, authUid: string |
     return () => {
       unsubscribe();
     };
-  }, [geoKey]);
+  }, [enabled, geoKey]);
 
   return {
     events: geoKey ? events : [],
-    error,
+    error: enabled ? error : null,
     geoKey,
     publishSpin,
   };

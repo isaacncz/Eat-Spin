@@ -19,6 +19,10 @@ interface ChallengeParticipant {
   completedDayKeys: string[];
 }
 
+interface UseSpinChallengeOptions {
+  enabled?: boolean;
+}
+
 const normalizeChallengeCode = (value: string) =>
   value
     .toUpperCase()
@@ -88,7 +92,12 @@ const getBaseUrl = () => {
   return `${window.location.origin}${window.location.pathname}`;
 };
 
-export const useSpinChallenge = (authUid: string | null, displayName: string) => {
+export const useSpinChallenge = (
+  authUid: string | null,
+  displayName: string,
+  options: UseSpinChallengeOptions = {}
+) => {
+  const { enabled = true } = options;
   const [challengeId, setChallengeId] = useState('');
   const [meta, setMeta] = useState<ChallengeMeta | null>(null);
   const [participants, setParticipants] = useState<ChallengeParticipant[]>([]);
@@ -98,13 +107,13 @@ export const useSpinChallenge = (authUid: string | null, displayName: string) =>
   const autoJoinedRef = useRef(false);
 
   const challengeLink = useMemo(() => {
-    if (!challengeId) return '';
+    if (!enabled || !challengeId) return '';
     const baseUrl = getBaseUrl();
     if (!baseUrl) return `?challenge=${challengeId}`;
     const url = new URL(baseUrl);
     url.searchParams.set('challenge', challengeId);
     return url.toString();
-  }, [challengeId]);
+  }, [challengeId, enabled]);
 
   const myParticipant = useMemo(
     () => participants.find((participant) => participant.uid === authUid),
@@ -123,6 +132,7 @@ export const useSpinChallenge = (authUid: string | null, displayName: string) =>
   }, []);
 
   const leaveChallenge = useCallback(async () => {
+    if (!enabled) return;
     clearListener();
     setChallengeId('');
     setMeta(null);
@@ -134,10 +144,10 @@ export const useSpinChallenge = (authUid: string | null, displayName: string) =>
       nextUrl.searchParams.delete('challenge');
       window.history.replaceState({}, '', nextUrl.toString());
     }
-  }, [clearListener]);
+  }, [clearListener, enabled]);
 
   const attachChallengeListener = useCallback((nextChallengeId: string) => {
-    if (!firebaseDb) return;
+    if (!enabled || !firebaseDb) return;
     clearListener();
 
     const challengeRef = ref(firebaseDb, `challenges/${nextChallengeId}`);
@@ -151,9 +161,10 @@ export const useSpinChallenge = (authUid: string | null, displayName: string) =>
       setMeta(nextMeta);
       setParticipants(parseParticipants(raw?.participants));
     });
-  }, [clearListener, leaveChallenge]);
+  }, [clearListener, enabled, leaveChallenge]);
 
   const joinChallenge = useCallback(async (input: string) => {
+    if (!enabled) return;
     if (!firebaseDb || !isFirebaseConfigured || !authUid) {
       setError('Challenge mode needs Firebase sign-in first.');
       return;
@@ -199,9 +210,10 @@ export const useSpinChallenge = (authUid: string | null, displayName: string) =>
     } finally {
       setIsBusy(false);
     }
-  }, [attachChallengeListener, authUid, displayName]);
+  }, [attachChallengeListener, authUid, displayName, enabled]);
 
   const createChallenge = useCallback(async () => {
+    if (!enabled) return;
     if (!firebaseDb || !isFirebaseConfigured || !authUid) {
       setError('Challenge mode needs Firebase sign-in first.');
       return;
@@ -253,20 +265,31 @@ export const useSpinChallenge = (authUid: string | null, displayName: string) =>
     } finally {
       setIsBusy(false);
     }
-  }, [attachChallengeListener, authUid, displayName]);
+  }, [attachChallengeListener, authUid, displayName, enabled]);
 
   const recordDailySpin = useCallback(async () => {
-    if (!firebaseDb || !authUid || !challengeId) return;
+    if (!enabled || !firebaseDb || !authUid || !challengeId) return;
     const dayKey = toDayKey();
     try {
       await set(ref(firebaseDb, `challenges/${challengeId}/participants/${authUid}/completedDays/${dayKey}`), true);
     } catch {
       // best-effort sync
     }
-  }, [authUid, challengeId]);
+  }, [authUid, challengeId, enabled]);
 
   useEffect(() => {
-    if (!authUid || autoJoinedRef.current) return;
+    if (enabled) return;
+    autoJoinedRef.current = false;
+    clearListener();
+    setChallengeId('');
+    setMeta(null);
+    setParticipants([]);
+    setIsBusy(false);
+    setError(null);
+  }, [clearListener, enabled]);
+
+  useEffect(() => {
+    if (!enabled || !authUid || autoJoinedRef.current) return;
     autoJoinedRef.current = true;
     if (typeof window === 'undefined') return;
 
@@ -275,7 +298,7 @@ export const useSpinChallenge = (authUid: string | null, displayName: string) =>
     const initialCode = fromUrl || fromStorage;
     if (!initialCode) return;
     void joinChallenge(initialCode);
-  }, [authUid, joinChallenge]);
+  }, [authUid, enabled, joinChallenge]);
 
   useEffect(() => {
     return () => {
@@ -284,13 +307,13 @@ export const useSpinChallenge = (authUid: string | null, displayName: string) =>
   }, [clearListener]);
 
   return {
-    challengeId,
+    challengeId: enabled ? challengeId : '',
     challengeLink,
-    leaderboard,
-    myParticipant,
-    meta,
-    isBusy,
-    error,
+    leaderboard: enabled ? leaderboard : [],
+    myParticipant: enabled ? myParticipant : undefined,
+    meta: enabled ? meta : null,
+    isBusy: enabled ? isBusy : false,
+    error: enabled ? error : null,
     createChallenge,
     joinChallenge,
     leaveChallenge,

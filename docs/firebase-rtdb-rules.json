@@ -25,6 +25,50 @@
         "spin": {
           ".write": "auth != null && (root.child('rooms/'+$roomId+'/meta/hostUid').val() === auth.uid || root.child('rooms/'+$roomId+'/cohosts/'+auth.uid).val() === true)",
           ".validate": "!newData.exists() || (newData.hasChildren(['spinId','winnerIndex','winnerName','startedAt','completedAt','startedBy']) && newData.child('spinId').isString() && newData.child('winnerIndex').isNumber() && newData.child('winnerName').isString() && newData.child('startedAt').isNumber() && newData.child('completedAt').isNumber() && newData.child('startedBy').val() === auth.uid)"
+        },
+        "reactions": {
+          "$reactionId": {
+            ".write": "auth != null && root.child('rooms/'+$roomId+'/participants/'+auth.uid).exists() && !data.exists() && newData.child('uid').val() === auth.uid",
+            ".validate": "newData.hasChildren(['uid','name','emoji','createdAt']) && newData.child('uid').isString() && newData.child('name').isString() && newData.child('emoji').isString() && newData.child('createdAt').isNumber()"
+          }
+        },
+        "votes": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('rooms/'+$roomId+'/participants/'+auth.uid).exists()",
+            ".validate": "newData.hasChildren(['name','going','updatedAt']) && newData.child('name').isString() && newData.child('going').isBoolean() && newData.child('updatedAt').isNumber()"
+          }
+        }
+      }
+    },
+    "challenges": {
+      "$challengeId": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.child('meta/createdBy').val() === auth.uid && newData.child('participants/'+auth.uid).exists()) || (data.exists() && !newData.exists() && data.child('meta/endsAt').isNumber() && data.child('meta/endsAt').val() <= now))",
+        "meta": {
+          ".validate": "newData.hasChildren(['createdAt','endsAt','createdBy']) && newData.child('createdAt').isNumber() && newData.child('endsAt').isNumber() && newData.child('createdBy').isString()"
+        },
+        "participants": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['name','joinedAt']) && newData.child('name').isString() && newData.child('joinedAt').isNumber()",
+            "completedDays": {
+              "$dayKey": {
+                ".write": "auth != null && auth.uid === $uid",
+                ".validate": "$dayKey.matches(/^\\d{4}-\\d{2}-\\d{2}$/) && newData.val() === true"
+              }
+            }
+          }
+        }
+      }
+    },
+    "discover": {
+      "$geoKey": {
+        ".read": "auth != null",
+        "events": {
+          "$eventId": {
+            ".write": "auth != null && $geoKey.matches(/^[A-Za-z0-9_-]+$/) && !data.exists()",
+            ".validate": "newData.hasChildren(['restaurantName','mealTime','createdAt']) && newData.child('restaurantName').isString() && newData.child('mealTime').val().matches(/^(none|breakfast|lunch|dinner)$/) && newData.child('createdAt').isNumber()"
+          }
         }
       }
     }

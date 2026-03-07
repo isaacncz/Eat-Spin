@@ -10,11 +10,15 @@ interface DiscoverFeedEvent {
   createdAt: number;
 }
 
+const toSafeCoordinateSegment = (value: number) => {
+  const rounded = Math.round(value * 100) / 100;
+  const prefix = rounded < 0 ? 'm' : 'p';
+  return `${prefix}${Math.abs(rounded).toFixed(2).replace('.', 'd')}`;
+};
+
 const toGeoKey = (location: UserLocation | null): string => {
   if (!location) return '';
-  const lat = Math.round(location.lat * 100) / 100;
-  const lng = Math.round(location.lng * 100) / 100;
-  return `${lat.toFixed(2)}_${lng.toFixed(2)}`.replace('-', 'm').replace('-', 'm');
+  return `${toSafeCoordinateSegment(location.lat)}_${toSafeCoordinateSegment(location.lng)}`;
 };
 
 const parseDiscoverEvents = (raw: unknown) => {

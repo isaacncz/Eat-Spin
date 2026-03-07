@@ -6,6 +6,7 @@ import { useNearbyRestaurants } from '@/hooks/useNearbyRestaurants';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
+import { useSpinChallenge } from '@/hooks/useSpinChallenge';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
 import { restaurants as localRestaurants } from '@/data/restaurants';
 import { enhancedFilterRestaurants, findNearbyFavourites } from '@/lib/restaurantUtils';
@@ -265,6 +266,7 @@ function App() {
     if (typeof window === 'undefined') return false;
     return !window.localStorage.getItem(FIRST_RUN_ONBOARDING_SEEN_KEY);
   });
+  const [challengeJoinInput, setChallengeJoinInput] = useState('');
 
   const [manualInput, setManualInput] = useState('');
   const [manualRestaurants, setManualRestaurants] = useState<Restaurant[]>(() => loadManualRestaurants());
@@ -371,6 +373,19 @@ function App() {
     spinCount: spins.length,
     showAfterSpins: 2,
   });
+  const {
+    challengeId,
+    challengeLink,
+    leaderboard: challengeLeaderboard,
+    myParticipant: myChallengeParticipant,
+    meta: challengeMeta,
+    isBusy: challengeBusy,
+    error: challengeError,
+    createChallenge,
+    joinChallenge,
+    leaveChallenge,
+    recordDailySpin,
+  } = useSpinChallenge(groupAuthUid, groupResolvedDisplayName);
 
   const priceOptions: Restaurant['priceRange'][] = ['$', '$$', '$$$', '$$$$'];
   const isGroupRoomActive = Boolean(groupRoomId);
@@ -538,13 +553,15 @@ function App() {
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
     trackEvent('spin_complete', { mode: 'auto', restaurant_name: restaurant.name, category: restaurant.category?.[0] ?? '' });
     recordSpin(restaurant, currentMealTime);
+    void recordDailySpin();
     setPendingAutoRemovalId(restaurant.id);
-  }, [currentMealTime, recordSpin]);
+  }, [currentMealTime, recordDailySpin, recordSpin]);
 
   const handleManualSpinComplete = useCallback((restaurant: Restaurant) => {
     trackEvent('spin_complete', { mode: 'manual', restaurant_name: restaurant.name });
     setManualSpinResult(restaurant);
-  }, []);
+    void recordDailySpin();
+  }, [recordDailySpin]);
 
   const handleSaveFavourite = useCallback((restaurant: Restaurant, mode: 'auto' | 'manual') => {
     trackEvent('favourite_saved', { restaurant_name: restaurant.name, mode });
@@ -674,6 +691,30 @@ function App() {
     scrollToSection('app');
     trackEvent('first_run_onboarding_auto_mode_opened');
   }, [scrollToSection]);
+
+  const handleCreateChallenge = useCallback(() => {
+    trackEvent('challenge_create_requested');
+    void createChallenge();
+  }, [createChallenge]);
+
+  const handleJoinChallenge = useCallback(() => {
+    if (!challengeJoinInput.trim()) return;
+    trackEvent('challenge_join_requested');
+    void joinChallenge(challengeJoinInput);
+    setChallengeJoinInput('');
+  }, [challengeJoinInput, joinChallenge]);
+
+  const handleCopyChallengeLink = useCallback(async () => {
+    if (!challengeLink || typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return;
+    await navigator.clipboard.writeText(challengeLink);
+    toast.success('Challenge link copied.');
+    trackEvent('challenge_link_copied');
+  }, [challengeLink]);
+
+  const handleLeaveChallenge = useCallback(() => {
+    trackEvent('challenge_left');
+    void leaveChallenge();
+  }, [leaveChallenge]);
 
   const handleLetsGo = useCallback((restaurant: Restaurant) => {
     trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
@@ -1311,6 +1352,98 @@ function App() {
                 ))}
               </ul>
             </div>
+          </div>
+
+          <div className="mb-6 rounded-2xl border border-brand-orange/35 bg-white p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-heading text-lg font-bold text-brand-black">7-Day Challenge a Friend</h3>
+                <p className="text-sm text-eatspin-gray-1">Challenge friends to spin daily and compare streak progress.</p>
+              </div>
+              {challengeId && (
+                <span className="rounded-full bg-brand-orange/10 px-3 py-1 text-xs font-semibold text-brand-orange">
+                  Challenge {challengeId}
+                </span>
+              )}
+            </div>
+
+            {challengeError && (
+              <p className="mt-2 text-sm text-eatspin-error">{challengeError}</p>
+            )}
+
+            {!challengeId ? (
+              <div className="mt-4 grid gap-2 sm:grid-cols-[auto_1fr_auto]">
+                <Button
+                  type="button"
+                  className="bg-brand-orange text-white hover:bg-brand-orange/90"
+                  disabled={challengeBusy}
+                  onClick={handleCreateChallenge}
+                >
+                  {challengeBusy ? 'Working...' : 'Create 7-day challenge'}
+                </Button>
+                <Input
+                  value={challengeJoinInput}
+                  onChange={(event) => setChallengeJoinInput(event.target.value)}
+                  placeholder="Paste challenge link or code"
+                  className="h-11"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-brand-orange/40 text-brand-black hover:bg-brand-linen"
+                  disabled={challengeBusy || !challengeJoinInput.trim()}
+                  onClick={handleJoinChallenge}
+                >
+                  Join
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-brand-orange/40 text-brand-orange hover:bg-brand-orange/10"
+                    onClick={() => { void handleCopyChallengeLink(); }}
+                  >
+                    Copy invite link
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                    onClick={handleLeaveChallenge}
+                  >
+                    Leave challenge
+                  </Button>
+                  {challengeMeta && (
+                    <span className="text-xs text-eatspin-gray-1">
+                      Ends in {Math.max(0, Math.ceil((challengeMeta.endsAt - Date.now()) / (24 * 60 * 60 * 1000)))} day(s)
+                    </span>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-eatspin-peach/50 bg-brand-linen/60 px-3 py-2">
+                  <p className="text-xs text-eatspin-gray-1">
+                    Your completed days: <strong className="text-brand-black">{myChallengeParticipant?.completedDayKeys.length ?? 0}</strong>/7
+                  </p>
+                </div>
+
+                <ul className="space-y-2">
+                  {challengeLeaderboard.map((participant) => (
+                    <li
+                      key={participant.uid}
+                      className="flex items-center justify-between rounded-lg border border-eatspin-peach/50 bg-brand-linen px-3 py-2 text-sm"
+                    >
+                      <span className="font-medium text-brand-black">
+                        {participant.name} {participant.uid === groupAuthUid ? '(You)' : ''}
+                      </span>
+                      <span className="text-eatspin-gray-1">{participant.completedDayKeys.length}/7 days</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {activeTab === 'auto' && (

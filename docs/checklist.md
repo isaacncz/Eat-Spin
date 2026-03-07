@@ -89,6 +89,13 @@ Last verified: March 2, 2026
 - [x] Add "I'm in / Pass" vote controls with live totals
 - [ ] Manual verify multi-client realtime sync for reactions and votes
 
+## P12 - Challenge a Friend (7 Days)
+- [x] Add Firebase-backed challenge hook for create/join/leave flows
+- [x] Add shareable invite link (`?challenge=CODE`) handling
+- [x] Sync daily completion markers when spins happen
+- [x] Add challenge leaderboard panel in app UI
+- [ ] Manual verify two-user challenge sync across devices
+
 ## P6 - Regression + Ship Gate
 - [ ] Run `npm run lint`
 - [ ] Run `npm run build`

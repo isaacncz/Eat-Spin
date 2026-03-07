@@ -811,6 +811,18 @@ export function RouletteWheel({
               {spinResult.name}
               <Trophy size={20} className="celebration-floating-icon text-[#FFD700]" />
             </h3>
+
+            {!isManualResult && spinResult.image && (
+              <div className="mb-3 overflow-hidden rounded-xl border border-eatspin-peach/60">
+                <img
+                  src={spinResult.image}
+                  alt={`Photo of ${spinResult.name}`}
+                  className="h-44 w-full object-cover"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            )}
             
             {!isManualResult && (
               <div className="space-y-2 text-sm">

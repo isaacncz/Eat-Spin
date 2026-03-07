@@ -62,6 +62,12 @@ Last verified: March 2, 2026
 - [x] Track prompt open/accept/dismiss analytics events
 - [x] Add manifest shortcuts for quick app entry points
 
+## P8 - Restaurant Photo in Result Card
+- [x] Add Google Places photo field in nearby request field mask
+- [x] Map first available Places photo into `Restaurant.image`
+- [x] Render hero image in spin result card with graceful no-photo fallback
+- [ ] Manual verify photo rendering in auto mode live results
+
 ## P6 - Regression + Ship Gate
 - [ ] Run `npm run lint`
 - [ ] Run `npm run build`

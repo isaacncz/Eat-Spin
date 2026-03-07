@@ -15,6 +15,7 @@ const GOOGLE_PLACE_FIELDS = [
   'places.types',
   'places.primaryType',
   'places.editorialSummary',
+  'places.photos.name',
   'places.nationalPhoneNumber',
   'places.regularOpeningHours.periods',
   'places.currentOpeningHours.openNow',
@@ -96,6 +97,10 @@ type GooglePlaceOpeningPeriod = {
   close?: GooglePlaceOpeningPoint;
 };
 
+type GooglePlacePhoto = {
+  name?: string;
+};
+
 type GooglePlace = {
   id?: string;
   displayName?: { text?: string };
@@ -109,6 +114,7 @@ type GooglePlace = {
   primaryType?: string;
   /** Free-text editorial description authored by Google. */
   editorialSummary?: { text?: string };
+  photos?: GooglePlacePhoto[];
   nationalPhoneNumber?: string;
   regularOpeningHours?: { periods?: GooglePlaceOpeningPeriod[] };
   currentOpeningHours?: { openNow?: boolean };
@@ -372,7 +378,8 @@ const computeCategoryConfidence = (
 
 const normalizeGooglePlace = (
   place: GooglePlace,
-  location: { lat: number; lng: number }
+  location: { lat: number; lng: number },
+  apiKey: string,
 ): Restaurant | null => {
   if (!place.id) return null;
   if (!place.location || typeof place.location.latitude !== 'number' || typeof place.location.longitude !== 'number') {
@@ -436,6 +443,10 @@ const normalizeGooglePlace = (
   const rating = typeof place.rating === 'number' ? Number(place.rating.toFixed(1)) : 0;
   const userRatingCount = typeof place.userRatingCount === 'number' ? place.userRatingCount : 0;
   const mappedPrice = mapGooglePriceLevel(place.priceLevel);
+  const photoName = place.photos?.[0]?.name?.trim();
+  const image = photoName
+    ? `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=720&maxWidthPx=720&key=${apiKey}`
+    : undefined;
 
   return {
     id: `gplace-${place.id}`,
@@ -452,6 +463,7 @@ const normalizeGooglePlace = (
     priceRange: mappedPrice.priceRange,
     hasKnownPriceRange: mappedPrice.hasKnownPriceRange,
     phone: place.nationalPhoneNumber?.trim(),
+    image,
     description: place.editorialSummary?.text?.trim() || 'Highly rated nearby pick from Google Maps.',
     isOpen: place.currentOpeningHours?.openNow ?? true,
     distance,
@@ -510,7 +522,7 @@ export const fetchNearbyGoogleRestaurants = async (
 
   const places = payload?.places ?? [];
   const restaurants = places
-    .map((place) => normalizeGooglePlace(place, options.location))
+    .map((place) => normalizeGooglePlace(place, options.location, apiKey))
     .filter((restaurant): restaurant is Restaurant => Boolean(restaurant));
 
   // When the API was called with cuisine-specific types, force-tag each result

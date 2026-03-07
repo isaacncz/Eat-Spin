@@ -268,6 +268,7 @@ function App() {
     return !window.localStorage.getItem(FIRST_RUN_ONBOARDING_SEEN_KEY);
   });
   const [challengeJoinInput, setChallengeJoinInput] = useState('');
+  const [uiNowMs, setUiNowMs] = useState(() => Date.now());
 
   const [manualInput, setManualInput] = useState('');
   const [manualRestaurants, setManualRestaurants] = useState<Restaurant[]>(() => loadManualRestaurants());
@@ -448,6 +449,16 @@ function App() {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(AUTO_RANGE_MODE_STORAGE_KEY, rangeMode);
   }, [rangeMode]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setUiNowMs(Date.now());
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   // Update current meal time
   useEffect(() => {
@@ -1427,7 +1438,7 @@ function App() {
                   </Button>
                   {challengeMeta && (
                     <span className="text-xs text-eatspin-gray-1">
-                      Ends in {Math.max(0, Math.ceil((challengeMeta.endsAt - Date.now()) / (24 * 60 * 60 * 1000)))} day(s)
+                      Ends in {Math.max(0, Math.ceil((challengeMeta.endsAt - uiNowMs) / (24 * 60 * 60 * 1000)))} day(s)
                     </span>
                   )}
                 </div>

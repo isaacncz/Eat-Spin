@@ -35,6 +35,7 @@ export const usePwaInstallPrompt = ({
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissedAt, setDismissedAt] = useState<number>(() => readDismissedAt());
   const [isInstalled, setIsInstalled] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -55,6 +56,16 @@ export const usePwaInstallPrompt = ({
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(intervalId);
     };
   }, []);
 
@@ -80,8 +91,8 @@ export const usePwaInstallPrompt = ({
     if (!deferredPrompt) return false;
     if (spinCount < showAfterSpins) return false;
     if (!dismissedAt) return true;
-    return Date.now() - dismissedAt > DISMISS_COOLDOWN_MS;
-  }, [deferredPrompt, dismissedAt, isInstalled, showAfterSpins, spinCount]);
+    return nowMs - dismissedAt > DISMISS_COOLDOWN_MS;
+  }, [deferredPrompt, dismissedAt, isInstalled, nowMs, showAfterSpins, spinCount]);
 
   return {
     shouldShowBanner,

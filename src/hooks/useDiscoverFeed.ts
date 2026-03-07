@@ -55,10 +55,7 @@ export const useDiscoverFeed = (location: UserLocation | null, authUid: string |
   }, [authUid, geoKey]);
 
   useEffect(() => {
-    if (!firebaseDb || !isFirebaseConfigured || !geoKey) {
-      setEvents([]);
-      return;
-    }
+    if (!firebaseDb || !isFirebaseConfigured || !geoKey) return;
 
     const eventsRef = ref(firebaseDb, `discover/${geoKey}/events`);
     const unsubscribe = onValue(eventsRef, (snapshot) => {
@@ -74,7 +71,7 @@ export const useDiscoverFeed = (location: UserLocation | null, authUid: string |
   }, [geoKey]);
 
   return {
-    events,
+    events: geoKey ? events : [],
     error,
     geoKey,
     publishSpin,

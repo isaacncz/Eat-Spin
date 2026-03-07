@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 interface FirstRunOnboardingProps {
@@ -33,11 +33,6 @@ export function FirstRunOnboarding({
   onOpenAutoMode,
 }: FirstRunOnboardingProps) {
   const [stepIndex, setStepIndex] = useState(0);
-
-  useEffect(() => {
-    if (!open) return;
-    setStepIndex(0);
-  }, [open]);
 
   if (!open) return null;
 

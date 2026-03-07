@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Users, Link2, Sparkles, Trophy, Copy, Check, ShieldCheck, LogOut, UserPlus, UserMinus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -96,10 +96,13 @@ export function GroupSpin({
   onSetGoingVote,
   onClearRoomError,
 }: GroupSpinProps) {
-  const [joinValue, setJoinValue] = useState('');
+  const [joinValue, setJoinValue] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    const roomFromUrl = new URLSearchParams(window.location.search).get('room');
+    return normalizeRoomCode(roomFromUrl ?? '');
+  });
   const [hasCopied, setHasCopied] = useState(false);
   const [cohostPendingUid, setCohostPendingUid] = useState<string | null>(null);
-  const [reactionBurst, setReactionBurst] = useState<GroupRoomReaction[]>([]);
   const [votePending, setVotePending] = useState(false);
 
   const canInteract = isFirebaseConfigured && !authLoading;
@@ -107,6 +110,7 @@ export function GroupSpin({
   const goingCount = votes.filter((vote) => vote.going).length;
   const votedCount = votes.length;
   const myVote = votes.find((vote) => vote.uid === authUid);
+  const reactionBurst = reactions.slice(-6);
 
   const handleCopyLink = async () => {
     if (!roomLink || typeof navigator === 'undefined' || !navigator.clipboard) return;
@@ -176,32 +180,6 @@ export function GroupSpin({
     await onSetGoingVote(going);
     setVotePending(false);
   };
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const roomFromUrl = new URLSearchParams(window.location.search).get('room');
-    if (!roomFromUrl) return;
-    const normalizedRoomCode = normalizeRoomCode(roomFromUrl);
-    if (!normalizedRoomCode) return;
-    setJoinValue((previous) => previous || normalizedRoomCode);
-  }, []);
-
-  useEffect(() => {
-    const latestReactions = reactions.slice(-6);
-    if (latestReactions.length === 0) {
-      setReactionBurst([]);
-      return;
-    }
-
-    setReactionBurst(latestReactions);
-    const timeoutId = window.setTimeout(() => {
-      setReactionBurst([]);
-    }, 1000);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [reactions]);
 
   return (
     <section id="group-spin" className="bg-brand-linen px-4 py-16 sm:px-6 lg:px-8">

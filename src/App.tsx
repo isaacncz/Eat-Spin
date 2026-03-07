@@ -7,6 +7,7 @@ import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
 import { useSpinChallenge } from '@/hooks/useSpinChallenge';
+import { useDiscoverFeed } from '@/hooks/useDiscoverFeed';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
 import { restaurants as localRestaurants } from '@/data/restaurants';
 import { enhancedFilterRestaurants, findNearbyFavourites } from '@/lib/restaurantUtils';
@@ -386,6 +387,12 @@ function App() {
     leaveChallenge,
     recordDailySpin,
   } = useSpinChallenge(groupAuthUid, groupResolvedDisplayName);
+  const {
+    events: discoverEvents,
+    error: discoverFeedError,
+    geoKey: discoverGeoKey,
+    publishSpin: publishDiscoverSpin,
+  } = useDiscoverFeed(location, groupAuthUid);
 
   const priceOptions: Restaurant['priceRange'][] = ['$', '$$', '$$$', '$$$$'];
   const isGroupRoomActive = Boolean(groupRoomId);
@@ -554,14 +561,16 @@ function App() {
     trackEvent('spin_complete', { mode: 'auto', restaurant_name: restaurant.name, category: restaurant.category?.[0] ?? '' });
     recordSpin(restaurant, currentMealTime);
     void recordDailySpin();
+    void publishDiscoverSpin(restaurant.name, currentMealTime);
     setPendingAutoRemovalId(restaurant.id);
-  }, [currentMealTime, recordDailySpin, recordSpin]);
+  }, [currentMealTime, publishDiscoverSpin, recordDailySpin, recordSpin]);
 
   const handleManualSpinComplete = useCallback((restaurant: Restaurant) => {
     trackEvent('spin_complete', { mode: 'manual', restaurant_name: restaurant.name });
     setManualSpinResult(restaurant);
     void recordDailySpin();
-  }, [recordDailySpin]);
+    void publishDiscoverSpin(restaurant.name, currentMealTime);
+  }, [currentMealTime, publishDiscoverSpin, recordDailySpin]);
 
   const handleSaveFavourite = useCallback((restaurant: Restaurant, mode: 'auto' | 'manual') => {
     trackEvent('favourite_saved', { restaurant_name: restaurant.name, mode });
@@ -1444,6 +1453,41 @@ function App() {
                 </ul>
               </div>
             )}
+          </div>
+
+          <div className="mb-6 rounded-2xl border border-eatspin-peach/60 bg-brand-linen/70 p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="font-heading text-lg font-bold text-brand-black">Discover Feed</h3>
+                <p className="text-sm text-eatspin-gray-1">See what others nearby are spinning right now.</p>
+              </div>
+              {discoverGeoKey && (
+                <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-eatspin-gray-1">
+                  Area: {discoverGeoKey}
+                </span>
+              )}
+            </div>
+
+            {discoverFeedError && (
+              <p className="mt-2 text-xs text-eatspin-error">{discoverFeedError}</p>
+            )}
+
+            <ul className="mt-3 space-y-2">
+              {discoverEvents.length === 0 && (
+                <li className="rounded-lg bg-white px-3 py-2 text-sm text-eatspin-gray-1">
+                  No nearby spins yet. Your next spin can kick off the feed.
+                </li>
+              )}
+              {discoverEvents.map((event) => (
+                <li key={event.id} className="rounded-lg bg-white px-3 py-2 text-sm">
+                  <p className="font-medium text-brand-black">
+                    Someone nearby spun {event.restaurantName}
+                    {event.mealTime !== 'none' ? ` • ${event.mealTime}` : ''}
+                  </p>
+                  <p className="text-xs text-eatspin-gray-1">{formatSpinTimestamp(event.createdAt)}</p>
+                </li>
+              ))}
+            </ul>
           </div>
 
           {activeTab === 'auto' && (

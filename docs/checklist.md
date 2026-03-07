@@ -96,6 +96,12 @@ Last verified: March 2, 2026
 - [x] Add challenge leaderboard panel in app UI
 - [ ] Manual verify two-user challenge sync across devices
 
+## P13 - Discover Feed (Anonymous Nearby Activity)
+- [x] Add coarse-location discover feed hook (`discover/{geo}/events`)
+- [x] Publish spin events into feed on spin completion
+- [x] Render nearby feed panel with meal-time context
+- [ ] Manual verify feed sync across two clients in same area
+
 ## P6 - Regression + Ship Gate
 - [ ] Run `npm run lint`
 - [ ] Run `npm run build`

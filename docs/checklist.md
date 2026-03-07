@@ -74,6 +74,13 @@ Last verified: March 2, 2026
 - [x] Add shareable "Wrapped" summary action (native share/clipboard fallback)
 - [ ] Manual verify stats correctness across reloads and new spins
 
+## P10 - First-Run Onboarding (15s to First Spin)
+- [x] Add first-run onboarding overlay component (3 guided steps)
+- [x] Wire location request step to existing geolocation flow
+- [x] Wire auto-mode step to existing tab/navigation flow
+- [x] Persist seen-state in localStorage (`eatspin:first-run-onboarding-seen`)
+- [ ] Manual verify first-run only behavior on fresh storage
+
 ## P6 - Regression + Ship Gate
 - [ ] Run `npm run lint`
 - [ ] Run `npm run build`

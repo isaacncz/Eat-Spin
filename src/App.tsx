@@ -34,6 +34,7 @@ import { enqueueFeedback } from '@/lib/feedbackStore';
 import { deriveFavouriteId } from '@/types/favourites';
 import { shareCard } from '@/lib/shareCard';
 import { FeedbackPrompt } from '@/components/FeedbackPrompt';
+import { FirstRunOnboarding } from '@/components/FirstRunOnboarding';
 import { toast } from 'sonner';
 import './App.css';
 
@@ -52,6 +53,7 @@ const MANUAL_RESTAURANTS_STORAGE_KEY = 'eatspin:manual-restaurants';
 const MANUAL_PRESETS_STORAGE_KEY = 'eatspin:manual-presets';
 const AUTO_RANGE_MODE_STORAGE_KEY = 'eatspin:auto-range-mode';
 const SPIN_REJECTION_STORAGE_KEY = 'eatspin:spin-rejections';
+const FIRST_RUN_ONBOARDING_SEEN_KEY = 'eatspin:first-run-onboarding-seen';
 const ROOM_LIST_SYNC_GRACE_MS = 2_500;
 const GROUP_SPIN_REPLAY_WINDOW_MS = 30_000;
 const LATE_JOIN_NOTICE_MS = 5 * 60 * 1000;
@@ -259,6 +261,10 @@ function App() {
   const [isReviewExpanded, setIsReviewExpanded] = useState(false);
   const [showAllRoundRestaurants, setShowAllRoundRestaurants] = useState(false);
   const [isMoreFiltersOpen, setIsMoreFiltersOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !window.localStorage.getItem(FIRST_RUN_ONBOARDING_SEEN_KEY);
+  });
 
   const [manualInput, setManualInput] = useState('');
   const [manualRestaurants, setManualRestaurants] = useState<Restaurant[]>(() => loadManualRestaurants());
@@ -650,6 +656,20 @@ function App() {
       trackEvent('spin_wrapped_share_copied');
     }
   }, [spinHistorySummary]);
+
+  const dismissFirstRunOnboarding = useCallback(() => {
+    setShowOnboarding(false);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(FIRST_RUN_ONBOARDING_SEEN_KEY, '1');
+    }
+    trackEvent('first_run_onboarding_dismissed');
+  }, []);
+
+  const handleOnboardingOpenAutoMode = useCallback(() => {
+    setActiveTab('auto');
+    scrollToSection('app');
+    trackEvent('first_run_onboarding_auto_mode_opened');
+  }, [scrollToSection]);
 
   const handleLetsGo = useCallback((restaurant: Restaurant) => {
     trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
@@ -1975,6 +1995,13 @@ function App() {
           onDidntGo={handleFeedbackDidntGo}
         />
       )}
+
+      <FirstRunOnboarding
+        open={showOnboarding}
+        onClose={dismissFirstRunOnboarding}
+        onRequestLocation={requestLocation}
+        onOpenAutoMode={handleOnboardingOpenAutoMode}
+      />
 
       <Toaster />
     </div>

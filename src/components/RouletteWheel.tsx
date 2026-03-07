@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown, Heart, Navigation } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown, Heart, Navigation, Share2 } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,8 @@ interface RouletteWheelProps {
   onSaveFavourite?: (restaurant: Restaurant) => void;
   /** Called when user taps "Let's go!" on the spin result. */
   onLetsGo?: (restaurant: Restaurant) => void;
+  /** Called when user taps "Share" on the spin result. */
+  onShareResult?: (restaurant: Restaurant, cardElement: HTMLElement) => void | Promise<void>;
   /** Returns true if the restaurant is already saved as a favourite. */
   isFavourite?: (restaurant: Restaurant) => boolean;
 }
@@ -144,6 +146,7 @@ export function RouletteWheel({
   onSpinStart,
   onSaveFavourite,
   onLetsGo,
+  onShareResult,
   isFavourite,
 }: RouletteWheelProps) {
   const ANTICIPATION_DURATION_S = 0.5;
@@ -166,6 +169,7 @@ export function RouletteWheel({
   const lastExternalSpinIdRef = useRef('');
   const [winnerSliceIndex, setWinnerSliceIndex] = useState<number | null>(null);
   const [isWinnerSliceHighlighted, setIsWinnerSliceHighlighted] = useState(false);
+  const resultCardRef = useRef<HTMLDivElement>(null);
 
   const syncWheelRotationVar = useCallback((rotation: number) => {
     if (!wheelRef.current) return;
@@ -711,7 +715,7 @@ export function RouletteWheel({
 
       {/* Result Display */}
       {spinResult && (
-        <div id="spin-result-card" className="w-full max-w-md relative z-10">
+        <div id="spin-result-card" ref={resultCardRef} className="w-full max-w-md relative z-10">
           <div className="celebration-ring celebration-ring-sm" />
           <div className="celebration-ring celebration-ring-lg" />
 
@@ -812,6 +816,20 @@ export function RouletteWheel({
                 >
                   <Heart size={16} className={`mr-1.5 ${isFavourite?.(spinResult) ? 'fill-current' : ''}`} />
                   {isFavourite?.(spinResult) ? 'Saved!' : 'Save'}
+                </Button>
+              )}
+              {onShareResult && (
+                <Button
+                  variant="outline"
+                  className="border-brand-orange/40 text-brand-orange hover:bg-brand-orange/10 font-heading font-bold"
+                  onClick={() => {
+                    const cardElement = resultCardRef.current;
+                    if (!cardElement) return;
+                    void onShareResult(spinResult, cardElement);
+                  }}
+                >
+                  <Share2 size={16} className="mr-1.5" />
+                  Share
                 </Button>
               )}
               {onEditList && (

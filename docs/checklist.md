@@ -23,12 +23,12 @@ Last verified: March 2, 2026
 - [ ] Validate final head tags in production build output
 
 ## P2 - Shareable Result Card (MVP, no photo)
-- [ ] Add image export dependency (`html-to-image`)
-- [ ] Add share utility (`src/lib/shareCard.ts`) for capture + blob + fallback download
-- [ ] Add `Share` action on spin result card in `src/components/RouletteWheel.tsx`
-- [ ] Use Web Share API when available
-- [ ] Fallback to image download when Web Share API is unavailable
-- [ ] Add analytics events for share open/success/failure
+- [x] Add image export dependency (`html-to-image`)
+- [x] Add share utility (`src/lib/shareCard.ts`) for capture + blob + fallback download
+- [x] Add `Share` action on spin result card in `src/components/RouletteWheel.tsx`
+- [x] Use Web Share API when available
+- [x] Fallback to image download when Web Share API is unavailable
+- [x] Add analytics events for share open/success/failure
 - [ ] Manual check on desktop and mobile behavior
 
 ## P3 - Sound + Haptics

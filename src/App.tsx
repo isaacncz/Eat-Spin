@@ -31,6 +31,7 @@ import { useFavourites } from '@/hooks/useFavourites';
 import { useFeedbackPrompt } from '@/hooks/useFeedbackPrompt';
 import { enqueueFeedback } from '@/lib/feedbackStore';
 import { deriveFavouriteId } from '@/types/favourites';
+import { shareCard } from '@/lib/shareCard';
 import { FeedbackPrompt } from '@/components/FeedbackPrompt';
 import { toast } from 'sonner';
 import './App.css';
@@ -464,6 +465,40 @@ function App() {
       description: 'Find it in the "I Know Where" tab under My Favourites.',
     });
   }, [saveFavourite]);
+
+  const handleShareResult = useCallback(async (restaurant: Restaurant, cardElement: HTMLElement) => {
+    trackEvent('share_result_open', { restaurant_name: restaurant.name, tab: activeTab });
+
+    try {
+      const shareMethod = await shareCard({
+        element: cardElement,
+        fileName: `eatspin-${restaurant.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'result'}`,
+        title: `EatSpin picked ${restaurant.name}`,
+        text: `We spun ${restaurant.name} on EatSpin. Try your luck!`,
+        url: typeof window !== 'undefined' ? window.location.origin : '',
+      });
+
+      trackEvent('share_result_success', {
+        restaurant_name: restaurant.name,
+        method: shareMethod,
+        tab: activeTab,
+      });
+
+      toast.success('Share ready!', {
+        description: shareMethod === 'download'
+          ? 'Image downloaded. Share it in your group chat.'
+          : 'Shared successfully.',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      trackEvent('share_result_failure', {
+        restaurant_name: restaurant.name,
+        tab: activeTab,
+        error: message,
+      });
+      toast.error('Unable to share this result right now.');
+    }
+  }, [activeTab]);
 
   const handleLetsGo = useCallback((restaurant: Restaurant) => {
     trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
@@ -1361,6 +1396,7 @@ function App() {
                 emptyStateSubtitle="Type any restaurant you like…"
                 onSaveFavourite={(r) => handleSaveFavourite(r, 'manual')}
                 onLetsGo={handleLetsGo}
+                onShareResult={handleShareResult}
                 isFavourite={isFavouriteCheck}
               />
 
@@ -1669,6 +1705,7 @@ function App() {
               onSpinStart={handleAutoSpinStart}
               onSaveFavourite={(r) => handleSaveFavourite(r, 'auto')}
               onLetsGo={handleLetsGo}
+              onShareResult={handleShareResult}
               isFavourite={isFavouriteCheck}
             />
           </div>

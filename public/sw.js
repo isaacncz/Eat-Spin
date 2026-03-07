@@ -1,14 +1,14 @@
-const CACHE_NAME = 'eat-spin-shell-v1'
+const CACHE_NAME = 'eat-spin-shell-v2'
 const CORE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
-  '/src/components/favicon/android-chrome-192x192.png',
-  '/src/components/favicon/android-chrome-512x512.png',
-  '/src/components/favicon/apple-touch-icon.png',
-  '/src/components/favicon/favicon-32x32.png',
-  '/src/components/favicon/favicon-16x16.png',
-  '/src/components/favicon/favicon.ico',
+  '/android-chrome-192x192.png',
+  '/android-chrome-512x512.png',
+  '/apple-touch-icon.png',
+  '/favicon-32x32.png',
+  '/favicon-16x16.png',
+  '/favicon.ico',
 ]
 
 self.addEventListener('install', (event) => {
@@ -33,8 +33,14 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event
+  const requestUrl = new URL(request.url)
 
   if (request.method !== 'GET') {
+    return
+  }
+
+  // Do not proxy third-party requests (analytics, maps, etc).
+  if (requestUrl.origin !== self.location.origin) {
     return
   }
 

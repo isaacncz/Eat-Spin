@@ -1,9 +1,7 @@
-/* ──────────────────────────────────────────────────────────
- *  Google Analytics (GA4) helper – thin wrapper around gtag
- *
- *  The gtag script is loaded dynamically so the measurement
- *  ID can come from the VITE_GA_MEASUREMENT_ID env var.
- * ────────────────────────────────────────────────────────── */
+/**
+ * Google Analytics (GA4) helper.
+ * Loads gtag.js at runtime using VITE_GA_MEASUREMENT_ID.
+ */
 
 declare global {
   interface Window {
@@ -16,40 +14,42 @@ type EventParams = Record<string, string | number | boolean | null | undefined>;
 
 let initialised = false;
 
-/**
- * Inject the gtag.js script + configure the GA4 stream.
- * Called once on app boot; silently no-ops when the env var is missing.
- */
+const getMeasurementId = (): string | undefined => {
+  const id = import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined;
+  return id && id.trim().length > 0 ? id.trim() : undefined;
+};
+
 export function initGA(): void {
-  if (initialised) return;
+  if (initialised || typeof window === 'undefined') return;
   initialised = true;
 
-  const id = import.meta.env.VITE_GA_MEASUREMENT_ID as string | undefined;
+  const id = getMeasurementId();
   if (!id) return;
 
-  // 1. dataLayer + gtag function
   window.dataLayer = window.dataLayer || [];
-  window.gtag = function gtag(...args: unknown[]) {
-    window.dataLayer!.push(args);
-  };
+  window.gtag = function gtag(): void {
+    window.dataLayer!.push(arguments);
+  } as unknown as (...args: unknown[]) => void;
+
   window.gtag('js', new Date());
   window.gtag('config', id);
 
-  // 2. Async script tag
+  const existingScript = document.querySelector<HTMLScriptElement>(
+    `script[data-ga-measurement-id="${id}"]`,
+  );
+  if (existingScript) return;
+
   const script = document.createElement('script');
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtag/js?id=${id}`;
+  script.dataset.gaMeasurementId = id;
+  script.onerror = () => {
+    console.warn('GA script failed to load');
+  };
   document.head.appendChild(script);
 }
 
-/**
- * Fire a custom GA4 event.
- *
- * Safe to call at any time – silently no-ops if gtag hasn't loaded yet
- * (e.g. blocked by an ad blocker or missing env var).
- */
 export function trackEvent(name: string, params?: EventParams): void {
-  if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
-    window.gtag('event', name, params);
-  }
+  if (typeof window === 'undefined' || typeof window.gtag !== 'function') return;
+  window.gtag('event', name, params);
 }

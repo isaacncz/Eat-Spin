@@ -1204,40 +1204,6 @@ function App() {
         onGroupSpin={() => { trackEvent('hero_group_spin'); scrollToSection('group-spin'); }}
       />
 
-      <GroupSpin
-        isFirebaseConfigured={isFirebaseConfigured}
-        firebaseConfigError={firebaseConfigError}
-        authLoading={groupAuthLoading}
-        authError={groupAuthError}
-        authUid={groupAuthUid}
-        displayName={groupDisplayName}
-        resolvedDisplayName={groupResolvedDisplayName}
-        setDisplayName={setGroupDisplayName}
-        roomId={groupRoomId}
-        hostUid={groupHostUid}
-        roomLink={groupRoomLink}
-        isHost={isGroupHost}
-        isCohost={isGroupCohost}
-        cohostUids={groupCohostUids}
-        isBusy={groupRoomBusy}
-        roomError={groupRoomError}
-        participants={groupParticipants}
-        reactions={groupReactions}
-        votes={groupVotes}
-        canStartRoomSpin={isGroupRoomActive && (isGroupHost || isGroupCohost) && manualRestaurantNames.length >= 2}
-        onCreateRoom={handleCreateGroupRoom}
-        onJoinRoom={handleJoinGroupRoom}
-        onLeaveRoom={handleLeaveGroupRoom}
-        onStartRoomSpin={handleRequestGroupSpin}
-        onSetParticipantCohost={setParticipantCohost}
-        onSendReaction={sendGroupReaction}
-        onSetGoingVote={setGroupGoingVote}
-        onClearRoomError={clearGroupRoomError}
-      />
-
-      <HowItWorks />
-      <Features />
-
       <section id="app" className="py-8 sm:py-10 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-3 sm:mb-4">
@@ -1815,6 +1781,7 @@ function App() {
                   {groupSpinDisplay && groupSpinDisplay.ageMs >= LATE_JOIN_NOTICE_MS && (
                     <p className="mt-1 text-xs font-medium text-brand-black/80">Result was decided earlier.</p>
                   )}
+
                   {!canEditGroupList && (
                     <button
                       type="button"
@@ -2173,6 +2140,40 @@ function App() {
         </section>
       )}
 
+
+      <GroupSpin
+        isFirebaseConfigured={isFirebaseConfigured}
+        firebaseConfigError={firebaseConfigError}
+        authLoading={groupAuthLoading}
+        authError={groupAuthError}
+        authUid={groupAuthUid}
+        displayName={groupDisplayName}
+        resolvedDisplayName={groupResolvedDisplayName}
+        setDisplayName={setGroupDisplayName}
+        roomId={groupRoomId}
+        hostUid={groupHostUid}
+        roomLink={groupRoomLink}
+        isHost={isGroupHost}
+        isCohost={isGroupCohost}
+        cohostUids={groupCohostUids}
+        isBusy={groupRoomBusy}
+        roomError={groupRoomError}
+        participants={groupParticipants}
+        reactions={groupReactions}
+        votes={groupVotes}
+        canStartRoomSpin={isGroupRoomActive && (isGroupHost || isGroupCohost) && manualRestaurantNames.length >= 2}
+        onCreateRoom={handleCreateGroupRoom}
+        onJoinRoom={handleJoinGroupRoom}
+        onLeaveRoom={handleLeaveGroupRoom}
+        onStartRoomSpin={handleRequestGroupSpin}
+        onSetParticipantCohost={setParticipantCohost}
+        onSendReaction={sendGroupReaction}
+        onSetGoingVote={setGroupGoingVote}
+        onClearRoomError={clearGroupRoomError}
+      />
+
+      <HowItWorks />
+      <Features />
       <Testimonials />
       <CTA />
       <Footer />

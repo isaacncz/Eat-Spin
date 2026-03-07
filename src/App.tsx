@@ -50,6 +50,7 @@ interface ManualPreset {
 const MANUAL_RESTAURANTS_STORAGE_KEY = 'eatspin:manual-restaurants';
 const MANUAL_PRESETS_STORAGE_KEY = 'eatspin:manual-presets';
 const AUTO_RANGE_MODE_STORAGE_KEY = 'eatspin:auto-range-mode';
+const SPIN_REJECTION_STORAGE_KEY = 'eatspin:spin-rejections';
 const ROOM_LIST_SYNC_GRACE_MS = 2_500;
 const GROUP_SPIN_REPLAY_WINDOW_MS = 30_000;
 const LATE_JOIN_NOTICE_MS = 5 * 60 * 1000;
@@ -499,6 +500,25 @@ function App() {
       toast.error('Unable to share this result right now.');
     }
   }, [activeTab]);
+
+  const handleAutoSpinAgain = useCallback((restaurant: Restaurant) => {
+    trackEvent('spin_again_requested', {
+      restaurant_name: restaurant.name,
+      round_size: wheelRestaurants.length,
+    });
+
+    if (typeof window === 'undefined') return;
+
+    try {
+      const raw = window.localStorage.getItem(SPIN_REJECTION_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) as Record<string, number> : {};
+      const key = restaurant.googlePlaceId ?? restaurant.id;
+      parsed[key] = (parsed[key] ?? 0) + 1;
+      window.localStorage.setItem(SPIN_REJECTION_STORAGE_KEY, JSON.stringify(parsed));
+    } catch {
+      // Best-effort local signal; analytics still tracks action.
+    }
+  }, [wheelRestaurants.length]);
 
   const handleLetsGo = useCallback((restaurant: Restaurant) => {
     trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
@@ -1706,6 +1726,8 @@ function App() {
               onSaveFavourite={(r) => handleSaveFavourite(r, 'auto')}
               onLetsGo={handleLetsGo}
               onShareResult={handleShareResult}
+              onSpinAgain={handleAutoSpinAgain}
+              canSpinAgain={wheelRestaurants.length > 2}
               isFavourite={isFavouriteCheck}
             />
           </div>

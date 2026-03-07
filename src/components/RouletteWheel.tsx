@@ -32,6 +32,10 @@ interface RouletteWheelProps {
   onLetsGo?: (restaurant: Restaurant) => void;
   /** Called when user taps "Share" on the spin result. */
   onShareResult?: (restaurant: Restaurant, cardElement: HTMLElement) => void | Promise<void>;
+  /** Called before the one-tap spin-again action starts a new spin. */
+  onSpinAgain?: (restaurant: Restaurant) => void;
+  /** Whether spin-again has enough candidates to run. */
+  canSpinAgain?: boolean;
   /** Returns true if the restaurant is already saved as a favourite. */
   isFavourite?: (restaurant: Restaurant) => boolean;
 }
@@ -156,6 +160,8 @@ export function RouletteWheel({
   onSaveFavourite,
   onLetsGo,
   onShareResult,
+  onSpinAgain,
+  canSpinAgain = false,
   isFavourite,
 }: RouletteWheelProps) {
   const ANTICIPATION_DURATION_S = 0.5;
@@ -900,6 +906,19 @@ export function RouletteWheel({
                 >
                   <Share2 size={16} className="mr-1.5" />
                   Share
+                </Button>
+              )}
+              {onSpinAgain && (
+                <Button
+                  variant="outline"
+                  className="border-eatspin-peach text-brand-black hover:bg-brand-linen font-heading font-bold"
+                  onClick={() => {
+                    onSpinAgain(spinResult);
+                    handleLocalSpin();
+                  }}
+                  disabled={!canSpinAgain || isSpinning}
+                >
+                  Spin Again
                 </Button>
               )}
               {onEditList && (

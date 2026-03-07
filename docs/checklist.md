@@ -42,11 +42,11 @@ Last verified: March 2, 2026
 - [x] Respect reduced-motion and unsupported-device fallbacks
 
 ## P4 - Spin Again (Not This One)
-- [ ] Add `Spin Again` button in the result card
-- [ ] Use existing auto-round removal flow so previous winner is excluded
-- [ ] Auto-spin directly from result action (single tap)
-- [ ] Disable when fewer than 2 eligible restaurants remain
-- [ ] Add analytics event for spin-again action
+- [x] Add `Spin Again` button in the result card
+- [x] Use existing auto-round removal flow so previous winner is excluded
+- [x] Auto-spin directly from result action (single tap)
+- [x] Disable when fewer than 2 eligible restaurants remain
+- [x] Add analytics event for spin-again action
 
 ## P5 - Confetti Upgrade
 - [ ] Add `canvas-confetti` dependency

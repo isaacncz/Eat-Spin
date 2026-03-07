@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown, Heart, Navigation, Share2 } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown, Heart, Navigation, Share2, Volume2, VolumeX } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
+import { playSpinTick, playSpinWin, startSpinDrumroll, stopSpinDrumroll, triggerSpinHaptic } from '@/lib/spinAudio';
 
 interface RouletteWheelProps {
   restaurants: Restaurant[];
@@ -109,6 +110,14 @@ const wrapLabelText = (text: string, maxCharsPerLine: number, maxLines: number):
 };
 
 const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
+const SOUND_PREF_STORAGE_KEY = 'eatspin:sound-enabled';
+
+const loadSoundPreference = (): boolean => {
+  if (typeof window === 'undefined') return true;
+  const storedValue = window.localStorage.getItem(SOUND_PREF_STORAGE_KEY);
+  if (storedValue === null) return true;
+  return storedValue !== '0';
+};
 
 
 const getOpeningHoursLabel = (restaurant: Restaurant): string => {
@@ -170,11 +179,42 @@ export function RouletteWheel({
   const [winnerSliceIndex, setWinnerSliceIndex] = useState<number | null>(null);
   const [isWinnerSliceHighlighted, setIsWinnerSliceHighlighted] = useState(false);
   const resultCardRef = useRef<HTMLDivElement>(null);
+  const lastTickSegmentRef = useRef<number | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => loadSoundPreference());
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const canPlayEffects = soundEnabled && !prefersReducedMotion;
 
   const syncWheelRotationVar = useCallback((rotation: number) => {
     if (!wheelRef.current) return;
     wheelRef.current.style.setProperty('--wheel-rotation', `${rotation}deg`);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updatePreference = () => {
+      setPrefersReducedMotion(mediaQuery.matches);
+    };
+
+    updatePreference();
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', updatePreference);
+    } else {
+      mediaQuery.addListener(updatePreference);
+    }
+    return () => {
+      if (typeof mediaQuery.removeEventListener === 'function') {
+        mediaQuery.removeEventListener('change', updatePreference);
+      } else {
+        mediaQuery.removeListener(updatePreference);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(SOUND_PREF_STORAGE_KEY, soundEnabled ? '1' : '0');
+  }, [soundEnabled]);
 
   const clearCelebrationEffects = useCallback(() => {
     celebrationTimeoutsRef.current.forEach((timeoutId) => {
@@ -290,42 +330,57 @@ export function RouletteWheel({
     const additionalRotation = additionalTurns * 360;
     const delta = (desiredFinalRotation - currentRotation + 360) % 360;
     const targetRotation = currentRotationRef.current + additionalRotation + delta;
+    const updateSpinFrame = () => {
+      if (!wheelRef.current) return;
+      currentRotationRef.current = gsap.getProperty(wheelRef.current, 'rotation') as number;
+      syncWheelRotationVar(currentRotationRef.current);
+      if (!canPlayEffects) return;
+
+      const normalizedRotation = ((currentRotationRef.current % 360) + 360) % 360;
+      const currentSegment = Math.floor(normalizedRotation / segmentAngle);
+      if (lastTickSegmentRef.current === null) {
+        lastTickSegmentRef.current = currentSegment;
+        return;
+      }
+
+      if (currentSegment !== lastTickSegmentRef.current) {
+        lastTickSegmentRef.current = currentSegment;
+        playSpinTick();
+      }
+    };
 
     recenterWheel();
     setIsSpinning(true);
     setSpinResult(null);
     setWinnerSliceIndex(null);
     setIsWinnerSliceHighlighted(false);
+    lastTickSegmentRef.current = null;
     if (winnerPulseTimeoutRef.current !== null) {
       window.clearTimeout(winnerPulseTimeoutRef.current);
       winnerPulseTimeoutRef.current = null;
     }
     gsap.killTweensOf(wheelRef.current);
+    stopSpinDrumroll();
 
     const timeline = gsap.timeline();
     timeline.to(wheelRef.current, {
       rotation: currentRotationRef.current - ANTICIPATION_DEG,
       duration: ANTICIPATION_DURATION_S,
       ease: 'back.inOut(1.2)',
-      onUpdate: () => {
-        if (wheelRef.current) {
-          currentRotationRef.current = gsap.getProperty(wheelRef.current, 'rotation') as number;
-          syncWheelRotationVar(currentRotationRef.current);
-        }
-      },
+      onUpdate: updateSpinFrame,
     });
+
+    if (canPlayEffects) {
+      startSpinDrumroll(Math.round(SPIN_DURATION_S * 1000));
+    }
 
     timeline.to(wheelRef.current, {
       rotation: targetRotation,
       duration: SPIN_DURATION_S,
       ease: 'power4.out',
-      onUpdate: () => {
-        if (wheelRef.current) {
-          currentRotationRef.current = gsap.getProperty(wheelRef.current, 'rotation') as number;
-          syncWheelRotationVar(currentRotationRef.current);
-        }
-      },
+      onUpdate: updateSpinFrame,
       onComplete: () => {
+        stopSpinDrumroll();
         setIsSpinning(false);
         setSpinResult(result);
         setWinnerSliceIndex(selectedIndex);
@@ -333,6 +388,10 @@ export function RouletteWheel({
         winnerPulseTimeoutRef.current = window.setTimeout(() => {
           setIsWinnerSliceHighlighted(false);
         }, WINNER_PULSE_DURATION_MS);
+        if (canPlayEffects) {
+          playSpinWin();
+          triggerSpinHaptic();
+        }
         onSpinComplete(result);
 
         if (resultScrollTimeoutRef.current !== null) {
@@ -352,7 +411,7 @@ export function RouletteWheel({
         }, 100);
       },
     });
-  }, [onSpinComplete, recenterWheel, restaurants, setIsSpinning, syncWheelRotationVar]);
+  }, [canPlayEffects, onSpinComplete, recenterWheel, restaurants, setIsSpinning, syncWheelRotationVar]);
 
   const handleLocalSpin = () => {
     if (isSpinning || restaurants.length === 0 || !canSpin) return;
@@ -430,6 +489,7 @@ export function RouletteWheel({
   useEffect(() => {
     return () => {
       clearCelebrationEffects();
+      stopSpinDrumroll();
       if (recenterTimeoutRef.current !== null) {
         window.clearTimeout(recenterTimeoutRef.current);
       }
@@ -652,6 +712,16 @@ export function RouletteWheel({
             <span className="text-xs sm:text-sm font-medium opacity-85">One tap. Let fate decide.</span>
           </span>
         )}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setSoundEnabled((previous) => !previous)}
+        className="inline-flex items-center gap-1.5 rounded-full border border-eatspin-peach/70 bg-white px-3 py-1.5 text-xs font-semibold text-eatspin-gray-1 hover:border-brand-orange hover:text-brand-orange"
+      >
+        {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+        {soundEnabled ? 'Sound on' : 'Sound off'}
+        {prefersReducedMotion && <span className="text-[10px] text-eatspin-gray-2">(reduced motion)</span>}
       </button>
 
       {helperText && (

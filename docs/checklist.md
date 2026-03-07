@@ -32,14 +32,14 @@ Last verified: March 2, 2026
 - [ ] Manual check on desktop and mobile behavior
 
 ## P3 - Sound + Haptics
-- [ ] Add sound engine utility (`src/lib/spinAudio.ts`) with tick/drumroll/win cues
-- [ ] Add sound toggle UI near spin controls
-- [ ] Persist setting in localStorage (`eatspin:sound-enabled`, default `true`)
-- [ ] Trigger tick on segment pass during spin
-- [ ] Trigger drumroll during deceleration
-- [ ] Trigger celebration chime on result reveal
-- [ ] Trigger `navigator.vibrate()` on supported mobile devices
-- [ ] Respect reduced-motion and unsupported-device fallbacks
+- [x] Add sound engine utility (`src/lib/spinAudio.ts`) with tick/drumroll/win cues
+- [x] Add sound toggle UI near spin controls
+- [x] Persist setting in localStorage (`eatspin:sound-enabled`, default `true`)
+- [x] Trigger tick on segment pass during spin
+- [x] Trigger drumroll during deceleration
+- [x] Trigger celebration chime on result reveal
+- [x] Trigger `navigator.vibrate()` on supported mobile devices
+- [x] Respect reduced-motion and unsupported-device fallbacks
 
 ## P4 - Spin Again (Not This One)
 - [ ] Add `Spin Again` button in the result card

@@ -247,6 +247,18 @@ One-button re-spin from result card. Rejects current restaurant for this round, 
 
 Anonymous, location-based feed: "Someone near you just spun Sushi Tei ‚òÄÔ∏è Lunch". Aggregated data by area. Creates FOMO + social proof. **Turns EatSpin from a utility into a live food pulse of the city.**
 
+### Implementation Progress (Branch: `codex/viral-feature-rollout`)
+
+- #1 Shareable Spin Result Card ó `30a29c2`
+- #2 Sound Effects + Haptic Feedback ó `64bd1a3`
+- #3 Challenge a Friend Mode ó `aceac02`
+- #4 Group Spin Reactions + Vote ó `6218a3a`
+- #5 Restaurant Photo in Result Card ó `ab3146f`
+- #6 Spin History + Personal Stats ó `c6acdfd`
+- #7 PWA Install Prompt ó `7a4785b`
+- #8 Spin Again Quick Action ó `37818fd`
+- #9 First-Run Onboarding ó `390199f`
+- #10 Discover Feed ó `e71fea1`
 ---
 
 ## Implementation Priority Matrix
@@ -375,3 +387,4 @@ User opens app ‚Üí Spins ‚Üí Gets a result
 | Favourite highlighting via Set lookup  | O(1) check per restaurant. Efficient for large lists.            |
 | Dropped Google Timeline import         | No public API. "Let's go!" + manual save covers 80% of use case. |
 | Dropped PWA background notifications   | Too complex for MVP. Foreground proximity check sufficient.      |
+

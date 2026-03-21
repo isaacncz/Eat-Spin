@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import { trackEvent } from '@/lib/analytics';
+import { APP_FEATURES } from '@/lib/featureFlags';
 import { useLocation } from '@/hooks/useLocation';
 import { useNearbyRestaurants } from '@/hooks/useNearbyRestaurants';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
+import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
+import { useSpinChallenge } from '@/hooks/useSpinChallenge';
+import { useDiscoverFeed } from '@/hooks/useDiscoverFeed';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
 import { restaurants as localRestaurants } from '@/data/restaurants';
 import { enhancedFilterRestaurants, findNearbyFavourites } from '@/lib/restaurantUtils';
@@ -31,7 +35,9 @@ import { useFavourites } from '@/hooks/useFavourites';
 import { useFeedbackPrompt } from '@/hooks/useFeedbackPrompt';
 import { enqueueFeedback } from '@/lib/feedbackStore';
 import { deriveFavouriteId } from '@/types/favourites';
+import { shareCard } from '@/lib/shareCard';
 import { FeedbackPrompt } from '@/components/FeedbackPrompt';
+import { FirstRunOnboarding } from '@/components/FirstRunOnboarding';
 import { toast } from 'sonner';
 import './App.css';
 
@@ -49,10 +55,13 @@ interface ManualPreset {
 const MANUAL_RESTAURANTS_STORAGE_KEY = 'eatspin:manual-restaurants';
 const MANUAL_PRESETS_STORAGE_KEY = 'eatspin:manual-presets';
 const AUTO_RANGE_MODE_STORAGE_KEY = 'eatspin:auto-range-mode';
+const SPIN_REJECTION_STORAGE_KEY = 'eatspin:spin-rejections';
+const FIRST_RUN_ONBOARDING_SEEN_KEY = 'eatspin:first-run-onboarding-seen';
 const ROOM_LIST_SYNC_GRACE_MS = 2_500;
 const GROUP_SPIN_REPLAY_WINDOW_MS = 30_000;
 const LATE_JOIN_NOTICE_MS = 5 * 60 * 1000;
 const REVIEW_PREVIEW_COUNT = 30;
+const SPIN_HISTORY_PREVIEW_COUNT = 8;
 const MANUAL_SUGGESTED_RESTAURANTS = ['Sushi Place', 'Burger Spot', 'Local Noodles', 'Pizza Corner'];
 const DEFAULT_AUTO_RANGE_MODE: AutoRangeMode = 'drive10';
 const AUTO_RANGE_RADIUS_KM: Record<AutoRangeMode, number> = {
@@ -200,6 +209,39 @@ const formatAbsoluteSpinTime = (timestamp: number) =>
 const formatAbsoluteSyncTime = (timestamp: number) =>
   new Date(timestamp).toLocaleString([], { hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric' });
 
+const toDateKey = (timestamp: Date | string | number): string => {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatSpinTimestamp = (timestamp: Date | string | number): string =>
+  new Date(timestamp).toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+const calculateCurrentSpinStreak = (timestamps: Array<Date | string | number>): number => {
+  const uniqueDayKeys = Array.from(new Set(timestamps.map((value) => toDateKey(value))));
+  if (uniqueDayKeys.length === 0) return 0;
+
+  const availableDays = new Set(uniqueDayKeys);
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  let streak = 0;
+
+  while (availableDays.has(toDateKey(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
+};
+
 function App() {
   // State management
   const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
@@ -222,6 +264,12 @@ function App() {
   const [isReviewExpanded, setIsReviewExpanded] = useState(false);
   const [showAllRoundRestaurants, setShowAllRoundRestaurants] = useState(false);
   const [isMoreFiltersOpen, setIsMoreFiltersOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !window.localStorage.getItem(FIRST_RUN_ONBOARDING_SEEN_KEY);
+  });
+  const [challengeJoinInput, setChallengeJoinInput] = useState('');
+  const [uiNowMs, setUiNowMs] = useState(() => Date.now());
 
   const [manualInput, setManualInput] = useState('');
   const [manualRestaurants, setManualRestaurants] = useState<Restaurant[]>(() => loadManualRestaurants());
@@ -261,7 +309,7 @@ function App() {
 
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
-  const { canSpin, recordSpin } = useSpinTracker();
+  const { spins, canSpin, recordSpin } = useSpinTracker();
   const {
     favourites,
     isFavourite: isFavouriteCheck,
@@ -308,13 +356,49 @@ function App() {
     participants: groupParticipants,
     roomListNames: groupRoomListNames,
     currentSpin: groupCurrentSpin,
+    reactions: groupReactions,
+    votes: groupVotes,
     createRoom: createGroupRoom,
     joinRoom: joinGroupRoom,
     leaveRoom: leaveGroupRoom,
     syncHostList,
     setParticipantCohost,
     requestHostSpin,
+    sendReaction: sendGroupReaction,
+    setGoingVote: setGroupGoingVote,
   } = useFirebaseGroupRoom();
+  const {
+    shouldShowBanner: showPwaInstallBanner,
+    isPromptReady: isPwaPromptReady,
+    dismissBanner: dismissPwaInstallBanner,
+    promptInstall,
+  } = usePwaInstallPrompt({
+    spinCount: spins.length,
+    showAfterSpins: 2,
+  });
+  const {
+    challengeId,
+    challengeLink,
+    leaderboard: challengeLeaderboard,
+    myParticipant: myChallengeParticipant,
+    meta: challengeMeta,
+    isBusy: challengeBusy,
+    error: challengeError,
+    createChallenge,
+    joinChallenge,
+    leaveChallenge,
+    recordDailySpin,
+  } = useSpinChallenge(groupAuthUid, groupResolvedDisplayName, {
+    enabled: APP_FEATURES.spinChallenge,
+  });
+  const {
+    events: discoverEvents,
+    error: discoverFeedError,
+    geoKey: discoverGeoKey,
+    publishSpin: publishDiscoverSpin,
+  } = useDiscoverFeed(location, groupAuthUid, {
+    enabled: APP_FEATURES.discoverFeed,
+  });
 
   const priceOptions: Restaurant['priceRange'][] = ['$', '$$', '$$$', '$$$$'];
   const isGroupRoomActive = Boolean(groupRoomId);
@@ -371,6 +455,16 @@ function App() {
     window.localStorage.setItem(AUTO_RANGE_MODE_STORAGE_KEY, rangeMode);
   }, [rangeMode]);
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setUiNowMs(Date.now());
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
   // Update current meal time
   useEffect(() => {
     const updateMealTime = () => {
@@ -399,6 +493,39 @@ function App() {
     if (!location) return [];
     return findNearbyFavourites(favourites, location.lat, location.lng);
   }, [favourites, location]);
+
+  const spinHistorySummary = useMemo(() => {
+    const categoryCounter = new Map<string, number>();
+    const restaurantIds = new Set<string>();
+
+    for (const spin of spins) {
+      const restaurant = spin.restaurant;
+      const category = restaurant.category?.[0] ?? 'other';
+      categoryCounter.set(category, (categoryCounter.get(category) ?? 0) + 1);
+      restaurantIds.add(restaurant.googlePlaceId ?? restaurant.id);
+    }
+
+    const topCategory = [...categoryCounter.entries()]
+      .sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+    const monthKey = new Date().toLocaleString([], { month: 'short', year: 'numeric' });
+    const spinsThisMonth = spins.filter((spin) => (
+      new Date(spin.timestamp).toLocaleString([], { month: 'short', year: 'numeric' }) === monthKey
+    )).length;
+
+    const recentSpins = [...spins]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, SPIN_HISTORY_PREVIEW_COUNT);
+
+    return {
+      totalSpins: spins.length,
+      uniqueRestaurants: restaurantIds.size,
+      topCategory,
+      currentStreak: calculateCurrentSpinStreak(spins.map((spin) => spin.timestamp)),
+      spinsThisMonth,
+      recentSpins,
+    };
+  }, [spins]);
 
   const filterResult = useMemo(() => (
     enhancedFilterRestaurants(
@@ -449,13 +576,17 @@ function App() {
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
     trackEvent('spin_complete', { mode: 'auto', restaurant_name: restaurant.name, category: restaurant.category?.[0] ?? '' });
     recordSpin(restaurant, currentMealTime);
+    void recordDailySpin();
+    void publishDiscoverSpin(restaurant.name, currentMealTime);
     setPendingAutoRemovalId(restaurant.id);
-  }, [currentMealTime, recordSpin]);
+  }, [currentMealTime, publishDiscoverSpin, recordDailySpin, recordSpin]);
 
   const handleManualSpinComplete = useCallback((restaurant: Restaurant) => {
     trackEvent('spin_complete', { mode: 'manual', restaurant_name: restaurant.name });
     setManualSpinResult(restaurant);
-  }, []);
+    void recordDailySpin();
+    void publishDiscoverSpin(restaurant.name, currentMealTime);
+  }, [currentMealTime, publishDiscoverSpin, recordDailySpin]);
 
   const handleSaveFavourite = useCallback((restaurant: Restaurant, mode: 'auto' | 'manual') => {
     trackEvent('favourite_saved', { restaurant_name: restaurant.name, mode });
@@ -464,6 +595,151 @@ function App() {
       description: 'Find it in the "I Know Where" tab under My Favourites.',
     });
   }, [saveFavourite]);
+
+  const handleShareResult = useCallback(async (restaurant: Restaurant, cardElement: HTMLElement) => {
+    trackEvent('share_result_open', { restaurant_name: restaurant.name, tab: activeTab });
+
+    try {
+      const shareMethod = await shareCard({
+        element: cardElement,
+        fileName: `eatspin-${restaurant.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'result'}`,
+        title: `EatSpin picked ${restaurant.name}`,
+        text: `We spun ${restaurant.name} on EatSpin. Try your luck!`,
+        url: typeof window !== 'undefined' ? window.location.origin : '',
+      });
+
+      trackEvent('share_result_success', {
+        restaurant_name: restaurant.name,
+        method: shareMethod,
+        tab: activeTab,
+      });
+
+      toast.success('Share ready!', {
+        description: shareMethod === 'download'
+          ? 'Image downloaded. Share it in your group chat.'
+          : 'Shared successfully.',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      trackEvent('share_result_failure', {
+        restaurant_name: restaurant.name,
+        tab: activeTab,
+        error: message,
+      });
+      toast.error('Unable to share this result right now.');
+    }
+  }, [activeTab]);
+
+  const handleAutoSpinAgain = useCallback((restaurant: Restaurant) => {
+    trackEvent('spin_again_requested', {
+      restaurant_name: restaurant.name,
+      round_size: wheelRestaurants.length,
+    });
+
+    if (typeof window === 'undefined') return;
+
+    try {
+      const raw = window.localStorage.getItem(SPIN_REJECTION_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) as Record<string, number> : {};
+      const key = restaurant.googlePlaceId ?? restaurant.id;
+      parsed[key] = (parsed[key] ?? 0) + 1;
+      window.localStorage.setItem(SPIN_REJECTION_STORAGE_KEY, JSON.stringify(parsed));
+    } catch {
+      // Best-effort local signal; analytics still tracks action.
+    }
+  }, [wheelRestaurants.length]);
+
+  const handlePwaInstall = useCallback(async () => {
+    trackEvent('pwa_install_prompt_open', { spin_count: spins.length });
+    const outcome = await promptInstall();
+
+    if (outcome === 'accepted') {
+      trackEvent('pwa_install_accepted', { spin_count: spins.length });
+      toast.success('App installation started.');
+      return;
+    }
+
+    if (outcome === 'dismissed') {
+      trackEvent('pwa_install_dismissed', { spin_count: spins.length });
+      toast('Install prompt dismissed for now.');
+      return;
+    }
+
+    toast('Install prompt is unavailable on this browser right now.');
+  }, [promptInstall, spins.length]);
+
+  const handleDismissPwaBanner = useCallback(() => {
+    dismissPwaInstallBanner();
+    trackEvent('pwa_install_banner_dismissed', { spin_count: spins.length });
+  }, [dismissPwaInstallBanner, spins.length]);
+
+  const handleShareSpinWrapped = useCallback(async () => {
+    const topCategoryLabel = spinHistorySummary.topCategory ?? 'mixed cuisines';
+    const summaryText = `I spun ${spinHistorySummary.totalSpins} times on EatSpin with a ${spinHistorySummary.currentStreak}-day streak. Top category: ${topCategoryLabel}.`;
+    trackEvent('spin_wrapped_share_open', {
+      total_spins: spinHistorySummary.totalSpins,
+      current_streak: spinHistorySummary.currentStreak,
+    });
+
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: 'My EatSpin Wrapped',
+          text: summaryText,
+          url: window.location.origin,
+        });
+        trackEvent('spin_wrapped_share_success');
+        return;
+      } catch {
+        trackEvent('spin_wrapped_share_cancelled');
+        return;
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(`${summaryText} ${window.location.origin}`);
+      toast.success('Wrapped summary copied to clipboard.');
+      trackEvent('spin_wrapped_share_copied');
+    }
+  }, [spinHistorySummary]);
+
+  const dismissFirstRunOnboarding = useCallback(() => {
+    setShowOnboarding(false);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(FIRST_RUN_ONBOARDING_SEEN_KEY, '1');
+    }
+    trackEvent('first_run_onboarding_dismissed');
+  }, []);
+
+  const handleOnboardingOpenAutoMode = useCallback(() => {
+    setActiveTab('auto');
+    scrollToSection('app');
+    trackEvent('first_run_onboarding_auto_mode_opened');
+  }, [scrollToSection]);
+
+  const handleCreateChallenge = useCallback(() => {
+    trackEvent('challenge_create_requested');
+    void createChallenge();
+  }, [createChallenge]);
+
+  const handleJoinChallenge = useCallback(() => {
+    if (!challengeJoinInput.trim()) return;
+    trackEvent('challenge_join_requested');
+    void joinChallenge(challengeJoinInput);
+    setChallengeJoinInput('');
+  }, [challengeJoinInput, joinChallenge]);
+
+  const handleCopyChallengeLink = useCallback(async () => {
+    if (!challengeLink || typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return;
+    await navigator.clipboard.writeText(challengeLink);
+    toast.success('Challenge link copied.');
+    trackEvent('challenge_link_copied');
+  }, [challengeLink]);
+
+  const handleLeaveChallenge = useCallback(() => {
+    trackEvent('challenge_left');
+    void leaveChallenge();
+  }, [leaveChallenge]);
 
   const handleLetsGo = useCallback((restaurant: Restaurant) => {
     trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
@@ -933,7 +1209,6 @@ function App() {
         onGroupSpin={() => { trackEvent('hero_group_spin'); scrollToSection('group-spin'); }}
       />
 
-
       <section id="app" className="py-8 sm:py-10 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-3 sm:mb-4">
@@ -977,6 +1252,229 @@ function App() {
               </button>
             </div>
           </div>
+
+          {showPwaInstallBanner && isPwaPromptReady && (
+            <div className="mb-6 rounded-2xl border border-brand-orange/40 bg-brand-linen px-4 py-3 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-heading text-base font-bold text-brand-black">Install EatSpin for faster lunch decisions</p>
+                  <p className="text-sm text-eatspin-gray-1">
+                    You have spun {spins.length} times. Add EatSpin to your home screen for one-tap access.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    className="bg-brand-orange text-white hover:bg-brand-orange/90"
+                    onClick={() => { void handlePwaInstall(); }}
+                  >
+                    Install App
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-brand-orange/50 text-brand-black hover:bg-brand-linen"
+                    onClick={handleDismissPwaBanner}
+                  >
+                    Later
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mb-6 rounded-2xl border border-eatspin-peach/60 bg-brand-linen/70 p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-heading text-lg font-bold text-brand-black">My Spins</h3>
+                <p className="text-sm text-eatspin-gray-1">Your personal stats and recent spin timeline.</p>
+              </div>
+              {spinHistorySummary.totalSpins > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-brand-orange/40 text-brand-orange hover:bg-brand-orange/10"
+                  onClick={() => { void handleShareSpinWrapped(); }}
+                >
+                  Share Wrapped
+                </Button>
+              )}
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-4">
+              <div className="rounded-xl bg-white px-3 py-2">
+                <p className="text-xs text-eatspin-gray-1">Total spins</p>
+                <p className="font-heading text-xl font-bold text-brand-black">{spinHistorySummary.totalSpins}</p>
+              </div>
+              <div className="rounded-xl bg-white px-3 py-2">
+                <p className="text-xs text-eatspin-gray-1">Unique places</p>
+                <p className="font-heading text-xl font-bold text-brand-black">{spinHistorySummary.uniqueRestaurants}</p>
+              </div>
+              <div className="rounded-xl bg-white px-3 py-2">
+                <p className="text-xs text-eatspin-gray-1">Current streak</p>
+                <p className="font-heading text-xl font-bold text-brand-black">{spinHistorySummary.currentStreak} day{spinHistorySummary.currentStreak === 1 ? '' : 's'}</p>
+              </div>
+              <div className="rounded-xl bg-white px-3 py-2">
+                <p className="text-xs text-eatspin-gray-1">Top category</p>
+                <p className="font-heading text-xl font-bold text-brand-black">{spinHistorySummary.topCategory ?? 'N/A'}</p>
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-xl border border-eatspin-peach/50 bg-white">
+              <div className="flex items-center justify-between px-3 py-2 text-xs text-eatspin-gray-1">
+                <span>This month: <strong className="text-brand-black">{spinHistorySummary.spinsThisMonth}</strong></span>
+                <span>Recent {spinHistorySummary.recentSpins.length}</span>
+              </div>
+              <ul className="max-h-56 divide-y divide-eatspin-peach/30 overflow-y-auto px-3 pb-2">
+                {spinHistorySummary.recentSpins.length === 0 && (
+                  <li className="py-3 text-sm text-eatspin-gray-1">No spins yet. Spin now to build your history.</li>
+                )}
+                {spinHistorySummary.recentSpins.map((spin, index) => (
+                  <li key={`${spin.restaurant.id}-${index}`} className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-brand-black">{spin.restaurant.name}</p>
+                      <p className="text-xs text-eatspin-gray-1">
+                        {spin.mealTime !== 'none' ? `${spin.mealTime} • ` : ''}
+                        {spin.restaurant.category?.[0] ?? 'uncategorized'}
+                      </p>
+                    </div>
+                    <span className="flex-shrink-0 text-xs text-eatspin-gray-1">{formatSpinTimestamp(spin.timestamp)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {APP_FEATURES.spinChallenge && (
+            <div className="mb-6 rounded-2xl border border-brand-orange/35 bg-white p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-heading text-lg font-bold text-brand-black">7-Day Challenge a Friend</h3>
+                <p className="text-sm text-eatspin-gray-1">Challenge friends to spin daily and compare streak progress.</p>
+              </div>
+              {challengeId && (
+                <span className="rounded-full bg-brand-orange/10 px-3 py-1 text-xs font-semibold text-brand-orange">
+                  Challenge {challengeId}
+                </span>
+              )}
+            </div>
+
+            {challengeError && (
+              <p className="mt-2 text-sm text-eatspin-error">{challengeError}</p>
+            )}
+
+            {!challengeId ? (
+              <div className="mt-4 grid gap-2 sm:grid-cols-[auto_1fr_auto]">
+                <Button
+                  type="button"
+                  className="bg-brand-orange text-white hover:bg-brand-orange/90"
+                  disabled={challengeBusy}
+                  onClick={handleCreateChallenge}
+                >
+                  {challengeBusy ? 'Working...' : 'Create 7-day challenge'}
+                </Button>
+                <Input
+                  value={challengeJoinInput}
+                  onChange={(event) => setChallengeJoinInput(event.target.value)}
+                  placeholder="Paste challenge link or code"
+                  className="h-11"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-brand-orange/40 text-brand-black hover:bg-brand-linen"
+                  disabled={challengeBusy || !challengeJoinInput.trim()}
+                  onClick={handleJoinChallenge}
+                >
+                  Join
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-brand-orange/40 text-brand-orange hover:bg-brand-orange/10"
+                    onClick={() => { void handleCopyChallengeLink(); }}
+                  >
+                    Copy invite link
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                    onClick={handleLeaveChallenge}
+                  >
+                    Leave challenge
+                  </Button>
+                  {challengeMeta && (
+                    <span className="text-xs text-eatspin-gray-1">
+                      Ends in {Math.max(0, Math.ceil((challengeMeta.endsAt - uiNowMs) / (24 * 60 * 60 * 1000)))} day(s)
+                    </span>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-eatspin-peach/50 bg-brand-linen/60 px-3 py-2">
+                  <p className="text-xs text-eatspin-gray-1">
+                    Your completed days: <strong className="text-brand-black">{myChallengeParticipant?.completedDayKeys.length ?? 0}</strong>/7
+                  </p>
+                </div>
+
+                <ul className="space-y-2">
+                  {challengeLeaderboard.map((participant) => (
+                    <li
+                      key={participant.uid}
+                      className="flex items-center justify-between rounded-lg border border-eatspin-peach/50 bg-brand-linen px-3 py-2 text-sm"
+                    >
+                      <span className="font-medium text-brand-black">
+                        {participant.name} {participant.uid === groupAuthUid ? '(You)' : ''}
+                      </span>
+                      <span className="text-eatspin-gray-1">{participant.completedDayKeys.length}/7 days</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            </div>
+          )}
+
+          {APP_FEATURES.discoverFeed && (
+            <div className="mb-6 rounded-2xl border border-eatspin-peach/60 bg-brand-linen/70 p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="font-heading text-lg font-bold text-brand-black">Discover Feed</h3>
+                <p className="text-sm text-eatspin-gray-1">See what others nearby are spinning right now.</p>
+              </div>
+              {discoverGeoKey && (
+                <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-eatspin-gray-1">
+                  Area: {discoverGeoKey}
+                </span>
+              )}
+            </div>
+
+            {discoverFeedError && (
+              <p className="mt-2 text-xs text-eatspin-error">{discoverFeedError}</p>
+            )}
+
+            <ul className="mt-3 space-y-2">
+              {discoverEvents.length === 0 && (
+                <li className="rounded-lg bg-white px-3 py-2 text-sm text-eatspin-gray-1">
+                  No nearby spins yet. Your next spin can kick off the feed.
+                </li>
+              )}
+              {discoverEvents.map((event) => (
+                <li key={event.id} className="rounded-lg bg-white px-3 py-2 text-sm">
+                  <p className="font-medium text-brand-black">
+                    Someone nearby spun {event.restaurantName}
+                    {event.mealTime !== 'none' ? ` • ${event.mealTime}` : ''}
+                  </p>
+                  <p className="text-xs text-eatspin-gray-1">{formatSpinTimestamp(event.createdAt)}</p>
+                </li>
+              ))}
+            </ul>
+            </div>
+          )}
 
           {activeTab === 'auto' && (
             <>
@@ -1333,6 +1831,7 @@ function App() {
                 emptyStateSubtitle="Type any restaurant you like…"
                 onSaveFavourite={(r) => handleSaveFavourite(r, 'manual')}
                 onLetsGo={handleLetsGo}
+                onShareResult={handleShareResult}
                 isFavourite={isFavouriteCheck}
               />
 
@@ -1641,6 +2140,9 @@ function App() {
               onSpinStart={handleAutoSpinStart}
               onSaveFavourite={(r) => handleSaveFavourite(r, 'auto')}
               onLetsGo={handleLetsGo}
+              onShareResult={handleShareResult}
+              onSpinAgain={handleAutoSpinAgain}
+              canSpinAgain={wheelRestaurants.length > 2}
               isFavourite={isFavouriteCheck}
             />
           </div>
@@ -1666,12 +2168,16 @@ function App() {
         isBusy={groupRoomBusy}
         roomError={groupRoomError}
         participants={groupParticipants}
+        reactions={groupReactions}
+        votes={groupVotes}
         canStartRoomSpin={isGroupRoomActive && (isGroupHost || isGroupCohost) && manualRestaurantNames.length >= 2}
         onCreateRoom={handleCreateGroupRoom}
         onJoinRoom={handleJoinGroupRoom}
         onLeaveRoom={handleLeaveGroupRoom}
         onStartRoomSpin={handleRequestGroupSpin}
         onSetParticipantCohost={setParticipantCohost}
+        onSendReaction={sendGroupReaction}
+        onSetGoingVote={setGroupGoingVote}
         onClearRoomError={clearGroupRoomError}
       />
 
@@ -1695,6 +2201,13 @@ function App() {
           onDidntGo={handleFeedbackDidntGo}
         />
       )}
+
+      <FirstRunOnboarding
+        open={showOnboarding}
+        onClose={dismissFirstRunOnboarding}
+        onRequestLocation={requestLocation}
+        onOpenAutoMode={handleOnboardingOpenAutoMode}
+      />
 
       <Toaster />
     </div>

@@ -89,21 +89,40 @@ Made with ❤️ by [isaacncz](https://github.com/isaacncz)
 
 ---
 
-## Firebase Group Spin Setup
+## Firebase Setup
 
-Group Spin now uses Firebase Realtime Database + Anonymous Auth for cross-browser/device rooms.
+Firebase is used for the realtime/social features in this repo:
+- Group Spin rooms
+- Group reactions and going votes
+- 7-day challenges
+- Discover feed
 
-1. Copy `.env.example` to `.env` and fill values.
-2. In Firebase Console:
-   - Enable `Authentication > Sign-in method > Anonymous`.
-   - Create a Realtime Database instance.
-3. In `Realtime Database > Rules`, paste `docs/firebase-rtdb-rules.json`.
-4. In Netlify project settings, add:
+1. Copy `.env.example` to `.env` and fill:
    - `VITE_FIREBASE_API_KEY`
    - `VITE_FIREBASE_AUTH_DOMAIN`
    - `VITE_FIREBASE_DATABASE_URL`
    - `VITE_FIREBASE_PROJECT_ID`
    - `VITE_FIREBASE_APP_ID`
+2. In Firebase Console, create or reuse a project, then:
+   - Enable `Authentication > Sign-in method > Anonymous`
+   - Create a Realtime Database instance
+3. In `Authentication > Settings > Authorized domains`, add every domain you use to open the app:
+   - `localhost`
+   - `127.0.0.1`
+   - your production domain
+   - each Netlify preview domain you actually test, because preview URLs use unique subdomains
+4. In `Realtime Database > Rules`, paste `docs/firebase-rtdb-rules.json`.
+5. Deploy the same Firebase env vars to your hosting provider.
+
+Realtime Database paths used by the app:
+- `rooms/*` for group spin, reactions, and votes
+- `challenges/*` for 7-day challenge mode
+- `discover/*` for the nearby activity feed
+
+Notes:
+- If Anonymous Auth is not enabled, group/challenge flows will fail during Firebase sign-in.
+- If the current domain is not in Authorized domains, Firebase will warn that popup/redirect OAuth flows are not allowed on that domain.
+- The Discover feed also needs Firebase-safe path keys. If you see an invalid path error containing `discover/<lat>_<lng>/events`, that is a code bug rather than a Firebase console setup issue.
 
 ## Google Nearby Restaurants Setup
 

@@ -405,3 +405,21 @@
   appearance: none;
   background-image: linear-gradient(to bottom, #ffffff, #fff9f4);
 }
+
+@keyframes reaction-float-up {
+  0% {
+    transform: translateY(8px) scale(0.9);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-36px) scale(1.08);
+    opacity: 0;
+  }
+}
+
+.reaction-float {
+  animation: reaction-float-up 900ms ease-out forwards;
+}

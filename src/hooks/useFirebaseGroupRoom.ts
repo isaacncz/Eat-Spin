@@ -59,6 +59,21 @@ export interface GroupRoomSpin {
   startedBy: string;
 }
 
+export interface GroupRoomReaction {
+  id: string;
+  uid: string;
+  name: string;
+  emoji: string;
+  createdAt: number;
+}
+
+export interface GroupRoomVote {
+  uid: string;
+  name: string;
+  going: boolean;
+  updatedAt: number;
+}
+
 const normalizeDisplayName = (value: string) => value.trim().replace(/\s+/g, ' ').slice(0, GROUP_ROOM_NAME_MAX_LENGTH);
 
 const normalizeRoomCode = (value: string) =>
@@ -216,6 +231,54 @@ const parseCohostUids = (raw: unknown) => {
     .map(([uid]) => uid);
 };
 
+const parseReactions = (raw: unknown) => {
+  if (!raw || typeof raw !== 'object') return [] as GroupRoomReaction[];
+  const entries = Object.entries(raw as Record<string, unknown>);
+  const parsed = entries.reduce<GroupRoomReaction[]>((accumulator, [id, value]) => {
+    if (!value || typeof value !== 'object') return accumulator;
+    const candidate = value as Record<string, unknown>;
+    const uid = typeof candidate.uid === 'string' ? candidate.uid : '';
+    const name = typeof candidate.name === 'string' ? normalizeDisplayName(candidate.name) : '';
+    const emoji = typeof candidate.emoji === 'string' ? candidate.emoji : '';
+    const createdAt = typeof candidate.createdAt === 'number' ? candidate.createdAt : 0;
+    if (!uid || !emoji || createdAt <= 0) return accumulator;
+    accumulator.push({
+      id,
+      uid,
+      name: name || buildGuestName(uid),
+      emoji,
+      createdAt,
+    });
+    return accumulator;
+  }, []);
+
+  return parsed
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .slice(-24);
+};
+
+const parseVotes = (raw: unknown) => {
+  if (!raw || typeof raw !== 'object') return [] as GroupRoomVote[];
+  const entries = Object.entries(raw as Record<string, unknown>);
+  const parsed = entries.reduce<GroupRoomVote[]>((accumulator, [uid, value]) => {
+    if (!value || typeof value !== 'object') return accumulator;
+    const candidate = value as Record<string, unknown>;
+    const going = typeof candidate.going === 'boolean' ? candidate.going : false;
+    const updatedAt = typeof candidate.updatedAt === 'number' ? candidate.updatedAt : 0;
+    const name = typeof candidate.name === 'string' ? normalizeDisplayName(candidate.name) : '';
+    if (!uid || updatedAt <= 0) return accumulator;
+    accumulator.push({
+      uid,
+      name: name || buildGuestName(uid),
+      going,
+      updatedAt,
+    });
+    return accumulator;
+  }, []);
+
+  return parsed.sort((a, b) => b.updatedAt - a.updatedAt);
+};
+
 const normalizeListNames = (names: string[]) =>
   names
     .map((name) => normalizeDisplayName(name))
@@ -269,6 +332,8 @@ export function useFirebaseGroupRoom() {
   const [participants, setParticipants] = useState<GroupRoomParticipant[]>([]);
   const [roomListNames, setRoomListNames] = useState<string[]>([]);
   const [currentSpin, setCurrentSpin] = useState<GroupRoomSpin | null>(null);
+  const [reactions, setReactions] = useState<GroupRoomReaction[]>([]);
+  const [votes, setVotes] = useState<GroupRoomVote[]>([]);
   const [isBusy, setIsBusy] = useState(false);
   const [roomError, setRoomError] = useState<string | null>(null);
 
@@ -334,6 +399,8 @@ export function useFirebaseGroupRoom() {
     setParticipants([]);
     setRoomListNames([]);
     setCurrentSpin(null);
+    setReactions([]);
+    setVotes([]);
     roomIdRef.current = '';
     isHostRef.current = false;
     isCohostRef.current = false;
@@ -370,6 +437,8 @@ export function useFirebaseGroupRoom() {
     const cohostsRef = ref(db, `rooms/${targetRoomId}/cohosts`);
     const listRef = ref(db, `rooms/${targetRoomId}/list`);
     const spinRef = ref(db, `rooms/${targetRoomId}/spin`);
+    const reactionsRef = ref(db, `rooms/${targetRoomId}/reactions`);
+    const votesRef = ref(db, `rooms/${targetRoomId}/votes`);
     const metaRef = ref(db, `rooms/${targetRoomId}/meta`);
 
     const unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
@@ -386,6 +455,14 @@ export function useFirebaseGroupRoom() {
 
     const unsubscribeSpin = onValue(spinRef, (snapshot) => {
       setCurrentSpin(parseSpin(snapshot.val()));
+    });
+
+    const unsubscribeReactions = onValue(reactionsRef, (snapshot) => {
+      setReactions(parseReactions(snapshot.val()));
+    });
+
+    const unsubscribeVotes = onValue(votesRef, (snapshot) => {
+      setVotes(parseVotes(snapshot.val()));
     });
 
     const unsubscribeMeta = onValue(metaRef, (snapshot) => {
@@ -423,7 +500,15 @@ export function useFirebaseGroupRoom() {
       isCohostRef.current = nextIsCohost;
     });
 
-    unsubscribersRef.current.push(unsubscribeParticipants, unsubscribeList, unsubscribeSpin, unsubscribeMeta, unsubscribeCohosts);
+    unsubscribersRef.current.push(
+      unsubscribeParticipants,
+      unsubscribeList,
+      unsubscribeSpin,
+      unsubscribeReactions,
+      unsubscribeVotes,
+      unsubscribeMeta,
+      unsubscribeCohosts,
+    );
   }, [authUid, cleanupStaleParticipants, leaveRoom]);
 
   const writePresenceHeartbeat = useCallback(async (targetRoomId: string) => {
@@ -708,6 +793,42 @@ export function useFirebaseGroupRoom() {
     }
   }, [authUid]);
 
+  const sendReaction = useCallback(async (emoji: string) => {
+    const activeRoomId = roomIdRef.current;
+    if (!firebaseDb || !authUid || !activeRoomId) return;
+    const trimmedEmoji = emoji.trim();
+    if (!trimmedEmoji) return;
+
+    const now = Date.now();
+    const reactionKey = `${authUid}-${now}`;
+
+    try {
+      await set(ref(firebaseDb, `rooms/${activeRoomId}/reactions/${reactionKey}`), {
+        uid: authUid,
+        name: resolvedDisplayNameRef.current,
+        emoji: trimmedEmoji,
+        createdAt: now,
+      });
+    } catch (error: unknown) {
+      setRoomError(extractErrorMessage(error));
+    }
+  }, [authUid]);
+
+  const setGoingVote = useCallback(async (going: boolean) => {
+    const activeRoomId = roomIdRef.current;
+    if (!firebaseDb || !authUid || !activeRoomId) return;
+
+    try {
+      await set(ref(firebaseDb, `rooms/${activeRoomId}/votes/${authUid}`), {
+        name: resolvedDisplayNameRef.current,
+        going,
+        updatedAt: Date.now(),
+      });
+    } catch (error: unknown) {
+      setRoomError(extractErrorMessage(error));
+    }
+  }, [authUid]);
+
   const clearRoomError = useCallback(() => {
     setRoomError(null);
   }, []);
@@ -799,11 +920,15 @@ export function useFirebaseGroupRoom() {
     participants,
     roomListNames,
     currentSpin,
+    reactions,
+    votes,
     createRoom,
     joinRoom,
     leaveRoom,
     syncHostList,
     setParticipantCohost,
     requestHostSpin,
+    sendReaction,
+    setGoingVote,
   };
 }

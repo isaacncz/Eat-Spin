@@ -1,6 +1,6 @@
-// Restaurant utilities for dynamic ID generation and radius filtering
+// Restaurant utilities for dynamic ID generation, opening-hours checks, and radius filtering
 
-import type { Restaurant, FoodCategory } from '@/types';
+import type { Restaurant, FoodCategory, DailyHours, TimeWindow } from '@/types';
 
 export type RangeMode = 'walk' | 'drive10' | 'drive20';
 export type HalalFilter = 'all' | 'halal' | 'non-halal';
@@ -9,6 +9,14 @@ export interface FilterResult {
   results: Restaurant[];
   expanded: boolean;
   expandedLabel?: string;
+  closedNowExcludedCount: number;
+  closingSoonExcludedCount: number;
+}
+
+export interface RestaurantOpenStatus {
+  isOpenNow: boolean;
+  activeWindow: TimeWindow | null;
+  minutesUntilClose: number | null;
 }
 
 type FilterCacheEntry = {
@@ -28,11 +36,20 @@ const filterCache = new Map<string, FilterCacheEntry>();
 const RANGE_BAND_MIN_KM: Record<RangeMode, number> = { walk: 0, drive10: 1.2, drive20: 6 };
 const RANGE_BAND_MAX_KM: Record<RangeMode, number> = { walk: 1.2, drive10: 6, drive20: 12 };
 const SPARSE_THRESHOLD = 12;
+const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+const AUTO_RESULT_SOURCES = new Set<NonNullable<Restaurant['source']>>([
+  'google-live',
+  'google-cache',
+  'local-fallback',
+]);
 
 // Quality gate: minimum thresholds for curated results
 // Places below these are excluded from the wheel entirely.
 const MIN_QUALITY_RATING = 3.8;
 const MIN_QUALITY_REVIEWS = 15;
+// Auto-spin keeps a small safety buffer so users do not land on a place
+// that is about to shut down. Change this to `60` for a 1-hour cutoff.
+export const AUTO_SPIN_MINUTES_UNTIL_CLOSE_CUTOFF = 30;
 
 /**
  * Bayesian-weighted quality score that balances rating with review volume.
@@ -103,6 +120,7 @@ const buildFilterCacheKey = (
     serializeSorted(selectedPriceRanges),
     halalFilter,
     avoidedKey,
+    `close-cutoff:${AUTO_SPIN_MINUTES_UNTIL_CLOSE_CUTOFF}`,
   ].join('::');
 };
 
@@ -177,6 +195,116 @@ export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+};
+
+const getDayKey = (date: Date, offset: number = 0): string => {
+  const index = (date.getDay() + offset + 7) % 7;
+  return dayKeys[index];
+};
+
+const resolveDayHours = (hours: Restaurant['hours'], dayKey: string): DailyHours | undefined => {
+  return hours[dayKey] ?? hours.daily ?? Object.values(hours)[0];
+};
+
+const toMinutes = (time: string): number => {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+const isOpenInTodayWindow = (currentMinutes: number, openMinutes: number, closeMinutes: number): boolean => {
+  if (openMinutes <= closeMinutes) {
+    return currentMinutes >= openMinutes && currentMinutes <= closeMinutes;
+  }
+
+  return currentMinutes >= openMinutes;
+};
+
+const isOpenFromPreviousDayOvernight = (
+  currentMinutes: number,
+  openMinutes: number,
+  closeMinutes: number
+): boolean => {
+  if (openMinutes <= closeMinutes) {
+    return false;
+  }
+
+  return currentMinutes <= closeMinutes;
+};
+
+const findActiveWindow = (
+  dayHours: DailyHours | undefined,
+  currentMinutes: number,
+  matcher: (currentMinutes: number, openMinutes: number, closeMinutes: number) => boolean
+): TimeWindow | null => {
+  if (!dayHours || dayHours.closed || dayHours.windows.length === 0) {
+    return null;
+  }
+
+  return dayHours.windows.find((window) => {
+    const openMinutes = toMinutes(window.open);
+    const closeMinutes = toMinutes(window.close);
+    return matcher(currentMinutes, openMinutes, closeMinutes);
+  }) ?? null;
+};
+
+const getMinutesUntilClose = (
+  activeWindow: TimeWindow,
+  currentMinutes: number,
+  sourceDay: 'today' | 'previous-day'
+): number => {
+  const openMinutes = toMinutes(activeWindow.open);
+  const closeMinutes = toMinutes(activeWindow.close);
+
+  if (openMinutes <= closeMinutes) {
+    return closeMinutes - currentMinutes;
+  }
+
+  if (sourceDay === 'today') {
+    return (24 * 60 - currentMinutes) + closeMinutes;
+  }
+
+  return closeMinutes - currentMinutes;
+};
+
+export const getRestaurantOpenStatus = (
+  hours: Restaurant['hours'],
+  now: Date = new Date()
+): RestaurantOpenStatus => {
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const todayHours = resolveDayHours(hours, getDayKey(now));
+  const previousDayHours = resolveDayHours(hours, getDayKey(now, -1));
+
+  const activeTodayWindow = findActiveWindow(todayHours, currentMinutes, isOpenInTodayWindow);
+  if (activeTodayWindow) {
+    return {
+      isOpenNow: true,
+      activeWindow: activeTodayWindow,
+      minutesUntilClose: getMinutesUntilClose(activeTodayWindow, currentMinutes, 'today'),
+    };
+  }
+
+  const activePreviousDayWindow = findActiveWindow(
+    previousDayHours,
+    currentMinutes,
+    isOpenFromPreviousDayOvernight
+  );
+  if (activePreviousDayWindow) {
+    return {
+      isOpenNow: true,
+      activeWindow: activePreviousDayWindow,
+      minutesUntilClose: getMinutesUntilClose(activePreviousDayWindow, currentMinutes, 'previous-day'),
+    };
+  }
+
+  return {
+    isOpenNow: false,
+    activeWindow: null,
+    minutesUntilClose: null,
+  };
+};
+
+export const isRestaurantOpen = (hours: Restaurant['hours']): boolean => {
+  return getRestaurantOpenStatus(hours).isOpenNow;
 };
 
 /**
@@ -294,6 +422,27 @@ export const enhancedFilterRestaurants = (
     filtered = filtered.filter((restaurant) => isNonHalalRestaurant(restaurant));
   }
 
+  let closedNowExcludedCount = 0;
+  let closingSoonExcludedCount = 0;
+  filtered = filtered.filter((restaurant) => {
+    if (!restaurant.source || !AUTO_RESULT_SOURCES.has(restaurant.source)) {
+      return true;
+    }
+
+    const openStatus = getRestaurantOpenStatus(restaurant.hours);
+    if (!openStatus.isOpenNow) {
+      closedNowExcludedCount += 1;
+      return false;
+    }
+
+    if ((openStatus.minutesUntilClose ?? Number.POSITIVE_INFINITY) < AUTO_SPIN_MINUTES_UNTIL_CLOSE_CUTOFF) {
+      closingSoonExcludedCount += 1;
+      return false;
+    }
+
+    return true;
+  });
+
   // 4. Attach computed distances
   const withDistance = userLocation
     ? filtered.map((restaurant) => ({
@@ -366,7 +515,13 @@ export const enhancedFilterRestaurants = (
     results = [...results].sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
   }
 
-  const filterResult: FilterResult = { results, expanded, expandedLabel };
+  const filterResult: FilterResult = {
+    results,
+    expanded,
+    expandedLabel,
+    closedNowExcludedCount,
+    closingSoonExcludedCount,
+  };
   writeFilterCache(cacheKey, filterResult, { sourcePoolSize: restaurants.length });
   return filterResult;
 };

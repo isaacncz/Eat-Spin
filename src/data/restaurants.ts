@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import type { DailyHours, Restaurant, FoodCategory, FoodCategoryConfig, JsonRestaurant } from '@/types';
-import { generateRestaurantId } from '@/lib/restaurantUtils';
+import { generateRestaurantId, isRestaurantOpen } from '@/lib/restaurantUtils';
 import rawRestaurants from './restaurants.json';
 
 const foodCategoryIds = [
@@ -237,82 +237,6 @@ export function calculateDistance(
       Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
-}
-
-const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
-
-const getDayKey = (date: Date, offset: number = 0): string => {
-  const index = (date.getDay() + offset + 7) % 7;
-  return dayKeys[index];
-};
-
-const resolveDayHours = (hours: Restaurant['hours'], dayKey: string): DailyHours | undefined => {
-  return hours[dayKey] ?? hours.daily ?? Object.values(hours)[0];
-};
-
-const toMinutes = (time: string): number => {
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
-};
-
-const isOpenInTodayWindow = (currentMinutes: number, openMinutes: number, closeMinutes: number): boolean => {
-  if (openMinutes <= closeMinutes) {
-    return currentMinutes >= openMinutes && currentMinutes <= closeMinutes;
-  }
-
-  // Overnight window starting today: active from open until midnight.
-  return currentMinutes >= openMinutes;
-};
-
-const isOpenFromPreviousDayOvernight = (
-  currentMinutes: number,
-  openMinutes: number,
-  closeMinutes: number
-): boolean => {
-  if (openMinutes <= closeMinutes) {
-    return false;
-  }
-
-  // Overnight window from previous day: active from midnight to close.
-  return currentMinutes <= closeMinutes;
-};
-
-const isOpenInDayHours = (dayHours: DailyHours | undefined, currentMinutes: number): boolean => {
-  if (!dayHours || dayHours.closed || dayHours.windows.length === 0) {
-    return false;
-  }
-
-  return dayHours.windows.some((window) => {
-    const openMinutes = toMinutes(window.open);
-    const closeMinutes = toMinutes(window.close);
-    return isOpenInTodayWindow(currentMinutes, openMinutes, closeMinutes);
-  });
-};
-
-const isOpenFromPreviousDayHours = (dayHours: DailyHours | undefined, currentMinutes: number): boolean => {
-  if (!dayHours || dayHours.closed || dayHours.windows.length === 0) {
-    return false;
-  }
-
-  return dayHours.windows.some((window) => {
-    const openMinutes = toMinutes(window.open);
-    const closeMinutes = toMinutes(window.close);
-    return isOpenFromPreviousDayOvernight(currentMinutes, openMinutes, closeMinutes);
-  });
-};
-
-// Helper function to check if restaurant is currently open
-export function isRestaurantOpen(hours: Restaurant['hours']): boolean {
-  const now = new Date();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const todayHours = resolveDayHours(hours, getDayKey(now));
-  const previousDayHours = resolveDayHours(hours, getDayKey(now, -1));
-
-  if (isOpenInDayHours(todayHours, currentMinutes)) {
-    return true;
-  }
-
-  return isOpenFromPreviousDayHours(previousDayHours, currentMinutes);
 }
 
 // Helper function to get current meal time

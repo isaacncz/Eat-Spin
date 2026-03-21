@@ -11,7 +11,11 @@ import { useSpinChallenge } from '@/hooks/useSpinChallenge';
 import { useDiscoverFeed } from '@/hooks/useDiscoverFeed';
 import type { FoodCategory, MealTime, Restaurant } from '@/types';
 import { restaurants as localRestaurants } from '@/data/restaurants';
-import { enhancedFilterRestaurants, findNearbyFavourites } from '@/lib/restaurantUtils';
+import {
+  AUTO_SPIN_MINUTES_UNTIL_CLOSE_CUTOFF,
+  enhancedFilterRestaurants,
+  findNearbyFavourites,
+} from '@/lib/restaurantUtils';
 import { getCurrentMealTime } from '@/lib/utils';
 import { FoodCategorySelector } from '@/components/FoodCategorySelector';
 import { RouletteWheel } from '@/components/RouletteWheel';
@@ -541,6 +545,38 @@ function App() {
   ), [autoSourceRestaurants, location, selectedCategories, rangeMode, selectedPriceRanges, avoidedRestaurantIds]);
 
   const filteredRestaurants = filterResult.results;
+  const closingSoonExcludedCount = filterResult.closingSoonExcludedCount;
+  const closedNowExcludedCount = filterResult.closedNowExcludedCount;
+
+  const autoAvailabilityHelperText = useMemo(() => {
+    const messages: string[] = [];
+
+    if (closingSoonExcludedCount > 0) {
+      messages.push(
+        `${closingSoonExcludedCount} place${closingSoonExcludedCount === 1 ? '' : 's'} will close in under ${AUTO_SPIN_MINUTES_UNTIL_CLOSE_CUTOFF} min, so they were skipped.`
+      );
+    }
+
+    if (closedNowExcludedCount > 0) {
+      messages.push(
+        `${closedNowExcludedCount} place${closedNowExcludedCount === 1 ? '' : 's'} are closed right now.`
+      );
+    }
+
+    return messages.join(' ');
+  }, [closedNowExcludedCount, closingSoonExcludedCount]);
+
+  const autoEmptyStateSubtitle = useMemo(() => {
+    if (closingSoonExcludedCount > 0 && filteredRestaurants.length === 0) {
+      return `Everything nearby is either closed or shutting within ${AUTO_SPIN_MINUTES_UNTIL_CLOSE_CUTOFF} min. Try a wider range or check back soon.`;
+    }
+
+    if (closedNowExcludedCount > 0 && filteredRestaurants.length === 0) {
+      return 'Everything matching your filters is closed right now. Try widening your filters or check back soon.';
+    }
+
+    return 'Try selecting different categories or check back during meal hours';
+  }, [closedNowExcludedCount, closingSoonExcludedCount, filteredRestaurants.length]);
 
   const roundRestaurants = useMemo(() => (
     filteredRestaurants.filter((restaurant) => !roundRemovedRestaurantIds.includes(restaurant.id))
@@ -1572,6 +1608,10 @@ function App() {
                     <p className="mb-2 text-xs text-eatspin-gray-1">{filterResult.expandedLabel}</p>
                   )}
 
+                  {autoAvailabilityHelperText && (
+                    <p className="mb-2 text-xs text-eatspin-gray-1">{autoAvailabilityHelperText}</p>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => setIsMoreFiltersOpen((prev) => !prev)}
@@ -1606,7 +1646,14 @@ function App() {
 
               {location && filteredRestaurants.length === 0 && !nearbyRestaurantsLoading && autoSourceRestaurants.length > 0 && (
                 <div className="mb-5 rounded-2xl border border-eatspin-peach/60 bg-white p-4 text-center">
-                  <p className="text-sm font-medium text-brand-black">No matches — try clearing a filter.</p>
+                  <p className="text-sm font-medium text-brand-black">
+                    {closingSoonExcludedCount > 0 || closedNowExcludedCount > 0
+                      ? 'No open spots left for the wheel right now.'
+                      : 'No matches — try clearing a filter.'}
+                  </p>
+                  <p className="mt-1 text-xs text-eatspin-gray-1">
+                    {autoEmptyStateSubtitle}
+                  </p>
                   {selectedPriceRanges.length > 0 && (
                     <p className="mt-1 text-xs text-eatspin-gray-1">
                       Price filter is active.
@@ -2144,6 +2191,9 @@ function App() {
               onSpinAgain={handleAutoSpinAgain}
               canSpinAgain={wheelRestaurants.length > 2}
               isFavourite={isFavouriteCheck}
+              helperText={autoAvailabilityHelperText || undefined}
+              emptyStateTitle="No open restaurants ready to spin"
+              emptyStateSubtitle={autoEmptyStateSubtitle}
             />
           </div>
         </section>

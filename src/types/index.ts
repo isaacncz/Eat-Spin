@@ -96,6 +96,16 @@ export interface SpinResult {
 }
 
 export type MealTime = 'breakfast' | 'lunch' | 'dinner' | 'none';
+export type ManualListMealTime = Exclude<MealTime, 'none'> | null;
+
+export interface ManualList {
+  id: string;
+  name: string;
+  restaurants: Restaurant[];
+  mealTime: ManualListMealTime;
+  createdAt: number;
+  updatedAt: number;
+}
 
 export interface UserPreferences {
   selectedCategories: FoodCategory[];

@@ -2073,7 +2073,7 @@ function App() {
                           type="button"
                           onClick={handleSaveManualListDetails}
                           disabled={isManualListReadOnly || !selectedManualList || !hasManualListDetailsChanged || Boolean(duplicateManualListForSave)}
-                          className="h-11 w-full shrink-0 bg-brand-black px-4 text-sm font-semibold text-white hover:bg-brand-black/90 sm:w-auto"
+                          className="h-11 w-full shrink-0 bg-brand-orange px-4 text-sm font-semibold text-white hover:bg-brand-orange/90 sm:w-auto"
                         >
                           Save
                         </Button>

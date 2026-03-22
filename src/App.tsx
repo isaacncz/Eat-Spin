@@ -942,6 +942,21 @@ function App() {
     )) ?? null;
   }, [listNameSuggestion, manualLists, normalizeManualListName, selectedManualList]);
 
+  const buildUniqueManualListName = useCallback((baseName: string) => {
+    const trimmedBaseName = baseName.trim();
+    if (!trimmedBaseName) return 'My list';
+
+    let candidateName = trimmedBaseName;
+    let duplicateIndex = 2;
+
+    while (manualLists.some((list) => normalizeManualListName(list.name) === normalizeManualListName(candidateName))) {
+      candidateName = `${trimmedBaseName} (${duplicateIndex})`;
+      duplicateIndex += 1;
+    }
+
+    return candidateName;
+  }, [manualLists, normalizeManualListName]);
+
   const handleSelectSavedManualList = useCallback((listId: string) => {
     const nextList = manualLists.find((list) => list.id === listId);
     if (!nextList) return;
@@ -1019,6 +1034,36 @@ function App() {
     });
     toast.success(`Saved details for "${nextName}".`);
   }, [duplicateManualListForSave, isManualListReadOnly, listMealTimeInput, listNameSuggestion, selectedManualList, updateSelectedManualList]);
+
+  const handleSaveRoomListToManualLists = useCallback(() => {
+    if (!isGroupRoomActive || displayedManualRestaurantNames.length === 0) return;
+
+    const roomMealTime = getPreferredManualMealTime();
+    const roomListBaseName = getSuggestedManualListName(groupRoomId ? `Room ${groupRoomId}` : 'Saved room', roomMealTime);
+    const nextName = buildUniqueManualListName(roomListBaseName);
+    const newList = createNewManualList({
+      name: nextName,
+      mealTime: roomMealTime,
+      restaurants: buildRestaurantsFromNames(displayedManualRestaurantNames),
+    });
+
+    trackEvent('manual_list_saved_from_room', {
+      room_id: groupRoomId,
+      list_id: newList.id,
+      list_name: newList.name,
+      count: displayedManualRestaurantNames.length,
+    });
+    toast.success(`Saved this room list as "${newList.name}".`, {
+      description: 'Leave the room anytime to find it in your saved manual lists.',
+    });
+  }, [
+    buildRestaurantsFromNames,
+    buildUniqueManualListName,
+    createNewManualList,
+    displayedManualRestaurantNames,
+    groupRoomId,
+    isGroupRoomActive,
+  ]);
 
   const handleDeleteManualList = useCallback(() => {
     if (!selectedManualList || isManualListReadOnly) {
@@ -1908,15 +1953,32 @@ function App() {
                   )}
 
                   {!canEditGroupList && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void handleLeaveGroupRoom();
-                      }}
-                      className="mt-2 inline-flex items-center rounded-full border border-brand-orange/40 bg-white px-3 py-1.5 text-xs font-semibold text-brand-black hover:bg-brand-linen"
-                    >
-                      Leave room to spin on your own
-                    </button>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-brand-black/80">Like this list? Save it to your own manual lists and spin it later.</p>
+                        <p className="text-[11px] text-eatspin-gray-1">We'll save a copy without changing the host's room list.</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleSaveRoomListToManualLists}
+                          disabled={displayedManualRestaurantNames.length === 0}
+                          className="h-9 border-brand-orange/40 bg-white px-3 text-xs font-semibold text-brand-black hover:bg-brand-linen"
+                        >
+                          Add to my list
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void handleLeaveGroupRoom();
+                          }}
+                          className="inline-flex items-center rounded-full border border-brand-orange/40 bg-white px-3 py-1.5 text-xs font-semibold text-brand-black hover:bg-brand-linen"
+                        >
+                          Leave room to spin on your own
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}

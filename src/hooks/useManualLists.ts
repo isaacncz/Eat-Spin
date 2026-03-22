@@ -266,11 +266,13 @@ export function useManualLists() {
     setSelectedManualListId(listId);
   }, []);
 
-  const createNewManualList = useCallback(({ name, mealTime }: { name: string; mealTime: ManualListMealTime }) => {
+  const createNewManualList = useCallback((
+    { name, mealTime, restaurants = [] }: { name: string; mealTime: ManualListMealTime; restaurants?: Restaurant[] },
+  ) => {
     const newList = createManualList({
       name,
       mealTime,
-      restaurants: [],
+      restaurants,
     });
 
     setManualLists((currentLists) => [newList, ...currentLists]);

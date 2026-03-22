@@ -2060,20 +2060,20 @@ function App() {
                   <div className="grid gap-3">
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-name">List name</label>
-                      <div className="flex flex-col gap-2 sm:flex-row">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
                         <Input
                           id="saved-manual-name"
                           value={listNameInput}
                           onChange={(e) => setListNameInput(e.target.value)}
                           placeholder="Isaac lunch list"
-                          className="h-11"
+                          className="h-11 min-w-0 flex-1"
                           disabled={isManualListReadOnly}
                         />
                         <Button
                           type="button"
                           onClick={handleSaveManualListDetails}
                           disabled={isManualListReadOnly || !selectedManualList || !hasManualListDetailsChanged || Boolean(duplicateManualListForSave)}
-                          className="h-11 bg-brand-black px-4 text-sm font-semibold text-white hover:bg-brand-black/90"
+                          className="h-11 w-full shrink-0 bg-brand-black px-4 text-sm font-semibold text-white hover:bg-brand-black/90 sm:w-auto"
                         >
                           Save
                         </Button>

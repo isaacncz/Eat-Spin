@@ -923,6 +923,25 @@ function App() {
     [listMealTimeInput, listNameInput],
   );
 
+  const normalizeManualListName = useCallback((name: string) => name.trim().toLowerCase(), []);
+
+  const duplicateManualListForCreate = useMemo(() => {
+    const nextName = listNameSuggestion.trim();
+    if (!nextName) return null;
+
+    return manualLists.find((list) => normalizeManualListName(list.name) === normalizeManualListName(nextName)) ?? null;
+  }, [listNameSuggestion, manualLists, normalizeManualListName]);
+
+  const duplicateManualListForSave = useMemo(() => {
+    const nextName = listNameSuggestion.trim();
+    if (!nextName || !selectedManualList) return null;
+
+    return manualLists.find((list) => (
+      list.id !== selectedManualList.id
+      && normalizeManualListName(list.name) === normalizeManualListName(nextName)
+    )) ?? null;
+  }, [listNameSuggestion, manualLists, normalizeManualListName, selectedManualList]);
+
   const handleSelectSavedManualList = useCallback((listId: string) => {
     const nextList = manualLists.find((list) => list.id === listId);
     if (!nextList) return;
@@ -951,6 +970,11 @@ function App() {
     }
 
     const nextName = listNameSuggestion.trim();
+    if (duplicateManualListForCreate) {
+      toast.error(`A saved list named "${duplicateManualListForCreate.name}" already exists.`);
+      return;
+    }
+
     const newList = createNewManualList({ name: nextName, mealTime: listMealTimeInput });
     hasUserSelectedManualListRef.current = true;
     setManualSpinResult(null);
@@ -967,7 +991,7 @@ function App() {
     }
 
     toast.success(`Created "${newList.name}".`);
-  }, [canEditGroupList, createNewManualList, isGroupRoomActive, isManualListReadOnly, listMealTimeInput, listNameSuggestion, syncGroupListFromRestaurants]);
+  }, [canEditGroupList, createNewManualList, duplicateManualListForCreate, isGroupRoomActive, isManualListReadOnly, listMealTimeInput, listNameSuggestion, syncGroupListFromRestaurants]);
 
   const handleSaveManualListDetails = useCallback(() => {
     if (!selectedManualList || isManualListReadOnly) {
@@ -978,6 +1002,11 @@ function App() {
     }
 
     const nextName = listNameSuggestion.trim();
+    if (duplicateManualListForSave) {
+      toast.error(`A saved list named "${duplicateManualListForSave.name}" already exists.`);
+      return;
+    }
+
     updateSelectedManualList({
       name: nextName,
       mealTime: listMealTimeInput,
@@ -989,7 +1018,7 @@ function App() {
       count: selectedManualList.restaurants.length,
     });
     toast.success(`Saved details for "${nextName}".`);
-  }, [isManualListReadOnly, listMealTimeInput, listNameSuggestion, selectedManualList, updateSelectedManualList]);
+  }, [duplicateManualListForSave, isManualListReadOnly, listMealTimeInput, listNameSuggestion, selectedManualList, updateSelectedManualList]);
 
   const handleDeleteManualList = useCallback(() => {
     if (!selectedManualList || isManualListReadOnly) {
@@ -1065,6 +1094,12 @@ function App() {
     if (!selectedManualList) return false;
     return selectedManualList.name !== listNameSuggestion.trim() || selectedManualList.mealTime !== listMealTimeInput;
   }, [listMealTimeInput, listNameSuggestion, selectedManualList]);
+
+  const manualListNameHelperText = duplicateManualListForSave
+    ? `List name already used by ${duplicateManualListForSave.name}.`
+    : listNameSuggestion.trim() !== listNameInput.trim()
+      ? `Use suggestion: ${listNameSuggestion}`
+      : '';
 
   const selectedManualListLabel = selectedManualList?.name ?? 'My list';
 
@@ -1904,7 +1939,7 @@ function App() {
                       <Button
                         type="button"
                         onClick={handleCreateManualList}
-                        disabled={isManualListReadOnly}
+                        disabled={isManualListReadOnly || Boolean(duplicateManualListForCreate)}
                         className="h-10 bg-brand-orange px-4 text-sm font-semibold text-white hover:bg-brand-orange/90"
                       >
                         <Plus size={16} className="mr-1" /> New list
@@ -1960,45 +1995,51 @@ function App() {
                     </div>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                  <div className="grid gap-3">
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-name">List name</label>
-                      <Input
-                        id="saved-manual-name"
-                        value={listNameInput}
-                        onChange={(e) => setListNameInput(e.target.value)}
-                        placeholder="Isaac lunch list"
-                        className="h-11"
-                        disabled={isManualListReadOnly}
-                      />
-                      {listNameSuggestion.trim() !== listNameInput.trim() && (
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Input
+                          id="saved-manual-name"
+                          value={listNameInput}
+                          onChange={(e) => setListNameInput(e.target.value)}
+                          placeholder="Isaac lunch list"
+                          className="h-11"
+                          disabled={isManualListReadOnly}
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleSaveManualListDetails}
+                          disabled={isManualListReadOnly || !selectedManualList || !hasManualListDetailsChanged || Boolean(duplicateManualListForSave)}
+                          className="h-11 bg-brand-black px-4 text-sm font-semibold text-white hover:bg-brand-black/90"
+                        >
+                          Save
+                        </Button>
+                      </div>
+                      {duplicateManualListForSave ? (
+                        <p className="text-xs text-red-600">{manualListNameHelperText}</p>
+                      ) : listNameSuggestion.trim() !== listNameInput.trim() ? (
                         <button
                           type="button"
                           onClick={() => setListNameInput(listNameSuggestion)}
                           className="text-left text-xs text-brand-orange hover:underline"
                           disabled={isManualListReadOnly}
                         >
-                          Use suggestion: {listNameSuggestion}
+                          {manualListNameHelperText}
                         </button>
-                      )}
+                      ) : null}
                     </div>
-                    <Button
-                      type="button"
-                      onClick={handleSaveManualListDetails}
-                      disabled={isManualListReadOnly || !selectedManualList || !hasManualListDetailsChanged}
-                      className="h-11 bg-brand-black px-4 text-sm font-semibold text-white hover:bg-brand-black/90"
-                    >
-                      Save details
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleDeleteManualList}
-                      disabled={isManualListReadOnly || !selectedManualList}
-                      className="h-11 border-red-200 px-4 text-sm font-semibold text-red-600 hover:bg-red-50"
-                    >
-                      <Trash2 size={16} className="mr-1" /> Delete
-                    </Button>
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleDeleteManualList}
+                        disabled={isManualListReadOnly || !selectedManualList}
+                        className="h-11 border-red-200 px-4 text-sm font-semibold text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 size={16} className="mr-1" /> Delete
+                      </Button>
+                    </div>
                   </div>
 
                   <p className="text-xs text-eatspin-gray-1">

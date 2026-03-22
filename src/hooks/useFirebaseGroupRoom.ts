@@ -332,6 +332,7 @@ export function useFirebaseGroupRoom() {
   const [participants, setParticipants] = useState<GroupRoomParticipant[]>([]);
   const [roomListNames, setRoomListNames] = useState<string[]>([]);
   const [currentSpin, setCurrentSpin] = useState<GroupRoomSpin | null>(null);
+  const [roomStatus, setRoomStatus] = useState<RoomStatus>('waiting');
   const [reactions, setReactions] = useState<GroupRoomReaction[]>([]);
   const [votes, setVotes] = useState<GroupRoomVote[]>([]);
   const [isBusy, setIsBusy] = useState(false);
@@ -399,6 +400,7 @@ export function useFirebaseGroupRoom() {
     setParticipants([]);
     setRoomListNames([]);
     setCurrentSpin(null);
+    setRoomStatus('waiting');
     setReactions([]);
     setVotes([]);
     roomIdRef.current = '';
@@ -484,6 +486,7 @@ export function useFirebaseGroupRoom() {
 
       const shouldBeHost = parsedMeta.hostUid === authUid;
       setHostUid(parsedMeta.hostUid);
+      setRoomStatus(parsedMeta.status);
       if (shouldBeHost !== isHostRef.current) {
         isHostRef.current = shouldBeHost;
         setIsHost(shouldBeHost);
@@ -626,6 +629,7 @@ export function useFirebaseGroupRoom() {
       setParticipants([]);
       setRoomListNames([]);
       setCurrentSpin(null);
+      setRoomStatus(existingMeta?.status ?? 'waiting');
 
       attachRoomSubscriptions(parsedRoomCode);
       await writePresenceHeartbeat(parsedRoomCode);
@@ -920,6 +924,7 @@ export function useFirebaseGroupRoom() {
     participants,
     roomListNames,
     currentSpin,
+    roomStatus,
     reactions,
     votes,
     createRoom,

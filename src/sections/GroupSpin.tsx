@@ -64,6 +64,7 @@ interface GroupSpinProps {
   onSendReaction: (emoji: string) => Promise<void>;
   onSetGoingVote: (going: boolean) => Promise<void>;
   onClearRoomError: () => void;
+  showCompletedListReminder: boolean;
 }
 
 export function GroupSpin({
@@ -95,6 +96,7 @@ export function GroupSpin({
   onSendReaction,
   onSetGoingVote,
   onClearRoomError,
+  showCompletedListReminder,
 }: GroupSpinProps) {
   const [joinValue, setJoinValue] = useState(() => {
     if (typeof window === 'undefined') return '';
@@ -357,6 +359,15 @@ export function GroupSpin({
                 </Button>
               </div>
             </div>
+
+            {showCompletedListReminder && (
+              <div className="mt-4 rounded-xl border border-brand-orange/30 bg-brand-orange/10 px-4 py-3 text-sm text-brand-black">
+                <p className="font-semibold">The room spin is finished.</p>
+                <p className="mt-1 text-brand-black/80">
+                  You're still viewing this room's shared restaurant list. Leave the room when you want to go back to your own saved personal list.
+                </p>
+              </div>
+            )}
 
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {participants.length === 0 ? (

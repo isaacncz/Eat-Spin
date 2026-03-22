@@ -7,9 +7,10 @@ import { useNearbyRestaurants } from '@/hooks/useNearbyRestaurants';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
+import { getManualListMealTimeLabel, getSuggestedManualListName, useManualLists } from '@/hooks/useManualLists';
 import { useSpinChallenge } from '@/hooks/useSpinChallenge';
 import { useDiscoverFeed } from '@/hooks/useDiscoverFeed';
-import type { FoodCategory, MealTime, Restaurant } from '@/types';
+import type { FoodCategory, ManualListMealTime, MealTime, Restaurant } from '@/types';
 import { restaurants as localRestaurants } from '@/data/restaurants';
 import {
   AUTO_SPIN_MINUTES_UNTIL_CLOSE_CUTOFF,
@@ -47,17 +48,7 @@ import './App.css';
 
 type SpinTab = 'auto' | 'manual';
 type AutoRangeMode = 'walk' | 'drive10' | 'drive20';
-type PresetMealTime = Exclude<MealTime, 'none'> | null;
-interface ManualPreset {
-  id: string;
-  name: string;
-  restaurants: string[];
-  mealTime: PresetMealTime;
-  createdAt: number;
-}
 
-const MANUAL_RESTAURANTS_STORAGE_KEY = 'eatspin:manual-restaurants';
-const MANUAL_PRESETS_STORAGE_KEY = 'eatspin:manual-presets';
 const AUTO_RANGE_MODE_STORAGE_KEY = 'eatspin:auto-range-mode';
 const SPIN_REJECTION_STORAGE_KEY = 'eatspin:spin-rejections';
 const FIRST_RUN_ONBOARDING_SEEN_KEY = 'eatspin:first-run-onboarding-seen';
@@ -113,78 +104,10 @@ const createManualRestaurant = (name: string): Restaurant => {
   };
 };
 
-const getPresetMealTime = (): PresetMealTime => {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 10) return 'breakfast';
-  if (hour >= 10 && hour < 15) return 'lunch';
-  if (hour >= 15 && hour < 22) return 'dinner';
-  return null;
+const getPreferredManualMealTime = (): ManualListMealTime => {
+  const mealTime = getCurrentMealTime();
+  return mealTime === 'none' ? null : mealTime;
 };
-
-const presetMealTimeTimeToLabel = (mealTime: PresetMealTime): string => {
-  if (mealTime === 'breakfast') return 'Breakfast';
-  if (mealTime === 'lunch') return 'Lunch';
-  if (mealTime === 'dinner') return 'Dinner';
-  return '';
-};
-
-const loadManualRestaurants = (): Restaurant[] => {
-  if (typeof window === 'undefined') return [];
-
-  const storedRestaurants = window.localStorage.getItem(MANUAL_RESTAURANTS_STORAGE_KEY);
-  if (!storedRestaurants) return [];
-
-  try {
-    const parsedRestaurants = JSON.parse(storedRestaurants);
-    if (!Array.isArray(parsedRestaurants)) return [];
-
-    return parsedRestaurants.filter((restaurant): restaurant is Restaurant => (
-      typeof restaurant?.id === 'string'
-      && typeof restaurant?.name === 'string'
-      && typeof restaurant?.address === 'string'
-      && typeof restaurant?.description === 'string'
-      && typeof restaurant?.rating === 'number'
-      && typeof restaurant?.priceRange === 'string'
-      && Array.isArray(restaurant?.category)
-      && typeof restaurant?.coordinates?.lat === 'number'
-      && typeof restaurant?.coordinates?.lng === 'number'
-      && typeof restaurant?.hours === 'object'
-    ));
-  } catch {
-    return [];
-  }
-};
-
-const loadManualPresets = (): ManualPreset[] => {
-  if (typeof window === 'undefined') return [];
-
-  const storedPresets = window.localStorage.getItem(MANUAL_PRESETS_STORAGE_KEY);
-  if (!storedPresets) return [];
-
-  try {
-    const parsedPresets = JSON.parse(storedPresets);
-    if (!Array.isArray(parsedPresets)) return [];
-
-    return parsedPresets.filter((preset): preset is ManualPreset => {
-      const restaurants = (preset as { restaurants?: unknown }).restaurants;
-
-      return (
-        typeof (preset as { id?: unknown }).id === 'string'
-        && typeof (preset as { name?: unknown }).name === 'string'
-        && Array.isArray(restaurants)
-        && restaurants.every((restaurant: unknown) => typeof restaurant === 'string')
-        && ((preset as { mealTime?: unknown }).mealTime === null
-          || (preset as { mealTime?: unknown }).mealTime === 'breakfast'
-          || (preset as { mealTime?: unknown }).mealTime === 'lunch'
-          || (preset as { mealTime?: unknown }).mealTime === 'dinner')
-        && typeof (preset as { createdAt?: unknown }).createdAt === 'number'
-      );
-    });
-  } catch {
-    return [];
-  }
-};
-
 const normalizeManualNames = (names: string[]) => (
   names
     .map((name) => name.trim())
@@ -276,20 +199,29 @@ function App() {
   const [uiNowMs, setUiNowMs] = useState(() => Date.now());
 
   const [manualInput, setManualInput] = useState('');
-  const [personalManualRestaurants, setPersonalManualRestaurants] = useState<Restaurant[]>(() => loadManualRestaurants());
+  const {
+    manualLists,
+    selectedManualList,
+    selectedManualListId,
+    selectManualList,
+    createNewManualList,
+    updateSelectedManualList,
+    deleteManualList,
+    selectDeterministicManualList,
+  } = useManualLists();
   const [roomManualRestaurants, setRoomManualRestaurants] = useState<Restaurant[]>([]);
   const [isManualRoomLeavePending, setIsManualRoomLeavePending] = useState(false);
   const [manualWheelKey, setManualWheelKey] = useState(0);
   const [, setManualSpinResult] = useState<Restaurant | null>(null);
-  const [presetNameInput, setPresetNameInput] = useState('');
-  const [presetMealTimeInput, setPresetMealTimeInput] = useState<PresetMealTime>(() => getPresetMealTime());
-  const [manualPresets, setManualPresets] = useState<ManualPreset[]>(() => loadManualPresets());
+  const [listNameInput, setListNameInput] = useState('');
+  const [listMealTimeInput, setListMealTimeInput] = useState<ManualListMealTime>(() => getPreferredManualMealTime());
   const [groupSpinNow, setGroupSpinNow] = useState(() => Date.now());
   // Fetch radius follows the selected range mode so each mode gets its own
   // focused 20-place pool from Google. Cached separately per radius — repeat
   // visits cost nothing for 7 days.
   const fetchRadiusKm = AUTO_RANGE_RADIUS_KM[rangeMode];
-  const autoLoadedMealTimeRef = useRef<PresetMealTime>(null);
+  const autoLoadedMealTimeRef = useRef<ManualListMealTime>(null);
+  const hasUserSelectedManualListRef = useRef(false);
   const seededRoomSyncIdRef = useRef('');
   const pendingRoomListSyncRef = useRef<{ roomId: string; signature: string; startedAt: number } | null>(null);
 
@@ -410,13 +342,17 @@ function App() {
   const priceOptions: Restaurant['priceRange'][] = ['$', '$$', '$$$', '$$$$'];
   const isGroupRoomActive = Boolean(groupRoomId);
   const shouldShowRoomManualRestaurants = isGroupRoomActive && !isManualRoomLeavePending;
+  const selectedPersonalManualRestaurants = useMemo(
+    () => selectedManualList?.restaurants ?? [],
+    [selectedManualList],
+  );
   const displayedManualRestaurants = useMemo(
-    () => (shouldShowRoomManualRestaurants ? roomManualRestaurants : personalManualRestaurants),
-    [personalManualRestaurants, roomManualRestaurants, shouldShowRoomManualRestaurants],
+    () => (shouldShowRoomManualRestaurants ? roomManualRestaurants : selectedPersonalManualRestaurants),
+    [roomManualRestaurants, selectedPersonalManualRestaurants, shouldShowRoomManualRestaurants],
   );
   const personalManualRestaurantNames = useMemo(
-    () => normalizeManualNames(personalManualRestaurants.map((restaurant) => restaurant.name)),
-    [personalManualRestaurants],
+    () => normalizeManualNames(selectedPersonalManualRestaurants.map((restaurant) => restaurant.name)),
+    [selectedPersonalManualRestaurants],
   );
   const roomManualRestaurantNames = useMemo(
     () => normalizeManualNames(roomManualRestaurants.map((restaurant) => restaurant.name)),
@@ -843,8 +779,8 @@ function App() {
       return;
     }
 
-    setPersonalManualRestaurants(restaurants);
-  }, [shouldShowRoomManualRestaurants]);
+    updateSelectedManualList({ restaurants });
+  }, [shouldShowRoomManualRestaurants, updateSelectedManualList]);
 
   const syncGroupListFromRestaurants = useCallback((restaurants: Restaurant[]) => {
     if (!isGroupRoomActive || !canEditGroupList || !groupRoomId) return;
@@ -982,47 +918,106 @@ function App() {
     return uniqueNames.map((name) => createManualRestaurant(name));
   }, []);
 
-  const loadPresetRestaurants = useCallback((preset: ManualPreset) => {
+  const listNameSuggestion = useMemo(
+    () => getSuggestedManualListName(listNameInput, listMealTimeInput),
+    [listMealTimeInput, listNameInput],
+  );
+
+  const handleSelectSavedManualList = useCallback((listId: string) => {
+    const nextList = manualLists.find((list) => list.id === listId);
+    if (!nextList) return;
+
+    hasUserSelectedManualListRef.current = true;
+    selectManualList(listId);
+    setManualSpinResult(null);
+    setManualWheelKey((prev) => prev + 1);
+
+    if (isGroupRoomActive && canEditGroupList) {
+      setRoomManualRestaurants(nextList.restaurants);
+      syncGroupListFromRestaurants(nextList.restaurants);
+    }
+
+    trackEvent('manual_list_selected', {
+      list_id: nextList.id,
+      list_name: nextList.name,
+      count: nextList.restaurants.length,
+    });
+  }, [canEditGroupList, isGroupRoomActive, manualLists, selectManualList, syncGroupListFromRestaurants]);
+
+  const handleCreateManualList = useCallback(() => {
     if (isManualListReadOnly) {
       toast.info('Only the host or co-host can edit the shared list.');
       return;
     }
 
-    const restaurants = buildRestaurantsFromNames(preset.restaurants);
-    setDisplayedManualRestaurants(restaurants);
-    syncGroupListFromRestaurants(restaurants);
-    trackEvent('preset_loaded', { preset_name: preset.name, count: preset.restaurants.length });
+    const nextName = listNameSuggestion.trim();
+    const newList = createNewManualList({ name: nextName, mealTime: listMealTimeInput });
+    hasUserSelectedManualListRef.current = true;
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
-  }, [buildRestaurantsFromNames, isManualListReadOnly, setDisplayedManualRestaurants, syncGroupListFromRestaurants]);
-
-  const saveCurrentAsPreset = () => {
-    const trimmedName = presetNameInput.trim();
-    if (!trimmedName || displayedManualRestaurants.length === 0) return;
-
-    const restaurantNames = displayedManualRestaurants.map((restaurant) => restaurant.name.trim()).filter(Boolean);
-    const newPreset: ManualPreset = {
-      id: `preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      name: trimmedName,
-      restaurants: restaurantNames,
-      mealTime: presetMealTimeInput,
-      createdAt: Date.now(),
-    };
-
-    setManualPresets((prev) => [newPreset, ...prev]);
-    trackEvent('preset_saved', { preset_name: trimmedName, meal_time: presetMealTimeInput ?? 'none', count: restaurantNames.length });
-    toast.success(`Preset "${trimmedName}" saved!`, {
-      description: `${restaurantNames.length} restaurants saved${presetMealTimeInput ? ` for ${presetMealTimeTimeToLabel(presetMealTimeInput)}` : ''}`,
+    trackEvent('manual_list_created', {
+      list_id: newList.id,
+      list_name: newList.name,
+      meal_time: newList.mealTime ?? 'none',
     });
-    setPresetNameInput('');
-    setPresetMealTimeInput(null);
-  };
 
-  const deletePreset = (presetId: string) => {
-    trackEvent('preset_deleted');
-    setManualPresets((prev) => prev.filter((preset) => preset.id !== presetId));
-  };
+    if (isGroupRoomActive && canEditGroupList) {
+      setRoomManualRestaurants([]);
+      syncGroupListFromRestaurants([]);
+    }
 
+    toast.success(`Created "${newList.name}".`);
+  }, [canEditGroupList, createNewManualList, isGroupRoomActive, isManualListReadOnly, listMealTimeInput, listNameSuggestion, syncGroupListFromRestaurants]);
+
+  const handleSaveManualListDetails = useCallback(() => {
+    if (!selectedManualList || isManualListReadOnly) {
+      if (isManualListReadOnly) {
+        toast.info('Only the host or co-host can edit the shared list.');
+      }
+      return;
+    }
+
+    const nextName = listNameSuggestion.trim();
+    updateSelectedManualList({
+      name: nextName,
+      mealTime: listMealTimeInput,
+    });
+    trackEvent('manual_list_updated', {
+      list_id: selectedManualList.id,
+      list_name: nextName,
+      meal_time: listMealTimeInput ?? 'none',
+      count: selectedManualList.restaurants.length,
+    });
+    toast.success(`Saved details for "${nextName}".`);
+  }, [isManualListReadOnly, listMealTimeInput, listNameSuggestion, selectedManualList, updateSelectedManualList]);
+
+  const handleDeleteManualList = useCallback(() => {
+    if (!selectedManualList || isManualListReadOnly) {
+      if (isManualListReadOnly) {
+        toast.info('Only the host or co-host can edit the shared list.');
+      }
+      return;
+    }
+
+    if (!window.confirm(`Delete "${selectedManualList.name}"?`)) return;
+
+    const fallbackList = deleteManualList(selectedManualList.id);
+    hasUserSelectedManualListRef.current = true;
+    setManualSpinResult(null);
+    setManualWheelKey((prev) => prev + 1);
+    trackEvent('manual_list_deleted', {
+      list_id: selectedManualList.id,
+      list_name: selectedManualList.name,
+    });
+
+    const nextRestaurants = fallbackList?.restaurants ?? [];
+    if (isGroupRoomActive && canEditGroupList) {
+      setRoomManualRestaurants(nextRestaurants);
+      syncGroupListFromRestaurants(nextRestaurants);
+    }
+
+    toast.success(`Deleted "${selectedManualList.name}".`);
+  }, [canEditGroupList, deleteManualList, isGroupRoomActive, isManualListReadOnly, selectedManualList, syncGroupListFromRestaurants]);
   const removeManualRestaurant = (id: string) => {
     if (isManualListReadOnly) {
       toast.info('Only the host or co-host can edit the shared list.');
@@ -1059,6 +1054,19 @@ function App() {
     if (displayedManualRestaurants.length === 1) return 'Add at least 2 restaurants to spin';
     return undefined;
   }, [canEditGroupList, displayedManualRestaurants.length, isGroupCohost, isGroupHost, isGroupRoomActive]);
+
+  useEffect(() => {
+    if (!selectedManualList) return;
+    setListNameInput(selectedManualList.name);
+    setListMealTimeInput(selectedManualList.mealTime);
+  }, [selectedManualList]);
+
+  const hasManualListDetailsChanged = useMemo(() => {
+    if (!selectedManualList) return false;
+    return selectedManualList.name !== listNameSuggestion.trim() || selectedManualList.mealTime !== listMealTimeInput;
+  }, [listMealTimeInput, listNameSuggestion, selectedManualList]);
+
+  const selectedManualListLabel = selectedManualList?.name ?? 'My list';
 
   const groupSpinDisplay = useMemo(() => {
     if (!isGroupRoomActive || !groupCurrentSpin) return null;
@@ -1221,35 +1229,26 @@ function App() {
 
 
   useEffect(() => {
-    window.localStorage.setItem(MANUAL_RESTAURANTS_STORAGE_KEY, JSON.stringify(personalManualRestaurants));
-  }, [personalManualRestaurants]);
+    if (isGroupRoomActive || hasUserSelectedManualListRef.current) return;
 
-  useEffect(() => {
-    window.localStorage.setItem(MANUAL_PRESETS_STORAGE_KEY, JSON.stringify(manualPresets));
-  }, [manualPresets]);
+    const preferredMealTime = getPreferredManualMealTime();
 
-  useEffect(() => {
-    if (isGroupRoomActive) return;
+    if (autoLoadedMealTimeRef.current === preferredMealTime) return;
 
-    const currentPresetMealTime = getPresetMealTime();
+    autoLoadedMealTimeRef.current = preferredMealTime;
 
-    if (autoLoadedMealTimeRef.current === currentPresetMealTime) return;
-
-    autoLoadedMealTimeRef.current = currentPresetMealTime;
-
-    if (currentPresetMealTime === null) return;
-
-    const matchedPreset = manualPresets.find((preset) => preset.mealTime === currentPresetMealTime);
-    if (!matchedPreset) return;
+    const matchedList = selectDeterministicManualList(preferredMealTime);
+    if (!matchedList) return;
 
     const timeoutId = window.setTimeout(() => {
-      loadPresetRestaurants(matchedPreset);
+      setManualSpinResult(null);
+      setManualWheelKey((prev) => prev + 1);
     }, 0);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [manualPresets, loadPresetRestaurants, currentMealTime, isGroupRoomActive]);
+  }, [currentMealTime, isGroupRoomActive, selectDeterministicManualList]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1886,10 +1885,127 @@ function App() {
                   )}
                 </div>
               )}
-              {/* <div className="text-center mb-5">
-                <h3 className="font-heading text-2xl font-bold text-brand-black mb-2">I know where</h3>
-                <p className="text-sm text-eatspin-gray-1">Add any restaurants you like and spin.</p>
-              </div> */}
+              <div className="mb-6 max-w-2xl mx-auto rounded-2xl border border-eatspin-peach/60 bg-white p-4 shadow-sm">
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-eatspin-gray-1">Saved lists</p>
+                      <h3 className="font-heading text-xl font-bold text-brand-black">{selectedManualListLabel}</h3>
+                      <p className="text-xs text-eatspin-gray-1">
+                        {selectedManualList
+                          ? `${selectedManualList.restaurants.length} picks${selectedManualList.mealTime ? ` • ${getManualListMealTimeLabel(selectedManualList.mealTime)}` : ''}`
+                          : 'Create a named list to keep separate lunch, dinner, and coffee spins.'}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center rounded-full bg-brand-linen px-3 py-1 text-xs font-medium text-brand-black">
+                        Active list: {selectedManualListLabel}
+                      </span>
+                      <Button
+                        type="button"
+                        onClick={handleCreateManualList}
+                        disabled={isManualListReadOnly}
+                        className="h-10 bg-brand-orange px-4 text-sm font-semibold text-white hover:bg-brand-orange/90"
+                      >
+                        <Plus size={16} className="mr-1" /> New list
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-list">Choose a saved list</label>
+                      <div className="relative">
+                        <select
+                          id="saved-manual-list"
+                          value={selectedManualListId}
+                          onChange={(e) => handleSelectSavedManualList(e.target.value)}
+                          className="preset-select h-11 w-full rounded-md border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
+                          disabled={isManualListReadOnly}
+                        >
+                          {manualLists.map((list) => (
+                            <option key={list.id} value={list.id}>
+                              {list.name}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-mealtime">Meal time</label>
+                      <div className="relative">
+                        <select
+                          id="saved-manual-mealtime"
+                          value={listMealTimeInput ?? ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === 'breakfast' || value === 'lunch' || value === 'dinner') {
+                              setListMealTimeInput(value);
+                              return;
+                            }
+                            setListMealTimeInput(null);
+                          }}
+                          className="preset-select h-11 w-full rounded-md border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
+                          disabled={isManualListReadOnly}
+                        >
+                          <option value="">🕒 No meal time</option>
+                          <option value="breakfast">🌅 Breakfast</option>
+                          <option value="lunch">☀️ Lunch</option>
+                          <option value="dinner">🌙 Dinner</option>
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-name">List name</label>
+                      <Input
+                        id="saved-manual-name"
+                        value={listNameInput}
+                        onChange={(e) => setListNameInput(e.target.value)}
+                        placeholder="Isaac lunch list"
+                        className="h-11"
+                        disabled={isManualListReadOnly}
+                      />
+                      {listNameSuggestion.trim() !== listNameInput.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => setListNameInput(listNameSuggestion)}
+                          className="text-left text-xs text-brand-orange hover:underline"
+                          disabled={isManualListReadOnly}
+                        >
+                          Use suggestion: {listNameSuggestion}
+                        </button>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleSaveManualListDetails}
+                      disabled={isManualListReadOnly || !selectedManualList || !hasManualListDetailsChanged}
+                      className="h-11 bg-brand-black px-4 text-sm font-semibold text-white hover:bg-brand-black/90"
+                    >
+                      Save details
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleDeleteManualList}
+                      disabled={isManualListReadOnly || !selectedManualList}
+                      className="h-11 border-red-200 px-4 text-sm font-semibold text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 size={16} className="mr-1" /> Delete
+                    </Button>
+                  </div>
+
+                  <p className="text-xs text-eatspin-gray-1">
+                    Pick a saved list to load it into the wheel. Meal-time matches auto-select the most recently updated list until you choose one yourself.
+                  </p>
+                </div>
+              </div>
 
               <RouletteWheel
                 key={isGroupRoomActive ? `manual-room-${groupRoomId || 'none'}` : `manual-${manualWheelKey}-${displayedManualRestaurants.length}`}
@@ -2116,82 +2232,7 @@ function App() {
                   )}
                 </div>
 
-                {!isManualListReadOnly && (
-                  <div className="mt-4 bg-white rounded-xl border border-eatspin-peach/60 p-4 space-y-3">
-                    <div>
-                      <h4 className="font-heading font-semibold text-brand-black">Quick Presets</h4>
-                      <p className="text-xs text-eatspin-gray-1">Save this wheel and load it anytime. Meal presets auto-load by current time.</p>
-                    </div>
 
-                    <div className="grid sm:grid-cols-[1fr_auto_auto] gap-2">
-                      <Input
-                        value={presetNameInput}
-                        onChange={(e) => setPresetNameInput(e.target.value)}
-                        placeholder="Preset name (e.g. Lunch Nearby)"
-                        className="h-11"
-                      />
-                      <div className="relative">
-                        <select
-                          value={presetMealTimeInput ?? ''}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (value === 'breakfast' || value === 'lunch' || value === 'dinner') {
-                              setPresetMealTimeInput(value);
-                              return;
-                            }
-                            setPresetMealTimeInput(null);
-                          }}
-                          className="preset-select h-11 w-full rounded-md border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
-                        >
-                          <option value="">🕒 No meal time</option>
-                          <option value="breakfast">🌅 Breakfast</option>
-                          <option value="lunch">☀️ Lunch</option>
-                          <option value="dinner">🌙 Dinner</option>
-                        </select>
-                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
-                      </div>
-                      <Button
-                        onClick={saveCurrentAsPreset}
-                        disabled={displayedManualRestaurants.length === 0 || !presetNameInput.trim()}
-                        className="h-11 px-4 bg-brand-orange text-white font-semibold hover:bg-brand-orange/90"
-                      >
-                        Save Preset
-                      </Button>
-                    </div>
-
-                    {manualPresets.length === 0 ? (
-                      <p className="text-sm text-eatspin-gray-1">No saved presets yet.</p>
-                    ) : (
-                      <ul className="space-y-2">
-                        {manualPresets.map((preset) => (
-                          <li key={preset.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-linen px-3 py-2">
-                            <button
-                              type="button"
-                              onClick={() => loadPresetRestaurants(preset)}
-                              className="text-left flex-1"
-                              disabled={isManualListReadOnly}
-                            >
-                              <p className="text-sm font-medium text-brand-black">
-                                {preset.mealTime === 'breakfast' ? '🌅' : preset.mealTime === 'lunch' ? '☀️' : preset.mealTime === 'dinner' ? '🌙' : '🕒'} {preset.name}
-                              </p>
-                              <p className="text-xs text-eatspin-gray-1">
-                                {preset.restaurants.length} picks{preset.mealTime ? ` • ${presetMealTimeTimeToLabel(preset.mealTime)}` : ''}
-                              </p>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => deletePreset(preset.id)}
-                              className="text-eatspin-gray-1 hover:text-red-500"
-                              aria-label={`Delete preset ${preset.name}`}
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
 
                 </div>
             </div>

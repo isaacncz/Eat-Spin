@@ -1372,7 +1372,7 @@ function App() {
               )}
             </div>
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
               <div className="rounded-xl bg-white px-3 py-2">
                 <p className="text-xs text-eatspin-gray-1">Total spins</p>
                 <p className="font-heading text-xl font-bold text-brand-black">{spinHistorySummary.totalSpins}</p>

@@ -866,6 +866,63 @@ export function RouletteWheel({
                 {spinResult.description}
               </p>
             )}
+
+            {/* OSM enrichment rows — only rendered when data exists */}
+            {(() => {
+              const hasEnrichmentData =
+                !isManualResult &&
+                Boolean(
+                  spinResult.cuisineSubtype?.length ||
+                  spinResult.signatureDishes?.length ||
+                  spinResult.dietaryTags?.length ||
+                  spinResult.ambiance?.length,
+                );
+              if (!hasEnrichmentData) return null;
+              return (
+                <div className="mt-4 space-y-2 text-sm text-left">
+                  {spinResult.cuisineSubtype && spinResult.cuisineSubtype.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-eatspin-gray-2 text-xs shrink-0">🍽️ Cuisine:</span>
+                      {spinResult.cuisineSubtype.map((sub) => (
+                        <span key={sub} className="px-2 py-0.5 rounded-full text-xs bg-eatspin-peach/40 text-brand-black capitalize">
+                          {sub}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {spinResult.signatureDishes && spinResult.signatureDishes.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-eatspin-gray-2 text-xs shrink-0">⭐ Famous for:</span>
+                      {spinResult.signatureDishes.map((dish) => (
+                        <span key={dish} className="px-2 py-0.5 rounded-full text-xs bg-yellow-50 border border-yellow-200 text-yellow-800 capitalize">
+                          {dish}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {spinResult.dietaryTags && spinResult.dietaryTags.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-eatspin-gray-2 text-xs shrink-0">✅ Dietary:</span>
+                      {spinResult.dietaryTags.map((tag) => (
+                        <span key={tag} className="px-2 py-0.5 rounded-full text-xs bg-green-50 border border-green-200 text-green-800 capitalize">
+                          {tag.replace(/-/g, ' ')}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {spinResult.ambiance && spinResult.ambiance.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-eatspin-gray-2 text-xs shrink-0">🏮 Vibe:</span>
+                      {spinResult.ambiance.map((tag) => (
+                        <span key={tag} className="px-2 py-0.5 rounded-full text-xs bg-purple-50 border border-purple-200 text-purple-800 capitalize">
+                          {tag.replace(/-/g, ' ')}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               {spinResult.category.slice(0, 3).map((cat) => {

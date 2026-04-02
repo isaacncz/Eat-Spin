@@ -1,5 +1,21 @@
 export type CategoryConfidence = 'high' | 'medium' | 'low';
 
+export type DietaryTag =
+  | 'halal-certified'
+  | 'muslim-friendly'
+  | 'pork-free'
+  | 'vegetarian-friendly'
+  | 'vegan-friendly'
+  | 'alcohol-free';
+
+export type AmbianceTag =
+  | 'hawker'
+  | 'kopitiam'
+  | 'air-cond'
+  | 'outdoor'
+  | 'fine-dining'
+  | 'family-friendly';
+
 export interface Restaurant {
   id: string;
   name: string;
@@ -28,6 +44,14 @@ export interface Restaurant {
    * - `low`: weak/no signal — generic restaurant or heuristic-only guess
    */
   categoryConfidence?: CategoryConfidence;
+  /** Granular cuisine sub-styles enriched from OSM or manual data (e.g. 'hokkien', 'dim sum'). */
+  cuisineSubtype?: string[];
+  /** Notable dishes associated with the restaurant (e.g. 'char kuey teow', 'assam laksa'). */
+  signatureDishes?: string[];
+  /** Structured dietary tags enriched from OSM or manual data. */
+  dietaryTags?: DietaryTag[];
+  /** Ambiance / venue-type tags enriched from OSM or manual data. */
+  ambiance?: AmbianceTag[];
 }
 
 // Type for JSON restaurant data (without ID fields)
@@ -45,6 +69,10 @@ export interface JsonRestaurant {
   phone?: string;
   image?: string;
   description: string;
+  cuisineSubtype?: string[];
+  signatureDishes?: string[];
+  dietaryTags?: DietaryTag[];
+  ambiance?: AmbianceTag[];
 }
 
 export type JsonRestaurantArray = JsonRestaurant[];

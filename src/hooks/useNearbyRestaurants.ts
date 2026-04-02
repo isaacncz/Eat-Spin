@@ -8,6 +8,7 @@ import {
   runNearbyCacheCleanup,
   saveNearbyRestaurantsSnapshot,
 } from '@/lib/nearbyCache';
+import { applyOsmEnrichments, fetchOsmEnrichments } from '@/lib/osmEnrichment';
 
 interface UseNearbyRestaurantsOptions {
   enabled: boolean;
@@ -179,10 +180,29 @@ export function useNearbyRestaurants({
         );
         const fetchedAtMs = Date.now();
 
-        if (rankedLive.length > 0) {
+        // --- OSM enrichment (non-blocking) ---
+        let enrichedLive = rankedLive;
+        try {
+          const osmEnrichments = await fetchOsmEnrichments(
+            location.lat,
+            location.lng,
+            effectiveRadiusKm * 1000,
+            abortController.signal,
+          );
+          enrichedLive = applyOsmEnrichments(rankedLive, osmEnrichments);
+        } catch (osmError) {
+          // OSM is additive; silently ignore failures so Google results still work.
+          if (!(osmError instanceof DOMException && osmError.name === 'AbortError')) {
+            console.warn('[osmEnrichment] Enrichment skipped:', osmError);
+          }
+        }
+
+        if (requestIdRef.current !== requestId) return;
+
+        if (enrichedLive.length > 0) {
           await saveNearbyRestaurantsSnapshot({
             location,
-            restaurants: rankedLive,
+            restaurants: enrichedLive,
             searchRadiusKm: effectiveRadiusKm,
             openNowOnly,
             region: normalizedRegion,
@@ -195,7 +215,7 @@ export function useNearbyRestaurants({
 
         if (requestIdRef.current !== requestId) return;
 
-        if (rankedLive.length === 0 && cachedResult && cachedResult.restaurants.length > 0) {
+        if (enrichedLive.length === 0 && cachedResult && cachedResult.restaurants.length > 0) {
           const rankedCached = rankNearbyRestaurants(
             cachedResult.restaurants,
             location,
@@ -211,7 +231,7 @@ export function useNearbyRestaurants({
           return;
         }
 
-        setRestaurants(enrichRestaurantListCategories(rankedLive));
+        setRestaurants(enrichRestaurantListCategories(enrichedLive));
         setSource('google-live');
         setLastSyncedAt(fetchedAtMs);
         setShouldUseLocalFallback(false);

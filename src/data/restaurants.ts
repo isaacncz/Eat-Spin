@@ -88,6 +88,24 @@ const rawHoursSchema: z.ZodType<RawJsonRestaurant['hours']> = z.record(
 
 const hoursSchema: z.ZodType<JsonRestaurant['hours']> = z.record(z.string(), strictDailyHoursSchema);
 
+const dietaryTagSchema = z.enum([
+  'halal-certified',
+  'muslim-friendly',
+  'pork-free',
+  'vegetarian-friendly',
+  'vegan-friendly',
+  'alcohol-free',
+]);
+
+const ambianceTagSchema = z.enum([
+  'hawker',
+  'kopitiam',
+  'air-cond',
+  'outdoor',
+  'fine-dining',
+  'family-friendly',
+]);
+
 const jsonRestaurantSchema: z.ZodType<JsonRestaurant> = z.object({
   name: z.string().min(1),
   category: z.array(foodCategorySchema).min(1),
@@ -102,6 +120,10 @@ const jsonRestaurantSchema: z.ZodType<JsonRestaurant> = z.object({
   phone: z.string().optional(),
   image: z.string().optional(),
   description: z.string().min(1),
+  cuisineSubtype: z.array(z.string()).optional(),
+  signatureDishes: z.array(z.string()).optional(),
+  dietaryTags: z.array(dietaryTagSchema).optional(),
+  ambiance: z.array(ambianceTagSchema).optional(),
 });
 
 const rawJsonRestaurantSchema: z.ZodType<RawJsonRestaurant> = z.object({
@@ -118,6 +140,10 @@ const rawJsonRestaurantSchema: z.ZodType<RawJsonRestaurant> = z.object({
   phone: z.string().nullable().optional(),
   image: z.string().optional(),
   description: z.string().min(1),
+  cuisineSubtype: z.array(z.string()).optional(),
+  signatureDishes: z.array(z.string()).optional(),
+  dietaryTags: z.array(dietaryTagSchema).optional(),
+  ambiance: z.array(ambianceTagSchema).optional(),
 });
 
 const rawJsonRestaurantArraySchema: z.ZodType<RawJsonRestaurant[]> = z.array(rawJsonRestaurantSchema);

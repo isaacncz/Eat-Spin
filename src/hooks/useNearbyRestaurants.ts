@@ -31,6 +31,9 @@ interface UseNearbyRestaurantsResult {
 }
 
 const DEFAULT_DEBOUNCE_MS = 450;
+
+/** Maximum ms to wait for Overpass before abandoning OSM enrichment. */
+const OSM_ENRICHMENT_TIMEOUT_MS = 8_000;
 const DEFAULT_MIN_RESULTS = 12;
 const DEFAULT_TOP_RESULTS = 20;
 const DEFAULT_CACHE_TTL_DAYS = 7;
@@ -180,42 +183,7 @@ export function useNearbyRestaurants({
         );
         const fetchedAtMs = Date.now();
 
-        // --- OSM enrichment (non-blocking) ---
-        let enrichedLive = rankedLive;
-        try {
-          const osmEnrichments = await fetchOsmEnrichments(
-            location.lat,
-            location.lng,
-            effectiveRadiusKm * 1000,
-            abortController.signal,
-          );
-          enrichedLive = applyOsmEnrichments(rankedLive, osmEnrichments);
-        } catch (osmError) {
-          // OSM is additive; silently ignore failures so Google results still work.
-          if (!(osmError instanceof DOMException && osmError.name === 'AbortError')) {
-            console.warn('[osmEnrichment] Enrichment skipped:', osmError);
-          }
-        }
-
-        if (requestIdRef.current !== requestId) return;
-
-        if (enrichedLive.length > 0) {
-          await saveNearbyRestaurantsSnapshot({
-            location,
-            restaurants: enrichedLive,
-            searchRadiusKm: effectiveRadiusKm,
-            openNowOnly,
-            region: normalizedRegion,
-            movementThresholdKm: cacheConfig.movementThresholdKm,
-            ttlMs: cacheConfig.ttlMs,
-            fetchedAtMs,
-            categoriesKey,
-          });
-        }
-
-        if (requestIdRef.current !== requestId) return;
-
-        if (enrichedLive.length === 0 && cachedResult && cachedResult.restaurants.length > 0) {
+        if (rankedLive.length === 0 && cachedResult && cachedResult.restaurants.length > 0) {
           const rankedCached = rankNearbyRestaurants(
             cachedResult.restaurants,
             location,
@@ -227,14 +195,91 @@ export function useNearbyRestaurants({
           setSource('google-cache');
           setError('Live refresh returned no matches. Showing cached nearby data.');
           setLastSyncedAt(cachedResult.fetchedAtMs);
-          setIsLoading(false);
           return;
         }
 
-        setRestaurants(enrichRestaurantListCategories(enrichedLive));
+        // Publish Google results immediately so the UI is responsive.
+        setRestaurants(enrichRestaurantListCategories(rankedLive));
         setSource('google-live');
         setLastSyncedAt(fetchedAtMs);
         setShouldUseLocalFallback(false);
+
+        // OSM enrichment runs asynchronously — must not delay the initial render.
+        // Capture loop-local values so the closure is race-free.
+        const capturedRequestId = requestId;
+        const capturedRankedLive = rankedLive;
+        void (async () => {
+          // Save the Google-only snapshot first so the cache is warm even if
+          // OSM enrichment times out or fails.
+          if (capturedRankedLive.length > 0) {
+            try {
+              await saveNearbyRestaurantsSnapshot({
+                location,
+                restaurants: capturedRankedLive,
+                searchRadiusKm: effectiveRadiusKm,
+                openNowOnly,
+                region: normalizedRegion,
+                movementThresholdKm: cacheConfig.movementThresholdKm,
+                ttlMs: cacheConfig.ttlMs,
+                fetchedAtMs,
+                categoriesKey,
+              });
+            } catch (saveError) {
+              console.warn('[nearbyCache] Failed to save Google snapshot:', saveError);
+            }
+          }
+
+          // Enrich with OSM behind a strict timeout so Overpass degradation
+          // cannot block or discard the already-rendered Google results.
+          // Note: abortController.abort() is called by the effect cleanup,
+          // which will cancel the ongoing OSM fetch when the component unmounts
+          // or a new request starts. requestIdRef checks prevent stale updates.
+          let osmTimeoutId: ReturnType<typeof setTimeout> | undefined;
+          try {
+            const osmEnrichments = await Promise.race([
+              fetchOsmEnrichments(
+                location.lat,
+                location.lng,
+                effectiveRadiusKm * 1000,
+                abortController.signal,
+              ),
+              new Promise<never>((_, reject) => {
+                osmTimeoutId = setTimeout(
+                  () => reject(new Error('OSM enrichment timed out')),
+                  OSM_ENRICHMENT_TIMEOUT_MS,
+                );
+              }),
+            ]);
+            clearTimeout(osmTimeoutId);
+
+            if (requestIdRef.current !== capturedRequestId) return;
+
+            const enrichedLive = applyOsmEnrichments(capturedRankedLive, osmEnrichments);
+
+            if (requestIdRef.current !== capturedRequestId) return;
+
+            // Update the UI with enriched data and persist the enriched cache.
+            setRestaurants(enrichRestaurantListCategories(enrichedLive));
+
+            await saveNearbyRestaurantsSnapshot({
+              location,
+              restaurants: enrichedLive,
+              searchRadiusKm: effectiveRadiusKm,
+              openNowOnly,
+              region: normalizedRegion,
+              movementThresholdKm: cacheConfig.movementThresholdKm,
+              ttlMs: cacheConfig.ttlMs,
+              fetchedAtMs,
+              categoriesKey,
+            });
+          } catch (osmError) {
+            clearTimeout(osmTimeoutId);
+            // OSM is additive; silently ignore so Google results remain.
+            if (!(osmError instanceof DOMException && osmError.name === 'AbortError')) {
+              console.warn('[osmEnrichment] Enrichment skipped:', osmError);
+            }
+          }
+        })();
       } catch (fetchError) {
         if (requestIdRef.current !== requestId) return;
         if (fetchError instanceof DOMException && fetchError.name === 'AbortError') return;

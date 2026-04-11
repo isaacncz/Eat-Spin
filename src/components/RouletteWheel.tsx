@@ -892,10 +892,10 @@ export function RouletteWheel({
               </div>
             </div>
 
-            {/* Action buttons - below the card for clean sharing screenshots */}
-            <div className="px-6 pb-6">
-              {/* Primary actions row */}
-              <div className="flex gap-2 mb-2">
+            {/* Action buttons */}
+            <div className="px-6 pb-6 space-y-2">
+              {/* Navigate + Share row */}
+              <div className="flex gap-2">
                 {onLetsGo && (
                   <Button
                     className="flex-1 h-12 bg-brand-orange hover:bg-brand-orange/90 text-white font-heading font-bold text-base rounded-xl shadow-md hover:shadow-lg transition-all"
@@ -907,7 +907,8 @@ export function RouletteWheel({
                 )}
                 {onShareResult && (
                   <Button
-                    className="flex-1 h-12 bg-gradient-to-r from-brand-orange to-[#FF8A3D] hover:opacity-90 text-white font-heading font-bold text-base rounded-xl shadow-md hover:shadow-lg transition-all"
+                    variant="outline"
+                    className="flex-1 h-12 rounded-xl border-brand-orange text-brand-orange hover:bg-brand-orange/10 font-heading font-bold text-base"
                     onClick={() => {
                       const cardElement = resultCardRef.current;
                       if (!cardElement) return;
@@ -915,12 +916,12 @@ export function RouletteWheel({
                     }}
                   >
                     <Share2 size={18} className="mr-1.5" />
-                    Share Result
+                    Share
                   </Button>
                 )}
               </div>
 
-              {/* Secondary actions row */}
+              {/* Save + Spin Again row */}
               <div className="flex gap-2">
                 {onSaveFavourite && (
                   <Button
@@ -939,14 +940,14 @@ export function RouletteWheel({
                 {onSpinAgain && (
                   <Button
                     variant="outline"
-                    className="flex-1 h-10 rounded-xl border-eatspin-peach text-brand-black hover:bg-brand-linen font-heading font-bold"
+                    className="flex-1 h-10 rounded-xl border-brand-orange/50 text-brand-black hover:bg-brand-linen font-heading font-bold"
                     onClick={() => {
                       onSpinAgain(spinResult);
                       handleLocalSpin();
                     }}
                     disabled={!canSpinAgain || isSpinning}
                   >
-                    Spin Again
+                    🎰 Spin Again
                   </Button>
                 )}
                 {onEditList && (

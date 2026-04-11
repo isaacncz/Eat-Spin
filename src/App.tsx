@@ -2128,7 +2128,7 @@ function App() {
               onLetsGo={handleLetsGo}
               onShareResult={handleShareResult}
               onSpinAgain={handleAutoSpinAgain}
-              canSpinAgain={wheelRestaurants.length > 2}
+              canSpinAgain={wheelRestaurants.length >= 2}
               isFavourite={isFavouriteCheck}
               helperText={autoAvailabilityHelperText || undefined}
               emptyStateTitle="No open restaurants ready to spin"

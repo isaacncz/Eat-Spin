@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { trackEvent } from '@/lib/analytics';
 import type { FoodCategory } from '@/types';
-import { cuisineCategories } from '@/data/restaurants';
+import { cuisineCategories, foodCategories } from '@/data/restaurants';
 import { Check } from 'lucide-react';
 
 interface FoodCategorySelectorProps {
@@ -33,9 +33,9 @@ export function FoodCategorySelector({
     }
   };
 
-  const selectedConfigs = selectedCategories.map(
-    (id) => cuisineCategories.find((c) => c.id === id)!
-  );
+  const selectedConfigs = selectedCategories
+    .map((id) => foodCategories.find((c) => c.id === id))
+    .filter((c): c is NonNullable<typeof c> => c != null);
 
   return (
     <div className="w-full">

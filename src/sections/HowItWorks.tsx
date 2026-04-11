@@ -120,7 +120,7 @@ export function HowItWorks() {
           </p>
           <button
             onClick={() => {
-              const appSection = document.getElementById('app');
+              const appSection = document.getElementById('app-main-section');
               appSection?.scrollIntoView({ behavior: 'smooth' });
             }}
             className="inline-flex items-center gap-2 px-6 py-3 bg-brand-orange text-white font-heading font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"

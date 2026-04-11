@@ -5,18 +5,12 @@
 @tailwind utilities;
 
 :root {
-  --navbar-height: 80px;
+  --navbar-height: 56px;
 }
 
 @media (min-width: 768px) {
   :root {
-    --navbar-height: 72px;
-  }
-}
-
-@media (min-width: 1024px) {
-  :root {
-    --navbar-height: 64px;
+    --navbar-height: 48px;
   }
 }
 

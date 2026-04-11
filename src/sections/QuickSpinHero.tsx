@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { MapPin, Users, Sparkles, Loader2 } from 'lucide-react';
+import { MapPin, Users, Sparkles, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { trackEvent } from '@/lib/analytics';
 import { ServesFilterPills } from '@/components/ServesFilterPills';
+import { CravingSearch } from '@/components/CravingSearch';
 import type { ServesFilterId } from '@/lib/servesFilters';
-import type { MealTime } from '@/types';
+import type { MealTime, Restaurant } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,6 +26,15 @@ export interface QuickSpinHeroProps {
   onGroupSpin: () => void;
   activeServesFilters: ServesFilterId[];
   onToggleServesFilter: (id: ServesFilterId) => void;
+  // Craving search
+  searchQuery: string;
+  onSearch: (text: string) => void;
+  searchResults: Restaurant[];
+  isSearching: boolean;
+  searchError: string | null;
+  recentSearches: string[];
+  onLetsGo: (restaurant: Restaurant) => void;
+  onClearSearch: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,8 +82,17 @@ export function QuickSpinHero({
   onGroupSpin,
   activeServesFilters,
   onToggleServesFilter,
+  searchQuery,
+  onSearch,
+  searchResults,
+  isSearching,
+  searchError,
+  recentSearches,
+  onLetsGo,
+  onClearSearch,
 }: QuickSpinHeroProps) {
   const [selectedMood, setSelectedMood] = useState<FoodMood | null>(null);
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   const handleMoodSelect = (mood: FoodMood) => {
     const next = selectedMood === mood ? null : mood;
@@ -192,7 +211,32 @@ export function QuickSpinHero({
         {/* ── Primary CTA area ─────────────────────────────────────── */}
         <div className="flex w-full flex-col items-center gap-3 hero-enter hero-enter-delay-3">
           {hasLocation ? (
-            <>
+            isSearchMode ? (
+              /* ── Search mode ──────────────────────────────────────── */
+              <div className="w-full space-y-3">
+                <button
+                  onClick={() => {
+                    setIsSearchMode(false);
+                    onClearSearch();
+                  }}
+                  className="inline-flex items-center gap-1 text-xs font-semibold
+                             text-brand-orange transition-colors hover:underline"
+                >
+                  ← Back to Spin
+                </button>
+                <CravingSearch
+                  query={searchQuery}
+                  onSearch={onSearch}
+                  results={searchResults}
+                  isLoading={isSearching}
+                  error={searchError}
+                  recentSearches={recentSearches}
+                  onLetsGo={onLetsGo}
+                  onClear={onClearSearch}
+                />
+              </div>
+            ) : (
+              <>
               {/* SPIN NOW button */}
               <Button
                 onClick={handleSpin}
@@ -233,7 +277,21 @@ export function QuickSpinHero({
                   restaurants ready nearby
                 </p>
               )}
+
+              {/* Search toggle link */}
+              <button
+                onClick={() => {
+                  setIsSearchMode(true);
+                  trackEvent('search_mode_open');
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold
+                           text-eatspin-gray-2 transition-colors hover:text-brand-orange"
+              >
+                <Search size={14} />
+                Know what you want? Search instead
+              </button>
             </>
+            )
           ) : (
             /* ── Location request card ──────────────────────────────── */
             <div className="flex w-full flex-col items-center gap-3 rounded-2xl border

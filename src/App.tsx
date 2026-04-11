@@ -4,6 +4,7 @@ import { trackEvent } from '@/lib/analytics';
 import { APP_FEATURES } from '@/lib/featureFlags';
 import { useLocation } from '@/hooks/useLocation';
 import { useNearbyRestaurants } from '@/hooks/useNearbyRestaurants';
+import { useTextSearch } from '@/hooks/useTextSearch';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
@@ -301,6 +302,9 @@ function App() {
     openNowOnly: true,
     selectedCategories,
   });
+
+  const textSearch = useTextSearch({ location });
+
   const {
     authUid: groupAuthUid,
     isFirebaseConfigured,
@@ -1444,6 +1448,14 @@ function App() {
         onGroupSpin={() => { trackEvent('hero_group_spin'); scrollToSection('group-spin'); }}
         activeServesFilters={activeServesFilters}
         onToggleServesFilter={handleToggleServesFilter}
+        searchQuery={textSearch.query}
+        onSearch={textSearch.search}
+        searchResults={textSearch.results}
+        isSearching={textSearch.isLoading}
+        searchError={textSearch.error}
+        recentSearches={textSearch.recentSearches}
+        onLetsGo={handleLetsGo}
+        onClearSearch={textSearch.clearResults}
       />
 
       {/* Main app section */}

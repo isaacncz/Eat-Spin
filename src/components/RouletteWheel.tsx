@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Crown, Heart, Navigation, Share2, Volume2, VolumeX } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Heart, Navigation, Share2, Volume2, VolumeX } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
@@ -795,149 +795,166 @@ export function RouletteWheel({
           <div className="celebration-ring celebration-ring-sm" />
           <div className="celebration-ring celebration-ring-lg" />
 
-          <div className="celebration-crown-badge">
-            <Crown size={16} className="text-yellow-900" />
-            <span>FOOD DESTINY</span>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-xl p-6 border text-center relative celebration-result-card">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <div className="w-2 h-2 bg-eatspin-success rounded-full animate-pulse" />
-              <span className="text-sm font-semibold text-[#B8860B]">Your Food Destiny</span>
+          <div className="bg-white rounded-2xl shadow-xl border text-center relative celebration-result-card overflow-hidden">
+            {/* Branded header strip */}
+            <div className="bg-gradient-to-r from-brand-orange via-[#FF8A3D] to-[#FFB347] px-6 py-3">
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                <span className="text-sm font-bold text-white tracking-wide uppercase">EatSpin picked this for you!</span>
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+              </div>
             </div>
 
-            <h3 className="font-heading text-2xl font-bold text-brand-black mb-3 flex items-center justify-center gap-2">
-              <Trophy size={20} className="celebration-floating-icon text-[#F4C430]" />
-              {spinResult.name}
-              <Trophy size={20} className="celebration-floating-icon text-[#FFD700]" />
-            </h3>
+            <div className="p-6">
+              <h3 className="font-heading text-2xl sm:text-3xl font-bold text-brand-black mb-3 flex items-center justify-center gap-2">
+                <Trophy size={22} className="celebration-floating-icon text-[#F4C430]" />
+                {spinResult.name}
+                <Trophy size={22} className="celebration-floating-icon text-[#FFD700]" />
+              </h3>
 
-            {!isManualResult && spinResult.image && (
-              <div className="mb-3 overflow-hidden rounded-xl border border-eatspin-peach/60">
-                <img
-                  src={spinResult.image}
-                  alt={`Photo of ${spinResult.name}`}
-                  className="h-44 w-full object-cover"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            )}
-            
-            {!isManualResult && (
-              <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                <MapPin size={16} className="text-[#F4C430] flex-shrink-0" />
-                <span>{spinResult.address}</span>
-              </div>
-              
-              <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                <Star size={16} className="text-[#FFD700] flex-shrink-0" />
-                <span>{spinResult.rating} / 5.0</span>
-                <span className="text-eatspin-gray-2">•</span>
-                <span className="text-eatspin-orange font-medium">{spinResult.priceRange}</span>
-              </div>
-              
-              {spinResult.distance !== undefined && (
-                <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                  <Clock3 size={16} className="text-[#F4C430] flex-shrink-0" />
-                  <span>{spinResult.distance.toFixed(1)} km away</span>
+              {!isManualResult && spinResult.image && (
+                <div className="mb-4 overflow-hidden rounded-xl border border-eatspin-peach/60">
+                  <img
+                    src={spinResult.image}
+                    alt={`Photo of ${spinResult.name}`}
+                    className="h-48 w-full object-cover"
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
               )}
-
-              <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                <Clock3 size={16} className="text-[#F4C430] flex-shrink-0" />
-                <span>{getOpeningHoursLabel(spinResult)}</span>
-              </div>
               
-              {spinResult.phone && (
+              {!isManualResult && (
+                <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                  <Phone size={16} className="text-[#F4C430] flex-shrink-0" />
-                  <a href={`tel:${spinResult.phone}`} className="hover:text-eatspin-orange">
-                    {spinResult.phone}
-                  </a>
+                  <MapPin size={16} className="text-brand-orange flex-shrink-0" />
+                  <span>{spinResult.address}</span>
                 </div>
-              )}
-              </div>
-            )}
-            
-            {spinResult.description && (
-               <p className="mt-4 text-sm text-eatspin-gray-1 leading-relaxed">
-                {spinResult.description}
-              </p>
-            )}
-            
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              {spinResult.category.slice(0, 3).map((cat) => {
-                const categoryConfig = foodCategories.find((c) => c.id === cat);
-                return (
-                  <span
-                    key={cat}
-                    className="px-3 py-1 rounded-full text-xs font-medium text-white"
-                    style={{ backgroundColor: categoryConfig?.color || '#F54703' }}
-                  >
-                    {categoryConfig?.icon} {categoryConfig?.name}
+                
+                <div className="flex items-center justify-center gap-3 text-eatspin-gray-1">
+                  <span className="inline-flex items-center gap-1">
+                    <Star size={16} className="text-[#FFD700] flex-shrink-0" />
+                    <span className="font-semibold text-brand-black">{spinResult.rating}</span>
+                    <span>/5</span>
                   </span>
-                );
-              })}
+                  <span className="text-eatspin-gray-3">|</span>
+                  <span className="font-semibold text-brand-orange">{spinResult.priceRange}</span>
+                  {spinResult.distance !== undefined && (
+                    <>
+                      <span className="text-eatspin-gray-3">|</span>
+                      <span>{spinResult.distance.toFixed(1)} km</span>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
+                  <Clock3 size={16} className="text-brand-orange flex-shrink-0" />
+                  <span>{getOpeningHoursLabel(spinResult)}</span>
+                </div>
+                
+                {spinResult.phone && (
+                  <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
+                    <Phone size={16} className="text-brand-orange flex-shrink-0" />
+                    <a href={`tel:${spinResult.phone}`} className="hover:text-eatspin-orange">
+                      {spinResult.phone}
+                    </a>
+                  </div>
+                )}
+                </div>
+              )}
+              
+              {spinResult.description && (
+                 <p className="mt-3 text-sm text-eatspin-gray-1 leading-relaxed">
+                  {spinResult.description}
+                </p>
+              )}
+              
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                {spinResult.category.slice(0, 3).map((cat) => {
+                  const categoryConfig = foodCategories.find((c) => c.id === cat);
+                  return (
+                    <span
+                      key={cat}
+                      className="px-3 py-1 rounded-full text-xs font-medium text-white"
+                      style={{ backgroundColor: categoryConfig?.color || '#F54703' }}
+                    >
+                      {categoryConfig?.icon} {categoryConfig?.name}
+                    </span>
+                  );
+                })}
+              </div>
+
+              {/* Branded footer - visible in screenshots */}
+              <div className="mt-4 pt-3 border-t border-eatspin-peach/40 flex items-center justify-center gap-2">
+                <span className="text-xs font-bold text-brand-orange">🍴 EatSpin</span>
+                <span className="text-[10px] text-eatspin-gray-2">•</span>
+                <span className="text-[10px] text-eatspin-gray-2">Spin to decide what to eat</span>
+              </div>
             </div>
 
-            <div className="mt-5 flex flex-wrap justify-center gap-3">
-              {onLetsGo && (
-                <Button
-                  className="bg-brand-orange hover:bg-brand-orange/90 text-white font-heading font-bold"
-                  onClick={() => onLetsGo(spinResult)}
-                >
-                  <Navigation size={16} className="mr-1.5" />
-                  Let's go!
-                </Button>
-              )}
-              {onSaveFavourite && (
-                <Button
-                  variant={isFavourite?.(spinResult) ? 'default' : 'outline'}
-                  className={isFavourite?.(spinResult)
-                    ? 'bg-pink-500 hover:bg-pink-600 text-white font-heading font-bold'
-                    : 'border-pink-300 text-pink-500 hover:bg-pink-50 font-heading font-bold'
-                  }
-                  onClick={() => onSaveFavourite(spinResult)}
-                  disabled={isFavourite?.(spinResult)}
-                >
-                  <Heart size={16} className={`mr-1.5 ${isFavourite?.(spinResult) ? 'fill-current' : ''}`} />
-                  {isFavourite?.(spinResult) ? 'Saved!' : 'Save'}
-                </Button>
-              )}
-              {onShareResult && (
-                <Button
-                  variant="outline"
-                  className="border-brand-orange/40 text-brand-orange hover:bg-brand-orange/10 font-heading font-bold"
-                  onClick={() => {
-                    const cardElement = resultCardRef.current;
-                    if (!cardElement) return;
-                    void onShareResult(spinResult, cardElement);
-                  }}
-                >
-                  <Share2 size={16} className="mr-1.5" />
-                  Share
-                </Button>
-              )}
-              {onSpinAgain && (
-                <Button
-                  variant="outline"
-                  className="border-eatspin-peach text-brand-black hover:bg-brand-linen font-heading font-bold"
-                  onClick={() => {
-                    onSpinAgain(spinResult);
-                    handleLocalSpin();
-                  }}
-                  disabled={!canSpinAgain || isSpinning}
-                >
-                  Spin Again
-                </Button>
-              )}
-              {onEditList && (
-                <Button variant="outline" onClick={onEditList}>
-                  Edit list
-                </Button>
-              )}
+            {/* Action buttons - below the card for clean sharing screenshots */}
+            <div className="px-6 pb-6">
+              {/* Primary actions row */}
+              <div className="flex gap-2 mb-2">
+                {onLetsGo && (
+                  <Button
+                    className="flex-1 h-12 bg-brand-orange hover:bg-brand-orange/90 text-white font-heading font-bold text-base rounded-xl shadow-md hover:shadow-lg transition-all"
+                    onClick={() => onLetsGo(spinResult)}
+                  >
+                    <Navigation size={18} className="mr-1.5" />
+                    Let's go!
+                  </Button>
+                )}
+                {onShareResult && (
+                  <Button
+                    className="flex-1 h-12 bg-gradient-to-r from-brand-orange to-[#FF8A3D] hover:opacity-90 text-white font-heading font-bold text-base rounded-xl shadow-md hover:shadow-lg transition-all"
+                    onClick={() => {
+                      const cardElement = resultCardRef.current;
+                      if (!cardElement) return;
+                      void onShareResult(spinResult, cardElement);
+                    }}
+                  >
+                    <Share2 size={18} className="mr-1.5" />
+                    Share Result
+                  </Button>
+                )}
+              </div>
+
+              {/* Secondary actions row */}
+              <div className="flex gap-2">
+                {onSaveFavourite && (
+                  <Button
+                    variant={isFavourite?.(spinResult) ? 'default' : 'outline'}
+                    className={`flex-1 h-10 rounded-xl ${isFavourite?.(spinResult)
+                      ? 'bg-pink-500 hover:bg-pink-600 text-white font-heading font-bold'
+                      : 'border-pink-300 text-pink-500 hover:bg-pink-50 font-heading font-bold'
+                    }`}
+                    onClick={() => onSaveFavourite(spinResult)}
+                    disabled={isFavourite?.(spinResult)}
+                  >
+                    <Heart size={15} className={`mr-1 ${isFavourite?.(spinResult) ? 'fill-current' : ''}`} />
+                    {isFavourite?.(spinResult) ? 'Saved!' : 'Save'}
+                  </Button>
+                )}
+                {onSpinAgain && (
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-10 rounded-xl border-eatspin-peach text-brand-black hover:bg-brand-linen font-heading font-bold"
+                    onClick={() => {
+                      onSpinAgain(spinResult);
+                      handleLocalSpin();
+                    }}
+                    disabled={!canSpinAgain || isSpinning}
+                  >
+                    Spin Again
+                  </Button>
+                )}
+                {onEditList && (
+                  <Button variant="outline" className="flex-1 h-10 rounded-xl" onClick={onEditList}>
+                    Edit list
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>

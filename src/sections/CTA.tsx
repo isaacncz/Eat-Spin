@@ -35,7 +35,7 @@ export function CTA() {
   }, []);
 
   const scrollToApp = () => {
-    const appSection = document.getElementById('app');
+    const appSection = document.getElementById('app-main-section');
     appSection?.scrollIntoView({ behavior: 'smooth' });
   };
 

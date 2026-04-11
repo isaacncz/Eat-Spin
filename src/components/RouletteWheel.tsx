@@ -897,6 +897,27 @@ export function RouletteWheel({
                 })}
               </div>
 
+              {/* Service badges */}
+              {(spinResult.delivery || spinResult.takeout || spinResult.dineIn) && (
+                <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+                  {spinResult.dineIn && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      🍽️ Dine-in
+                    </span>
+                  )}
+                  {spinResult.takeout && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                      📦 Takeout
+                    </span>
+                  )}
+                  {spinResult.delivery && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                      🛵 Delivery
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* Branded footer - visible in screenshots */}
               <div className="mt-4 pt-3 border-t border-eatspin-peach/40 flex items-center justify-center gap-2">
                 <span className="text-xs font-bold text-brand-orange">🍴 EatSpin</span>

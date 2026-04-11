@@ -22,6 +22,9 @@ const GOOGLE_PLACE_FIELDS = [
   'places.businessStatus',
   'places.googleMapsUri',
   'places.websiteUri',
+  'places.delivery',
+  'places.takeout',
+  'places.dineIn',
 ].join(',');
 const DEFAULT_MAX_RESULTS = 20;
 
@@ -123,6 +126,9 @@ type GooglePlace = {
   businessStatus?: string;
   googleMapsUri?: string;
   websiteUri?: string;
+  delivery?: boolean;
+  takeout?: boolean;
+  dineIn?: boolean;
 };
 
 type GoogleNearbyResponse = {
@@ -473,6 +479,9 @@ const normalizeGooglePlace = (
     distance,
     googleMapsUri: place.googleMapsUri?.trim(),
     websiteUri: place.websiteUri?.trim(),
+    delivery: place.delivery,
+    takeout: place.takeout,
+    dineIn: place.dineIn,
   };
 };
 

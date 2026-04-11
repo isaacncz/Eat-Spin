@@ -25,6 +25,12 @@ export interface Restaurant {
   googleMapsUri?: string;
   /** Restaurant's own website URL. */
   websiteUri?: string;
+  /** Whether the restaurant offers delivery. */
+  delivery?: boolean;
+  /** Whether the restaurant offers takeout. */
+  takeout?: boolean;
+  /** Whether the restaurant offers dine-in. */
+  dineIn?: boolean;
   /**
    * How confident the classification pipeline is about this restaurant's categories.
    * - `high`: primaryType or cuisine-specific API query confirms the category

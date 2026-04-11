@@ -4,7 +4,7 @@ import { computeQualityScore } from '@/lib/restaurantUtils';
 import { classifyPlace } from '@/lib/categoryClassifier';
 
 const GOOGLE_NEARBY_ENDPOINT = 'https://places.googleapis.com/v1/places:searchNearby';
-const GOOGLE_PLACE_FIELDS = [
+export const GOOGLE_PLACE_FIELDS = [
   'places.id',
   'places.displayName',
   'places.formattedAddress',
@@ -113,7 +113,7 @@ type GooglePlacePhoto = {
   name?: string;
 };
 
-type GooglePlace = {
+export type GooglePlace = {
   id?: string;
   displayName?: { text?: string };
   formattedAddress?: string;
@@ -343,7 +343,7 @@ const mapGoogleTypesToCategories = (types: string[] | undefined): FoodCategory[]
   return categories;
 };
 
-const getGoogleApiKey = (): string => {
+export const getGoogleApiKey = (): string => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
   if (!apiKey || apiKey.trim().length === 0) {
     throw new Error('VITE_GOOGLE_MAPS_API_KEY is missing');
@@ -400,7 +400,7 @@ const computeCategoryConfidence = (
   return 'low';
 };
 
-const normalizeGooglePlace = (
+export const normalizeGooglePlace = (
   place: GooglePlace,
   location: { lat: number; lng: number },
   apiKey: string,

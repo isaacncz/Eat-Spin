@@ -24,6 +24,7 @@ import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { SpinLimitWarning } from '@/components/SpinLimitWarning';
 import { AppNavbar } from '@/sections/AppNavbar';
 import { QuickSpinHero, type FoodMood } from '@/sections/QuickSpinHero';
+import { applyServesFilters, type ServesFilterId } from '@/lib/servesFilters';
 import { FilterPanel } from '@/components/FilterPanel';
 import { Footer } from '@/sections/Footer';
 import { GroupSpin } from '@/sections/GroupSpin';
@@ -200,6 +201,7 @@ function App() {
   const [challengeJoinInput, setChallengeJoinInput] = useState('');
   const [uiNowMs, setUiNowMs] = useState(() => Date.now());
   const [, setSelectedMood] = useState<FoodMood | null>(null);
+  const [activeServesFilters, setActiveServesFilters] = useState<ServesFilterId[]>([]);
   const [showAboutSections, setShowAboutSections] = useState(false);
 
   const [manualInput, setManualInput] = useState('');
@@ -261,7 +263,15 @@ function App() {
 
     if (mood === 'surprise-me') {
       setSelectedPriceRanges([]);
+      setActiveServesFilters([]);
     }
+  }, []);
+
+  const handleToggleServesFilter = useCallback((id: ServesFilterId) => {
+    setActiveServesFilters((prev) =>
+      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id],
+    );
+    trackEvent('serves_filter_toggle', { filter: id });
   }, []);
 
   // Custom hooks
@@ -518,7 +528,10 @@ function App() {
     )
   ), [autoSourceRestaurants, location, selectedCategories, rangeMode, selectedPriceRanges, avoidedRestaurantIds]);
 
-  const filteredRestaurants = filterResult.results;
+  const filteredRestaurants = useMemo(
+    () => applyServesFilters(filterResult.results, activeServesFilters),
+    [filterResult.results, activeServesFilters],
+  );
   const closingSoonExcludedCount = filterResult.closingSoonExcludedCount;
   const closedNowExcludedCount = filterResult.closedNowExcludedCount;
 
@@ -1429,6 +1442,8 @@ function App() {
         locationError={locationError}
         restaurantCount={roundRestaurants.length}
         onGroupSpin={() => { trackEvent('hero_group_spin'); scrollToSection('group-spin'); }}
+        activeServesFilters={activeServesFilters}
+        onToggleServesFilter={handleToggleServesFilter}
       />
 
       {/* Main app section */}

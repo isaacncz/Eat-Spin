@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { MapPin, Users, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { trackEvent } from '@/lib/analytics';
+import { ServesFilterPills } from '@/components/ServesFilterPills';
+import type { ServesFilterId } from '@/lib/servesFilters';
 import type { MealTime } from '@/types';
 
 // ---------------------------------------------------------------------------
@@ -21,6 +23,8 @@ export interface QuickSpinHeroProps {
   locationError: string | null;
   restaurantCount: number;
   onGroupSpin: () => void;
+  activeServesFilters: ServesFilterId[];
+  onToggleServesFilter: (id: ServesFilterId) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -66,6 +70,8 @@ export function QuickSpinHero({
   locationError,
   restaurantCount,
   onGroupSpin,
+  activeServesFilters,
+  onToggleServesFilter,
 }: QuickSpinHeroProps) {
   const [selectedMood, setSelectedMood] = useState<FoodMood | null>(null);
 
@@ -169,6 +175,19 @@ export function QuickSpinHero({
             );
           })}
         </div>
+
+        {/* ── Serves-filter pills ──────────────────────────────────── */}
+        {hasLocation && (
+          <div className="w-full hero-enter hero-enter-delay-2">
+            <p className="mb-2 text-center text-xs font-medium text-[var(--eatspin-gray-2)]">
+              I'm looking for…
+            </p>
+            <ServesFilterPills
+              activeFilters={activeServesFilters}
+              onToggle={onToggleServesFilter}
+            />
+          </div>
+        )}
 
         {/* ── Primary CTA area ─────────────────────────────────────── */}
         <div className="flex w-full flex-col items-center gap-3 hero-enter hero-enter-delay-3">

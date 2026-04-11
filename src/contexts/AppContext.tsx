@@ -32,8 +32,6 @@ export const AUTO_RANGE_MODE_STORAGE_KEY = 'eatspin:auto-range-mode';
 export const DEFAULT_AUTO_RANGE_MODE: AutoRangeMode = 'drive10';
 
 // Road detour factor: straight-line × 1.4 ≈ actual road distance
-const ROAD_DETOUR_FACTOR = 1.4;
-
 export const AUTO_RANGE_RADIUS_KM: Record<AutoRangeMode, number> = {
   walk: 0.85,     // ~1.2 km road ÷ 1.4 ≈ 12 min walk at 5 km/h
   drive10: 4.3,   // ~6 km road ÷ 1.4 ≈ 10 min at 35 km/h urban

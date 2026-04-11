@@ -759,12 +759,17 @@ function App() {
     const favId = deriveFavouriteId(restaurant);
     enqueueFeedback({ favouriteId: favId, restaurantName: restaurant.name });
 
-    // Open Google Maps navigation
-    const { lat, lng } = restaurant.coordinates;
-    const query = encodeURIComponent(restaurant.name);
-    const mapsUrl = lat && lng
-      ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${restaurant.googlePlaceId ?? ''}&query=${query}`
-      : `https://www.google.com/maps/search/?api=1&query=${query}`;
+    // Open Google Maps navigation — prefer the official URI from the API
+    let mapsUrl: string;
+    if (restaurant.googleMapsUri) {
+      mapsUrl = restaurant.googleMapsUri;
+    } else {
+      const { lat, lng } = restaurant.coordinates;
+      const query = encodeURIComponent(restaurant.name);
+      mapsUrl = lat && lng
+        ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${restaurant.googlePlaceId ?? ''}&query=${query}`
+        : `https://www.google.com/maps/search/?api=1&query=${query}`;
+    }
     window.open(mapsUrl, '_blank', 'noopener,noreferrer');
 
     toast.success(`Navigating to ${restaurant.name}!`, {

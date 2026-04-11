@@ -20,6 +20,8 @@ const GOOGLE_PLACE_FIELDS = [
   'places.regularOpeningHours.periods',
   'places.currentOpeningHours.openNow',
   'places.businessStatus',
+  'places.googleMapsUri',
+  'places.websiteUri',
 ].join(',');
 const DEFAULT_MAX_RESULTS = 20;
 
@@ -119,6 +121,8 @@ type GooglePlace = {
   regularOpeningHours?: { periods?: GooglePlaceOpeningPeriod[] };
   currentOpeningHours?: { openNow?: boolean };
   businessStatus?: string;
+  googleMapsUri?: string;
+  websiteUri?: string;
 };
 
 type GoogleNearbyResponse = {
@@ -467,6 +471,8 @@ const normalizeGooglePlace = (
     description: place.editorialSummary?.text?.trim() || 'Highly rated nearby pick from Google Maps.',
     isOpen: place.currentOpeningHours?.openNow ?? true,
     distance,
+    googleMapsUri: place.googleMapsUri?.trim(),
+    websiteUri: place.websiteUri?.trim(),
   };
 };
 

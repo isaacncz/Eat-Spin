@@ -21,6 +21,10 @@ export interface Restaurant {
   googlePlaceId?: string;
   source?: 'google-live' | 'google-cache' | 'local-fallback';
   hasKnownPriceRange?: boolean;
+  /** Official Google Maps URL for this place. */
+  googleMapsUri?: string;
+  /** Restaurant's own website URL. */
+  websiteUri?: string;
   /**
    * How confident the classification pipeline is about this restaurant's categories.
    * - `high`: primaryType or cuisine-specific API query confirms the category

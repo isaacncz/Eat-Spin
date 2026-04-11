@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Heart, Navigation, Share2, Volume2, VolumeX } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Heart, Navigation, Share2, Volume2, VolumeX, Globe } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
@@ -930,6 +930,16 @@ export function RouletteWheel({
                   >
                     <Share2 size={18} className="mr-1.5" />
                     Share
+                  </Button>
+                )}
+                {spinResult.websiteUri && (
+                  <Button
+                    variant="outline"
+                    className="h-12 w-12 rounded-xl border-eatspin-gray-3 text-eatspin-gray-1 hover:bg-eatspin-gray-3/30 shrink-0"
+                    onClick={() => window.open(spinResult.websiteUri, '_blank', 'noopener,noreferrer')}
+                    title="Visit website"
+                  >
+                    <Globe size={18} />
                   </Button>
                 )}
               </div>

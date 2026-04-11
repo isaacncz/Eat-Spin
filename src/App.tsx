@@ -62,13 +62,24 @@ const SPIN_HISTORY_PREVIEW_COUNT = 8;
 const MANUAL_SUGGESTED_RESTAURANTS = ['Sushi Place', 'Burger Spot', 'Local Noodles', 'Pizza Corner'];
 const DEFAULT_AUTO_RANGE_MODE: AutoRangeMode = 'drive10';
 const AUTO_RANGE_RADIUS_KM: Record<AutoRangeMode, number> = {
-  walk: 1.2,
-  drive10: 6,
-  drive20: 12,
+  walk: 0.85,
+  drive10: 4.3,
+  drive20: 8.5,
 };
 
 const isAutoRangeMode = (value: string): value is AutoRangeMode =>
   value === 'walk' || value === 'drive10' || value === 'drive20';
+
+/** Estimate travel time from straight-line distance using road detour factor. */
+const estimateTravelTime = (straightLineKm: number): string => {
+  const roadKm = straightLineKm * 1.4;
+  if (roadKm <= 1.2) {
+    const minutes = Math.round((roadKm / 5) * 60);
+    return `~${Math.max(1, minutes)} min walk`;
+  }
+  const minutes = Math.round((roadKm / 30) * 60);
+  return `~${Math.max(1, minutes)} min drive`;
+};
 
 const loadAutoRangeMode = (): AutoRangeMode => {
   if (typeof window === 'undefined') return DEFAULT_AUTO_RANGE_MODE;
@@ -1582,7 +1593,7 @@ function App() {
                               ))}
                               <span className="rounded-full bg-white px-2 py-0.5">{restaurant.priceRange}</span>
                               {restaurant.distance !== undefined && (
-                                <span className="rounded-full bg-white px-2 py-0.5">{restaurant.distance.toFixed(1)} km</span>
+                                <span className="rounded-full bg-white px-2 py-0.5">{estimateTravelTime(restaurant.distance)}</span>
                               )}
                             </div>
                           </div>
@@ -1920,7 +1931,7 @@ function App() {
                             <li key={nf.favouriteId} className="flex items-center justify-between gap-2 rounded-lg bg-green-50 px-3 py-2">
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium text-brand-black truncate">{nf.restaurantName}</p>
-                                <p className="text-xs text-eatspin-gray-1">{nf.distanceKm.toFixed(1)} km away</p>
+                                <p className="text-xs text-eatspin-gray-1">{estimateTravelTime(nf.distanceKm)}</p>
                               </div>
                               <div className="flex items-center gap-1.5 flex-shrink-0">
                                 {!alreadyInList && !isManualListReadOnly && (

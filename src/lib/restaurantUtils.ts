@@ -30,11 +30,13 @@ const MAX_FILTER_CACHE_ENTRIES = 200;
 const filterCache = new Map<string, FilterCacheEntry>();
 
 // Exclusive distance bands: primary min (exclusive), max (inclusive)
-// walk: 0 ≤ d ≤ 1.2  (no lower exclusive bound)
-// drive10 primary: 1.2 < d ≤ 6
-// drive20 primary: 6 < d ≤ 12
-const RANGE_BAND_MIN_KM: Record<RangeMode, number> = { walk: 0, drive10: 1.2, drive20: 6 };
-const RANGE_BAND_MAX_KM: Record<RangeMode, number> = { walk: 1.2, drive10: 6, drive20: 12 };
+// Radii are tightened by ~1.4× detour factor so straight-line
+// distance better approximates actual road travel time.
+// walk: 0 ≤ d ≤ 0.85      (~12 min walk)
+// drive10 primary: 0.85 < d ≤ 4.3  (~10 min drive)
+// drive20 primary: 4.3 < d ≤ 8.5   (~20 min drive)
+const RANGE_BAND_MIN_KM: Record<RangeMode, number> = { walk: 0, drive10: 0.85, drive20: 4.3 };
+const RANGE_BAND_MAX_KM: Record<RangeMode, number> = { walk: 0.85, drive10: 4.3, drive20: 8.5 };
 const SPARSE_THRESHOLD = 12;
 const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 const AUTO_RESULT_SOURCES = new Set<NonNullable<Restaurant['source']>>([
@@ -485,7 +487,7 @@ export const enhancedFilterRestaurants = (
         expandedLabel = `${results.length} nearby spot${results.length === 1 ? '' : 's'} found — try a wider range for more options.`;
       }
     } else {
-      // drive20 primary band: >6–12 km
+      // drive20 primary band: >4.3–8.5 km
       const primary = withDistance.filter((r) => {
         const d = r.distance ?? 0;
         return d > minKm && d <= maxKm;
@@ -493,10 +495,10 @@ export const enhancedFilterRestaurants = (
       if (primary.length >= SPARSE_THRESHOLD) {
         results = primary;
       } else {
-        // Expand 1: >1.2–12 km
+        // Expand 1: >0.85–8.5 km
         const expand1 = withDistance.filter((r) => {
           const d = r.distance ?? 0;
-          return d > 1.2 && d <= maxKm;
+          return d > 0.85 && d <= maxKm;
         });
         if (expand1.length >= SPARSE_THRESHOLD) {
           results = expand1;

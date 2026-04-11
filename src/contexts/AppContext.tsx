@@ -31,10 +31,13 @@ export type AutoRangeMode = 'walk' | 'drive10' | 'drive20';
 export const AUTO_RANGE_MODE_STORAGE_KEY = 'eatspin:auto-range-mode';
 export const DEFAULT_AUTO_RANGE_MODE: AutoRangeMode = 'drive10';
 
+// Road detour factor: straight-line × 1.4 ≈ actual road distance
+const ROAD_DETOUR_FACTOR = 1.4;
+
 export const AUTO_RANGE_RADIUS_KM: Record<AutoRangeMode, number> = {
-  walk: 1.2,
-  drive10: 6,
-  drive20: 12,
+  walk: 0.85,     // ~1.2 km road ÷ 1.4 ≈ 12 min walk at 5 km/h
+  drive10: 4.3,   // ~6 km road ÷ 1.4 ≈ 10 min at 35 km/h urban
+  drive20: 8.5,   // ~12 km road ÷ 1.4 ≈ 20 min at 35 km/h urban
 };
 
 export const AUTO_RANGE_LABEL: Record<AutoRangeMode, string> = {
@@ -48,9 +51,9 @@ export const AUTO_RANGE_OPTIONS: Array<{
   label: string;
   helper: string;
 }> = [
-  { id: 'walk', label: 'Walking distance', helper: '~1.2 km' },
-  { id: 'drive10', label: '10 min drive', helper: '~6 km' },
-  { id: 'drive20', label: '20 min drive', helper: '~12 km' },
+  { id: 'walk', label: 'Walking distance', helper: '~12 min walk' },
+  { id: 'drive10', label: '10 min drive', helper: '~4 km radius' },
+  { id: 'drive20', label: '20 min drive', helper: '~9 km radius' },
 ];
 
 // ---------------------------------------------------------------------------

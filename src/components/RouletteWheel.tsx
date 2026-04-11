@@ -62,6 +62,19 @@ function getSegmentColor(index: number): string {
   return WHEEL_COLORS[index % WHEEL_COLORS.length];
 }
 
+/** Estimate travel time from straight-line distance using road detour factor. */
+const estimateTravelTime = (straightLineKm: number): string => {
+  const roadKm = straightLineKm * 1.4; // detour factor
+  if (roadKm <= 1.2) {
+    // Walking range
+    const minutes = Math.round((roadKm / 5) * 60); // 5 km/h walk speed
+    return `~${Math.max(1, minutes)} min walk`;
+  }
+  // Driving range — urban avg ~30 km/h
+  const minutes = Math.round((roadKm / 30) * 60);
+  return `~${Math.max(1, minutes)} min drive`;
+};
+
 const compactRestaurantName = (name: string, maxLength: number): string => {
   const normalized = name.trim().replace(/\s+/g, ' ');
   if (normalized.length <= maxLength) return normalized;
@@ -566,7 +579,7 @@ export function RouletteWheel({
       const labelBaseFontSize = clamp(Math.min(constrainedWidth * 0.16, radialBandHeight * 0.28), 11.5, 22);
       const fontSize = clamp(labelBaseFontSize * densityScale, 11.5, 24);
       const distanceLabel = canShowDistance && lines.length <= 3 && restaurant.distance !== undefined
-        ? `${restaurant.distance.toFixed(1)} km`
+        ? estimateTravelTime(restaurant.distance)
         : null;
 
       return {
@@ -780,7 +793,7 @@ export function RouletteWheel({
                       </span>
                     </span>
                     <span className="flex-shrink-0 text-xs font-semibold text-brand-orange tabular-nums">
-                      {r.distance!.toFixed(1)} km
+                      {estimateTravelTime(r.distance!)}
                     </span>
                   </li>
                 ))}
@@ -842,7 +855,7 @@ export function RouletteWheel({
                   {spinResult.distance !== undefined && (
                     <>
                       <span className="text-eatspin-gray-3">|</span>
-                      <span>{spinResult.distance.toFixed(1)} km</span>
+                      <span>{estimateTravelTime(spinResult.distance)}</span>
                     </>
                   )}
                 </div>

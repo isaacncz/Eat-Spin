@@ -14,10 +14,11 @@
 ## Decisions Locked
 - Time model: approximate radius.
 - Range preset: balanced.
-- Mapping:
-1. Walking distance = `1.2 km`
-2. 10-min drive = `6 km`
-3. 20-min drive = `12 km`
+- Mapping (with 1.4× road detour factor applied):
+1. Walking distance = `0.85 km` straight-line (~12 min walk)
+2. 10-min drive = `4.3 km` straight-line (~10 min drive)
+3. 20-min drive = `8.5 km` straight-line (~20 min drive)
+- See `docs/spin-first-revamp.md` for full details on the detour factor rationale.
 - Wheel count policy: max 12.
 - Default behavior: initialize with 10-min drive; persist and restore last selected option.
 

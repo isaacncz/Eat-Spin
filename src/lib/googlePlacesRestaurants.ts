@@ -25,6 +25,13 @@ const GOOGLE_PLACE_FIELDS = [
   'places.delivery',
   'places.takeout',
   'places.dineIn',
+  'places.servesCoffee',
+  'places.servesBreakfast',
+  'places.servesBrunch',
+  'places.servesLunch',
+  'places.servesDinner',
+  'places.servesDessert',
+  'places.servesVegetarianFood',
 ].join(',');
 const DEFAULT_MAX_RESULTS = 20;
 
@@ -129,6 +136,13 @@ type GooglePlace = {
   delivery?: boolean;
   takeout?: boolean;
   dineIn?: boolean;
+  servesCoffee?: boolean;
+  servesBreakfast?: boolean;
+  servesBrunch?: boolean;
+  servesLunch?: boolean;
+  servesDinner?: boolean;
+  servesDessert?: boolean;
+  servesVegetarianFood?: boolean;
 };
 
 type GoogleNearbyResponse = {
@@ -482,6 +496,13 @@ const normalizeGooglePlace = (
     delivery: place.delivery,
     takeout: place.takeout,
     dineIn: place.dineIn,
+    servesCoffee: place.servesCoffee,
+    servesBreakfast: place.servesBreakfast,
+    servesBrunch: place.servesBrunch,
+    servesLunch: place.servesLunch,
+    servesDinner: place.servesDinner,
+    servesDessert: place.servesDessert,
+    servesVegetarianFood: place.servesVegetarianFood,
   };
 };
 

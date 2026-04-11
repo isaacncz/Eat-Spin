@@ -31,6 +31,20 @@ export interface Restaurant {
   takeout?: boolean;
   /** Whether the restaurant offers dine-in. */
   dineIn?: boolean;
+  /** Whether the place serves coffee. */
+  servesCoffee?: boolean;
+  /** Whether the place serves breakfast. */
+  servesBreakfast?: boolean;
+  /** Whether the place serves brunch. */
+  servesBrunch?: boolean;
+  /** Whether the place serves lunch. */
+  servesLunch?: boolean;
+  /** Whether the place serves dinner. */
+  servesDinner?: boolean;
+  /** Whether the place serves dessert. */
+  servesDessert?: boolean;
+  /** Whether the place serves vegetarian food. */
+  servesVegetarianFood?: boolean;
   /**
    * How confident the classification pipeline is about this restaurant's categories.
    * - `high`: primaryType or cuisine-specific API query confirms the category

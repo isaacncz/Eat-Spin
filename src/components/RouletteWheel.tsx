@@ -140,6 +140,7 @@ const loadSoundPreference = (): boolean => {
 
 
 import { getSmartHoursLabel } from '@/lib/smartHours';
+import { getOrderingLinks } from '@/lib/orderingLinks';
 
 const getOpeningHoursLabel = (restaurant: Restaurant): string => {
   return getSmartHoursLabel(restaurant).label;
@@ -1055,6 +1056,23 @@ export function RouletteWheel({
                   </Button>
                 )}
               </div>
+
+              {/* Ordering platform links */}
+              {!isManualResult && (
+                <div className="flex gap-2">
+                  {getOrderingLinks(spinResult.name, spinResult.coordinates).map((link) => (
+                    <a
+                      key={link.platform}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 h-9 rounded-xl border border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-1.5 text-[11px] font-medium text-eatspin-gray-1 transition-colors"
+                    >
+                      {link.emoji} Order on {link.label}
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

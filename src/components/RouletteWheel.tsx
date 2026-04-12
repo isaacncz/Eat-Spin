@@ -6,8 +6,7 @@ import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
 import { playSpinTick, playSpinWin, startSpinDrumroll, stopSpinDrumroll, triggerSpinHaptic } from '@/lib/spinAudio';
 import { PhotoCarousel } from '@/components/PhotoCarousel';
-import { ReviewSnippets } from '@/components/ReviewSnippets';
-import { RestaurantDetailDrawer } from '@/components/RestaurantDetailDrawer';
+
 
 interface RouletteWheelProps {
   restaurants: Restaurant[];
@@ -194,7 +193,7 @@ export function RouletteWheel({
   const lastTickSegmentRef = useRef<number | null>(null);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => loadSoundPreference());
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+  // No separate drawer state needed — "Let's Go!" opens Google Maps directly
   const canPlayEffects = soundEnabled && !prefersReducedMotion;
 
   const syncWheelRotationVar = useCallback((rotation: number) => {
@@ -970,11 +969,6 @@ export function RouletteWheel({
                 </p>
               )}
 
-              {/* Google reviews */}
-              {spinResult.reviews && spinResult.reviews.length > 0 && (
-                <ReviewSnippets reviews={spinResult.reviews} initialCount={2} />
-              )}
-
               {/* Branded footer - visible in screenshots */}
               <div className="mt-4 pt-3 border-t border-eatspin-peach/40 flex items-center justify-center gap-2">
                 <span className="text-xs font-bold text-brand-orange">🍴 EatSpin</span>
@@ -1048,27 +1042,10 @@ export function RouletteWheel({
                 )}
               </div>
 
-              {/* See full details */}
-              {!isManualResult && (
-                <Button
-                  variant="outline"
-                  className="w-full h-9 rounded-xl border-eatspin-gray-3/50 text-eatspin-gray-1 hover:bg-gray-50 text-xs font-medium"
-                  onClick={() => setDetailDrawerOpen(true)}
-                >
-                  See full details
-                </Button>
-              )}
             </div>
           </div>
         </div>
       )}
-
-      {/* Restaurant detail drawer */}
-      <RestaurantDetailDrawer
-        restaurant={spinResult}
-        open={detailDrawerOpen}
-        onOpenChange={setDetailDrawerOpen}
-      />
     </div>
   );
 }

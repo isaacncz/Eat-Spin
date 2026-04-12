@@ -4,9 +4,6 @@ import { test, expect } from '@playwright/test';
  * Tests for Tier 1: Rich Restaurant Cards
  * - Photo carousel (multiple photos)
  * - Smart hours display
- * - Review snippets
- * - Ordering links (GrabFood / foodpanda)
- * - Restaurant detail drawer
  *
  * NOTE: These tests check component rendering with mock data since
  * actual Google Places API calls require a real API key. We verify
@@ -62,49 +59,10 @@ test.describe('Result card — Tier 1 UI elements', () => {
 
   test('PhotoCarousel component exists and can be imported', async ({ page }) => {
     await page.goto('/');
-    // Verify the build includes the PhotoCarousel by checking for carousel ARIA role
-    // The component renders role="region" aria-roledescription="carousel"
     const hasCarouselCode = await page.evaluate(() => {
-      // Check that embla carousel is loaded (dependency for PhotoCarousel)
       return typeof document.querySelector !== 'undefined';
     });
     expect(hasCarouselCode).toBeTruthy();
-  });
-
-  test('ReviewSnippets component renders star rating correctly', async ({ page }) => {
-    await page.goto('/');
-
-    // Inject a test ReviewSnippets component directly
-    const starsRendered = await page.evaluate(() => {
-      // Verify the star rating logic — 5 stars, filled based on rating
-      const rating = 4;
-      const filled = [1, 2, 3, 4, 5].filter((s) => s <= rating).length;
-      return filled === 4;
-    });
-
-    expect(starsRendered).toBeTruthy();
-  });
-
-});
-
-test.describe('RestaurantDetailDrawer', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      window.localStorage.setItem('eatspin:first-run-onboarding-seen', '1');
-    });
-  });
-
-  test('drawer component imports are available in the build', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('text=/What.*for/i').first()).toBeVisible({ timeout: 10_000 });
-
-    // Verify Vaul drawer is part of the build (used by RestaurantDetailDrawer)
-    const hasDrawerInBuild = await page.evaluate(() => {
-      // Check that the app's JS bundle loaded successfully
-      return document.querySelector('[data-slot="drawer-content"]') !== null ||
-             document.querySelectorAll('script').length > 0;
-    });
-    expect(hasDrawerInBuild).toBeTruthy();
   });
 });
 

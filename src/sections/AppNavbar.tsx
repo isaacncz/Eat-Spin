@@ -133,17 +133,6 @@ export function AppNavbar({
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={handleAbout}
-                className="hidden md:inline-flex items-center justify-center w-8 h-8 rounded-lg
-                           text-brand-black/60 hover:bg-[var(--eatspin-peach)]/40 hover:text-brand-black
-                           transition-colors duration-150"
-                aria-label="About"
-              >
-                <Info size={16} />
-              </button>
-
               {/* Mobile: hamburger (only for Group + About links) */}
               <button
                 type="button"

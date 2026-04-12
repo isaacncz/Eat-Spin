@@ -204,25 +204,27 @@ export function QuickSpinHero({
                 <Loader2 className="size-3.5 animate-spin" />
                 Finding restaurants nearby…
               </p>
-            ) : restaurantCount === 0 && totalNearbyCount > 0 && closedNowCount > 0 ? (
-              /* All closed */
+            ) : restaurantCount === 0 && totalNearbyCount > 0 && closedNowCount >= totalNearbyCount ? (
+              /* Every single nearby place is closed */
               <div className="rounded-xl border border-[var(--eatspin-gray-3)] bg-white/80 px-4 py-3 text-center">
                 <p className="flex items-center justify-center gap-1.5 text-sm font-medium text-[var(--eatspin-black)]">
                   <Moon className="size-4 text-[var(--eatspin-gray-1)]" />
                   {closedNowCount} place{closedNowCount === 1 ? '' : 's'} nearby — all closed now
                 </p>
                 <p className="mt-1 text-xs text-[var(--eatspin-gray-2)]">
-                  Check back during meal hours, or search for what's open
+                  Check back during meal hours, or try searching below
                 </p>
               </div>
             ) : restaurantCount === 0 && totalNearbyCount > 0 ? (
-              /* Filtered to 0 */
+              /* Some combination of filters + closures → 0 results */
               <div className="rounded-xl border border-[var(--eatspin-peach)]/60 bg-white/80 px-4 py-3 text-center">
                 <p className="text-sm font-medium text-[var(--eatspin-black)]">
-                  😕 No restaurants match your current filters
+                  😕 No restaurants match right now
                 </p>
                 <p className="mt-1 text-xs text-[var(--eatspin-gray-2)]">
-                  Try different categories or scroll down to adjust filters
+                  {closedNowCount > 0
+                    ? `${closedNowCount} closed now · try different filters or a wider range`
+                    : 'Try different categories or a wider range below'}
                 </p>
               </div>
             ) : restaurantCount > 0 ? (

@@ -11,6 +11,21 @@ test.describe('Serves-filter pills', () => {
     // Skip the first-run onboarding modal
     await page.addInitScript(() => {
       window.localStorage.setItem('eatspin:first-run-onboarding-seen', '1');
+
+      // Fix clock to 7pm so time-of-day defaults don't pre-select pills
+      const RealDate = Date;
+      const fakeNow = new RealDate(2025, 3, 15, 19, 0, 0).getTime();
+      globalThis.Date = class extends RealDate {
+        constructor(...args: unknown[]) {
+          if (args.length === 0) {
+            super(fakeNow);
+          } else {
+            // biome-ignore lint: constructor args
+            super(...(args as [any]));
+          }
+        }
+        static override now() { return fakeNow; }
+      } as DateConstructor;
     });
 
     await page.goto('/');

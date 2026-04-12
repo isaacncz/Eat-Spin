@@ -1454,6 +1454,7 @@ function App() {
         activeRoomId={groupRoomId}
         onGroupSpin={() => { trackEvent('nav_group_spin'); scrollToSection('group-spin'); }}
         onAbout={() => setShowAboutSections(prev => !prev)}
+        onLeaveRoom={isGroupRoomActive ? handleLeaveGroupRoom : undefined}
       />
 
       {/* QuickSpinHero - only in auto (discovery) mode */}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Users, Info, Menu, X, Sparkles, PencilLine } from 'lucide-react';
+import { Users, Info, Menu, X, Sparkles, PencilLine, LogOut } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
 
 interface AppNavbarProps {
@@ -8,6 +8,7 @@ interface AppNavbarProps {
   activeRoomId: string;
   onGroupSpin: () => void;
   onAbout: () => void;
+  onLeaveRoom?: () => void;
 }
 
 const MOBILE_HEIGHT = 56;
@@ -19,6 +20,7 @@ export function AppNavbar({
   activeRoomId,
   onGroupSpin,
   onAbout,
+  onLeaveRoom,
 }: AppNavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const hasActiveRoom = Boolean(activeRoomId);
@@ -116,6 +118,21 @@ export function AppNavbar({
                 {hasActiveRoom && <RoomDot />}
               </button>
 
+              {/* Leave room — desktop */}
+              {hasActiveRoom && onLeaveRoom && (
+                <button
+                  type="button"
+                  onClick={() => { onLeaveRoom(); setMobileMenuOpen(false); }}
+                  className="hidden md:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium
+                             text-red-600 hover:bg-red-50 hover:text-red-700
+                             transition-colors duration-150"
+                  aria-label="Leave group room"
+                >
+                  <LogOut size={14} />
+                  <span>Leave</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={handleAbout}
@@ -147,7 +164,7 @@ export function AppNavbar({
         {/* ── Mobile dropdown ── */}
         <div
           className={`md:hidden overflow-hidden transition-[max-height,opacity] duration-200 ease-out ${
-            mobileMenuOpen ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
+            mobileMenuOpen ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0'
           }`}
           style={{ borderTop: mobileMenuOpen ? '1px solid rgba(254,228,199,0.3)' : 'none' }}
         >
@@ -168,6 +185,20 @@ export function AppNavbar({
                 </span>
               )}
             </button>
+
+            {/* Leave room — mobile */}
+            {hasActiveRoom && onLeaveRoom && (
+              <button
+                type="button"
+                onClick={() => { onLeaveRoom(); setMobileMenuOpen(false); }}
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium
+                           text-red-600 hover:bg-red-50 active:bg-red-100
+                           transition-colors duration-150"
+              >
+                <LogOut size={18} />
+                <span>Leave Room</span>
+              </button>
+            )}
 
             <button
               type="button"

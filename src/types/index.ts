@@ -1,5 +1,15 @@
 export type CategoryConfidence = 'high' | 'medium' | 'low';
 
+/** A single Google Places review (up to 5 per place). */
+export interface PlaceReview {
+  authorName: string;
+  authorPhotoUri?: string;
+  rating: number;
+  text: string;
+  relativeTime: string;
+  publishTime?: string;
+}
+
 export interface Restaurant {
   id: string;
   name: string;
@@ -53,6 +63,10 @@ export interface Restaurant {
   outdoorSeating?: boolean;
   /** AI-generated summary from Google. */
   generativeSummary?: string;
+  /** Multiple photo URLs from Google Places (up to 10). */
+  photos?: string[];
+  /** Up to 5 recent Google reviews. */
+  reviews?: PlaceReview[];
   /**
    * How confident the classification pipeline is about this restaurant's categories.
    * - `high`: primaryType or cuisine-specific API query confirms the category

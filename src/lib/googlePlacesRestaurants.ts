@@ -1,4 +1,4 @@
-import type { CategoryConfidence, DailyHours, FoodCategory, Restaurant } from '@/types';
+import type { CategoryConfidence, DailyHours, FoodCategory, PlaceReview, Restaurant } from '@/types';
 import { calculateDistance } from '@/lib/restaurantUtils';
 import { computeQualityScore } from '@/lib/restaurantUtils';
 import { classifyPlace } from '@/lib/categoryClassifier';
@@ -36,6 +36,7 @@ export const GOOGLE_PLACE_FIELDS = [
   'places.goodForChildren',
   'places.outdoorSeating',
   'places.generativeSummary',
+  'places.reviews',
 ].join(',');
 const DEFAULT_MAX_RESULTS = 20;
 
@@ -117,6 +118,20 @@ type GooglePlacePhoto = {
   name?: string;
 };
 
+type GooglePlaceReviewAttribution = {
+  displayName?: string;
+  uri?: string;
+  photoUri?: string;
+};
+
+type GooglePlaceReview = {
+  rating?: number;
+  text?: { text?: string };
+  authorAttribution?: GooglePlaceReviewAttribution;
+  relativePublishTimeDescription?: string;
+  publishTime?: string;
+};
+
 export type GooglePlace = {
   id?: string;
   displayName?: { text?: string };
@@ -151,6 +166,7 @@ export type GooglePlace = {
   goodForChildren?: boolean;
   outdoorSeating?: boolean;
   generativeSummary?: { overview?: { text?: string } };
+  reviews?: GooglePlaceReview[];
 };
 
 type GoogleNearbyResponse = {
@@ -485,6 +501,26 @@ export const normalizeGooglePlace = (
     ? `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=720&maxWidthPx=720&key=${apiKey}`
     : undefined;
 
+  // Build all photo URLs (up to 10)
+  const photos: string[] = (place.photos ?? [])
+    .slice(0, 10)
+    .map((p) => p.name?.trim())
+    .filter((n): n is string => !!n)
+    .map((n) => `https://places.googleapis.com/v1/${n}/media?maxHeightPx=720&maxWidthPx=720&key=${apiKey}`);
+
+  // Map Google reviews to our PlaceReview type (up to 5)
+  const reviews: PlaceReview[] = (place.reviews ?? [])
+    .slice(0, 5)
+    .filter((r) => r.text?.text?.trim())
+    .map((r) => ({
+      authorName: r.authorAttribution?.displayName?.trim() || 'Anonymous',
+      authorPhotoUri: r.authorAttribution?.photoUri?.trim(),
+      rating: typeof r.rating === 'number' ? r.rating : 0,
+      text: r.text!.text!.trim(),
+      relativeTime: r.relativePublishTimeDescription?.trim() || '',
+      publishTime: r.publishTime,
+    }));
+
   return {
     id: `gplace-${place.id}`,
     googlePlaceId: place.id,
@@ -520,6 +556,8 @@ export const normalizeGooglePlace = (
     goodForChildren: place.goodForChildren,
     outdoorSeating: place.outdoorSeating,
     generativeSummary: place.generativeSummary?.overview?.text?.trim(),
+    photos: photos.length > 0 ? photos : undefined,
+    reviews: reviews.length > 0 ? reviews : undefined,
   };
 };
 

@@ -40,6 +40,9 @@ export interface FilterPanelProps {
   // Availability info
   closingSoonCount: number;
   closedNowCount: number;
+
+  /** Visit counts per category from favourites — used to boost popular categories. */
+  favouriteCategoryCounts?: Partial<Record<FoodCategory, number>>;
 }
 
 // ── Component ────────────────────────────────────────────────────────────
@@ -57,6 +60,7 @@ export function FilterPanel({
   nearbyError,
   closingSoonCount,
   closedNowCount,
+  favouriteCategoryCounts,
 }: FilterPanelProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -184,6 +188,7 @@ export function FilterPanel({
             selectedCategories={selectedCategories}
             onCategoryChange={onCategoryChange}
             maxSelection={3}
+            favouriteCategoryCounts={favouriteCategoryCounts}
           />
         </div>
       </div>

@@ -487,6 +487,18 @@ function App() {
     return findNearbyFavourites(favourites, location.lat, location.lng);
   }, [favourites, location]);
 
+  // Favourite category visit counts — used to boost popular categories in selector
+  const favouriteCategoryCounts = useMemo(() => {
+    const counts: Partial<Record<FoodCategory, number>> = {};
+    for (const fav of favourites) {
+      if (fav.userRating === 'avoid') continue;
+      for (const cat of fav.restaurant.category) {
+        counts[cat] = (counts[cat] ?? 0) + fav.visitCount;
+      }
+    }
+    return counts;
+  }, [favourites]);
+
   const spinHistorySummary = useMemo(() => {
     const categoryCounter = new Map<string, number>();
     const restaurantIds = new Set<string>();
@@ -1522,6 +1534,7 @@ function App() {
                   nearbyError={nearbyRestaurantsError}
                   closingSoonCount={closingSoonExcludedCount}
                   closedNowCount={closedNowExcludedCount}
+                  favouriteCategoryCounts={favouriteCategoryCounts}
                 />
               )}
 

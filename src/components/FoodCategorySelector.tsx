@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { trackEvent } from '@/lib/analytics';
 import type { FoodCategory } from '@/types';
 import { cuisineCategories, foodCategories } from '@/data/restaurants';
@@ -8,13 +8,28 @@ interface FoodCategorySelectorProps {
   selectedCategories: FoodCategory[];
   onCategoryChange: (categories: FoodCategory[]) => void;
   maxSelection?: number;
+  /** Visit counts per category from favourites — used to boost popular categories. */
+  favouriteCategoryCounts?: Partial<Record<FoodCategory, number>>;
 }
 
 export function FoodCategorySelector({
   selectedCategories,
   onCategoryChange,
   maxSelection = 3,
+  favouriteCategoryCounts,
 }: FoodCategorySelectorProps) {
+  // Sort categories: boosted favourites first, then original order
+  const sortedCategories = useMemo(() => {
+    if (!favouriteCategoryCounts) return cuisineCategories;
+    return [...cuisineCategories].sort((a, b) => {
+      const countA = favouriteCategoryCounts[a.id] ?? 0;
+      const countB = favouriteCategoryCounts[b.id] ?? 0;
+      return countB - countA;
+    });
+  }, [favouriteCategoryCounts]);
+
+  const hasBoosted = favouriteCategoryCounts
+    && Object.values(favouriteCategoryCounts).some((v) => (v ?? 0) > 0);
   const handleCategoryToggle = (categoryId: FoodCategory) => {
     const isSelected = selectedCategories.includes(categoryId);
     
@@ -73,8 +88,13 @@ export function FoodCategorySelector({
       )}
 
       {/* Category Grid */}
+      {hasBoosted && (
+        <p className="mb-2 text-[11px] font-medium text-brand-orange">
+          ⭐ Based on your favourites
+        </p>
+      )}
       <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-        {cuisineCategories.map((category) => {
+        {sortedCategories.map((category) => {
           const isSelected = selectedCategories.includes(category.id);
           const isDisabled = !isSelected && selectedCategories.length >= maxSelection;
 

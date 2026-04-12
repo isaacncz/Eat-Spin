@@ -201,6 +201,13 @@ export const foodCategories: FoodCategoryConfig[] = [
   { id: 'thai', name: 'Thai', icon: '🌶️', color: '#FF7675' },
   { id: 'japanese', name: 'Japanese', icon: '🍣', color: '#74B9FF' },
   { id: 'korean', name: 'Korean', icon: '🔥', color: '#A29BFE' },
+  { id: 'breakfast', name: 'Breakfast', icon: '🍳', color: '#F39C12' },
+  { id: 'brunch', name: 'Brunch', icon: '🥞', color: '#FDCB6E' },
+  { id: 'bubble-tea', name: 'Bubble Tea', icon: '🧋', color: '#6C5CE7' },
+  { id: 'pizza', name: 'Pizza', icon: '🍕', color: '#E17055' },
+  { id: 'fast-food', name: 'Fast Food', icon: '🍟', color: '#FDCB6E' },
+  { id: 'hotpot', name: 'Hotpot', icon: '♨️', color: '#D63031' },
+  { id: 'bbq', name: 'BBQ', icon: '🔥', color: '#B33939' },
 ];
 
 /** Cuisine-only subset shown in the category selector UI. */
@@ -213,6 +220,11 @@ const CUISINE_IDS: ReadonlySet<FoodCategory> = new Set([
   'japanese',
   'korean',
   'cafe',
+  'bubble-tea',
+  'pizza',
+  'fast-food',
+  'hotpot',
+  'bbq',
 ]);
 
 export const cuisineCategories: FoodCategoryConfig[] = foodCategories.filter(

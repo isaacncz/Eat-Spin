@@ -105,7 +105,13 @@ export type FoodCategory =
   | 'thai'
   | 'japanese'
   | 'korean'
-  | 'breakfast';
+  | 'breakfast'
+  | 'bubble-tea'
+  | 'pizza'
+  | 'fast-food'
+  | 'hotpot'
+  | 'bbq'
+  | 'brunch';
 
 export interface UserLocation {
   lat: number;

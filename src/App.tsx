@@ -26,6 +26,7 @@ import { SpinLimitWarning } from '@/components/SpinLimitWarning';
 import { AppNavbar } from '@/sections/AppNavbar';
 import { QuickSpinHero, type FoodMood } from '@/sections/QuickSpinHero';
 import { applyServesFilters, type ServesFilterId } from '@/lib/servesFilters';
+import { getTimeOfDayFilters } from '@/lib/timeOfDayDefaults';
 import { FilterPanel } from '@/components/FilterPanel';
 import { Footer } from '@/sections/Footer';
 import { GroupSpin } from '@/sections/GroupSpin';
@@ -202,7 +203,7 @@ function App() {
   const [challengeJoinInput, setChallengeJoinInput] = useState('');
   const [uiNowMs, setUiNowMs] = useState(() => Date.now());
   const [, setSelectedMood] = useState<FoodMood | null>(null);
-  const [activeServesFilters, setActiveServesFilters] = useState<ServesFilterId[]>([]);
+  const [activeServesFilters, setActiveServesFilters] = useState<ServesFilterId[]>(getTimeOfDayFilters);
   const [showAboutSections, setShowAboutSections] = useState(false);
 
   const [manualInput, setManualInput] = useState('');

@@ -1,10 +1,9 @@
-import { Star, MapPin, Clock3, Phone, Globe, ExternalLink } from 'lucide-react';
+import { Star, MapPin, Clock3, Phone } from 'lucide-react';
 import type { Restaurant } from '@/types';
 import { foodCategories } from '@/data/restaurants';
 import { PhotoCarousel } from '@/components/PhotoCarousel';
 import { ReviewSnippets } from '@/components/ReviewSnippets';
 import { getSmartHoursLabel } from '@/lib/smartHours';
-import { getOrderingLinks } from '@/lib/orderingLinks';
 import {
   Drawer,
   DrawerContent,
@@ -22,7 +21,7 @@ interface RestaurantDetailDrawerProps {
 
 /**
  * Full-detail bottom drawer for a restaurant.
- * Composes: photo carousel, hours, reviews, ordering links, map link.
+ * Composes: photo carousel, hours, reviews, map link.
  */
 export function RestaurantDetailDrawer({
   restaurant,
@@ -33,11 +32,10 @@ export function RestaurantDetailDrawer({
 
   const hoursInfo = getSmartHoursLabel(restaurant);
   const allPhotos = restaurant.photos ?? (restaurant.image ? [restaurant.image] : []);
-  const orderLinks = getOrderingLinks(restaurant.name, restaurant.coordinates);
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[90vh]">
+      <DrawerContent className="max-h-[90vh] mx-auto max-w-lg">
         <div className="overflow-y-auto">
           {/* Photo carousel — full width */}
           {allPhotos.length > 0 && (
@@ -200,45 +198,16 @@ export function RestaurantDetailDrawer({
             )}
 
             {/* Action buttons */}
-            <div className="space-y-2 pt-2">
-              {/* Navigate + Website */}
-              <div className="flex gap-2">
-                {restaurant.googleMapsUri && (
-                  <Button
-                    className="flex-1 h-11 bg-brand-orange hover:bg-brand-orange/90 text-white font-heading font-bold rounded-xl"
-                    onClick={() => window.open(restaurant.googleMapsUri, '_blank', 'noopener,noreferrer')}
-                  >
-                    <MapPin size={16} className="mr-1.5" />
-                    Open in Maps
-                  </Button>
-                )}
-                {restaurant.websiteUri && (
-                  <Button
-                    variant="outline"
-                    className="flex-1 h-11 rounded-xl border-eatspin-gray-3 text-eatspin-gray-1 hover:bg-gray-50"
-                    onClick={() => window.open(restaurant.websiteUri, '_blank', 'noopener,noreferrer')}
-                  >
-                    <Globe size={16} className="mr-1.5" />
-                    Website
-                  </Button>
-                )}
-              </div>
-
-              {/* Ordering platform links */}
-              <div className="flex gap-2">
-                {orderLinks.map((link) => (
-                  <a
-                    key={link.platform}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 h-9 rounded-xl border border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-1.5 text-xs font-medium text-eatspin-gray-1 transition-colors"
-                  >
-                    {link.emoji} {link.label}
-                    <ExternalLink size={10} className="opacity-50" />
-                  </a>
-                ))}
-              </div>
+            <div className="pt-2">
+              {restaurant.googleMapsUri && (
+                <Button
+                  className="w-full h-11 bg-brand-orange hover:bg-brand-orange/90 text-white font-heading font-bold rounded-xl"
+                  onClick={() => window.open(restaurant.googleMapsUri, '_blank', 'noopener,noreferrer')}
+                >
+                  <MapPin size={16} className="mr-1.5" />
+                  Open in Maps
+                </Button>
+              )}
             </div>
           </div>
         </div>

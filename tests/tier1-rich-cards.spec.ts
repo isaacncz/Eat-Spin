@@ -85,23 +85,6 @@ test.describe('Result card — Tier 1 UI elements', () => {
     expect(starsRendered).toBeTruthy();
   });
 
-  test('ordering links construct valid URLs', async ({ page }) => {
-    await page.goto('/');
-
-    const urls = await page.evaluate(() => {
-      const name = 'Chicken Rice Shop';
-      const encoded = encodeURIComponent(name);
-      return {
-        grabfood: `https://food.grab.com/search?q=${encoded}`,
-        foodpanda: `https://www.foodpanda.com/search?q=${encoded}`,
-      };
-    });
-
-    expect(urls.grabfood).toContain('Chicken%20Rice%20Shop');
-    expect(urls.foodpanda).toContain('Chicken%20Rice%20Shop');
-    expect(urls.grabfood).toMatch(/^https:\/\/food\.grab\.com/);
-    expect(urls.foodpanda).toMatch(/^https:\/\/www\.foodpanda\.com/);
-  });
 });
 
 test.describe('RestaurantDetailDrawer', () => {

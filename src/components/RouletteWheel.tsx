@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Heart, Navigation, Share2, Volume2, VolumeX, Globe } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Heart, Navigation, Share2, Volume2, VolumeX } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
@@ -141,7 +141,6 @@ const loadSoundPreference = (): boolean => {
 
 
 import { getSmartHoursLabel } from '@/lib/smartHours';
-import { getOrderingLinks } from '@/lib/orderingLinks';
 
 const getOpeningHoursLabel = (restaurant: Restaurant): string => {
   return getSmartHoursLabel(restaurant).label;
@@ -1011,16 +1010,6 @@ export function RouletteWheel({
                     Share
                   </Button>
                 )}
-                {spinResult.websiteUri && (
-                  <Button
-                    variant="outline"
-                    className="h-12 w-12 rounded-xl border-eatspin-gray-3 text-eatspin-gray-1 hover:bg-eatspin-gray-3/30 shrink-0"
-                    onClick={() => window.open(spinResult.websiteUri, '_blank', 'noopener,noreferrer')}
-                    title="Visit website"
-                  >
-                    <Globe size={18} />
-                  </Button>
-                )}
               </div>
 
               {/* Save + Spin Again row */}
@@ -1068,23 +1057,6 @@ export function RouletteWheel({
                 >
                   See full details
                 </Button>
-              )}
-
-              {/* Ordering platform links */}
-              {!isManualResult && (
-                <div className="flex gap-2">
-                  {getOrderingLinks(spinResult.name, spinResult.coordinates).map((link) => (
-                    <a
-                      key={link.platform}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 h-9 rounded-xl border border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-1.5 text-[11px] font-medium text-eatspin-gray-1 transition-colors"
-                    >
-                      {link.emoji} Order on {link.label}
-                    </a>
-                  ))}
-                </div>
               )}
             </div>
           </div>

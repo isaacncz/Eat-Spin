@@ -918,6 +918,34 @@ export function RouletteWheel({
                 </div>
               )}
 
+              {/* Vibe / context tags */}
+              {(spinResult.goodForGroups || spinResult.goodForChildren || spinResult.outdoorSeating) && (
+                <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+                  {spinResult.goodForGroups && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                      👥 Groups
+                    </span>
+                  )}
+                  {spinResult.goodForChildren && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-cyan-50 text-cyan-700 border border-cyan-200">
+                      👶 Kids
+                    </span>
+                  )}
+                  {spinResult.outdoorSeating && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-50 text-green-700 border border-green-200">
+                      🌿 Outdoor
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* AI-generated summary */}
+              {spinResult.generativeSummary && (
+                <p className="mt-3 text-xs italic text-eatspin-gray-1 leading-relaxed px-2">
+                  "{spinResult.generativeSummary}"
+                </p>
+              )}
+
               {/* Branded footer - visible in screenshots */}
               <div className="mt-4 pt-3 border-t border-eatspin-peach/40 flex items-center justify-center gap-2">
                 <span className="text-xs font-bold text-brand-orange">🍴 EatSpin</span>

@@ -6,6 +6,7 @@ import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
 import { playSpinTick, playSpinWin, startSpinDrumroll, stopSpinDrumroll, triggerSpinHaptic } from '@/lib/spinAudio';
 import { PhotoCarousel } from '@/components/PhotoCarousel';
+import { ReviewSnippets } from '@/components/ReviewSnippets';
 
 interface RouletteWheelProps {
   restaurants: Restaurant[];
@@ -965,6 +966,11 @@ export function RouletteWheel({
                 <p className="mt-3 text-xs italic text-eatspin-gray-1 leading-relaxed px-2">
                   "{spinResult.generativeSummary}"
                 </p>
+              )}
+
+              {/* Google reviews */}
+              {spinResult.reviews && spinResult.reviews.length > 0 && (
+                <ReviewSnippets reviews={spinResult.reviews} initialCount={2} />
               )}
 
               {/* Branded footer - visible in screenshots */}

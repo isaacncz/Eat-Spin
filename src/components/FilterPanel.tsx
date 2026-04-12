@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { ChevronDown, MapPin, Loader2 } from 'lucide-react';
 import { FoodCategorySelector } from '@/components/FoodCategorySelector';
+import { ServesFilterPills } from '@/components/ServesFilterPills';
 import {
   AUTO_RANGE_OPTIONS,
   type AutoRangeMode,
 } from '@/contexts/AppContext';
+import type { ServesFilterId } from '@/lib/servesFilters';
 import type { FoodCategory, Restaurant } from '@/types';
 
 // ── Short pill labels for compact display ────────────────────────────────
@@ -43,6 +45,10 @@ export interface FilterPanelProps {
 
   /** Visit counts per category from favourites — used to boost popular categories. */
   favouriteCategoryCounts?: Partial<Record<FoodCategory, number>>;
+
+  // Serves-filter pills
+  activeServesFilters: ServesFilterId[];
+  onToggleServesFilter: (id: ServesFilterId) => void;
 }
 
 // ── Component ────────────────────────────────────────────────────────────
@@ -61,6 +67,8 @@ export function FilterPanel({
   closingSoonCount,
   closedNowCount,
   favouriteCategoryCounts,
+  activeServesFilters,
+  onToggleServesFilter,
 }: FilterPanelProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -153,6 +161,17 @@ export function FilterPanel({
             Some places may not appear if Google hasn't mapped their price tier.
           </span>
         )}
+      </div>
+
+      {/* ── Serves-filter pills ───────────────────────────────────── */}
+      <div className="mb-3">
+        <p className="mb-1.5 text-xs font-medium text-eatspin-gray-2">
+          I'm looking for…
+        </p>
+        <ServesFilterPills
+          activeFilters={activeServesFilters}
+          onToggle={onToggleServesFilter}
+        />
       </div>
 
       {/* ── Availability hint ──────────────────────────────────────── */}

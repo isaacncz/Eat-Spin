@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { MapPin, Users, Sparkles, Loader2, Search } from 'lucide-react';
+import { MapPin, Users, Sparkles, Loader2, Search, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { trackEvent } from '@/lib/analytics';
-import { ServesFilterPills } from '@/components/ServesFilterPills';
 import { CravingSearch } from '@/components/CravingSearch';
-import type { ServesFilterId } from '@/lib/servesFilters';
 import type { MealTime, Restaurant } from '@/types';
 
 // ---------------------------------------------------------------------------
@@ -24,8 +22,10 @@ export interface QuickSpinHeroProps {
   locationError: string | null;
   restaurantCount: number;
   onGroupSpin: () => void;
-  activeServesFilters: ServesFilterId[];
-  onToggleServesFilter: (id: ServesFilterId) => void;
+  // Restaurant context (so hero can surface 0-results reason)
+  isLoadingRestaurants: boolean;
+  totalNearbyCount: number;
+  closedNowCount: number;
   // Craving search
   searchQuery: string;
   onSearch: (text: string) => void;
@@ -80,8 +80,9 @@ export function QuickSpinHero({
   locationError,
   restaurantCount,
   onGroupSpin,
-  activeServesFilters,
-  onToggleServesFilter,
+  isLoadingRestaurants,
+  totalNearbyCount,
+  closedNowCount,
   searchQuery,
   onSearch,
   searchResults,
@@ -195,16 +196,45 @@ export function QuickSpinHero({
           })}
         </div>
 
-        {/* ── Serves-filter pills ──────────────────────────────────── */}
-        {hasLocation && (
+        {/* ── Restaurant context (surface 0-results in hero) ──────── */}
+        {hasLocation && !isSearchMode && (
           <div className="w-full hero-enter hero-enter-delay-2">
-            <p className="mb-2 text-center text-xs font-medium text-[var(--eatspin-gray-2)]">
-              I'm looking for…
-            </p>
-            <ServesFilterPills
-              activeFilters={activeServesFilters}
-              onToggle={onToggleServesFilter}
-            />
+            {isLoadingRestaurants ? (
+              <p className="flex items-center justify-center gap-2 text-xs text-[var(--eatspin-gray-2)]">
+                <Loader2 className="size-3.5 animate-spin" />
+                Finding restaurants nearby…
+              </p>
+            ) : restaurantCount === 0 && totalNearbyCount > 0 && closedNowCount > 0 ? (
+              /* All closed */
+              <div className="rounded-xl border border-[var(--eatspin-gray-3)] bg-white/80 px-4 py-3 text-center">
+                <p className="flex items-center justify-center gap-1.5 text-sm font-medium text-[var(--eatspin-black)]">
+                  <Moon className="size-4 text-[var(--eatspin-gray-1)]" />
+                  {closedNowCount} place{closedNowCount === 1 ? '' : 's'} nearby — all closed now
+                </p>
+                <p className="mt-1 text-xs text-[var(--eatspin-gray-2)]">
+                  Check back during meal hours, or search for what's open
+                </p>
+              </div>
+            ) : restaurantCount === 0 && totalNearbyCount > 0 ? (
+              /* Filtered to 0 */
+              <div className="rounded-xl border border-[var(--eatspin-peach)]/60 bg-white/80 px-4 py-3 text-center">
+                <p className="text-sm font-medium text-[var(--eatspin-black)]">
+                  😕 No restaurants match your current filters
+                </p>
+                <p className="mt-1 text-xs text-[var(--eatspin-gray-2)]">
+                  Try different categories or scroll down to adjust filters
+                </p>
+              </div>
+            ) : restaurantCount > 0 ? (
+              /* Happy path */
+              <p className="flex items-center justify-center gap-1.5 text-xs font-medium text-[var(--eatspin-gray-1)] sm:text-sm">
+                <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full
+                                 bg-brand-orange/10 px-1.5 text-[11px] font-bold text-brand-orange">
+                  {restaurantCount}
+                </span>
+                restaurants ready nearby
+              </p>
+            ) : null}
           </div>
         )}
 
@@ -240,24 +270,32 @@ export function QuickSpinHero({
               {/* SPIN NOW button */}
               <Button
                 onClick={handleSpin}
-                disabled={isSpinning}
-                className="group relative h-16 w-full rounded-2xl bg-brand-orange text-lg font-bold
-                           text-white shadow-lg transition-all duration-300
-                           hover:scale-105 hover:shadow-xl
-                           disabled:opacity-70 disabled:hover:scale-100
-                           sm:h-[72px] sm:text-xl font-heading
-                           animate-cta-pulse"
+                disabled={isSpinning || restaurantCount === 0}
+                className={`group relative h-16 w-full rounded-2xl text-lg font-bold
+                            text-white shadow-lg transition-all duration-300
+                            disabled:opacity-70 disabled:hover:scale-100
+                            sm:h-[72px] sm:text-xl font-heading
+                            ${restaurantCount > 0
+                              ? 'bg-brand-orange hover:scale-105 hover:shadow-xl animate-cta-pulse'
+                              : 'bg-[var(--eatspin-gray-2)] cursor-not-allowed'
+                            }`}
               >
-                {/* Pulsing ring behind the button */}
-                <span
-                  className="absolute inset-0 -z-10 rounded-2xl animate-pulse-ring"
-                  aria-hidden
-                />
+                {/* Pulsing ring (only when spinnable) */}
+                {restaurantCount > 0 && (
+                  <span
+                    className="absolute inset-0 -z-10 rounded-2xl animate-pulse-ring"
+                    aria-hidden
+                  />
+                )}
 
                 {isSpinning ? (
                   <span className="flex items-center gap-2">
                     <Loader2 className="size-5 animate-spin" />
                     Spinning…
+                  </span>
+                ) : restaurantCount === 0 ? (
+                  <span className="flex items-center gap-2 opacity-80">
+                    No restaurants to spin
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
@@ -266,17 +304,6 @@ export function QuickSpinHero({
                   </span>
                 )}
               </Button>
-
-              {/* Restaurant count badge */}
-              {restaurantCount > 0 && (
-                <p className="flex items-center gap-1.5 text-xs font-medium text-[var(--eatspin-gray-1)] sm:text-sm">
-                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full
-                                   bg-brand-orange/10 px-1.5 text-[11px] font-bold text-brand-orange">
-                    {restaurantCount}
-                  </span>
-                  restaurants ready nearby
-                </p>
-              )}
 
               {/* Search toggle link */}
               <button
@@ -349,8 +376,8 @@ export function QuickSpinHero({
           </div>
         )}
 
-        {/* ── Scroll indicator ──────────────────────────────────────── */}
-        {hasLocation && (
+        {/* ── Scroll indicator (hide when nothing to customize) ────── */}
+        {hasLocation && restaurantCount > 0 && (
           <div className="mt-auto pt-4 hero-enter hero-enter-delay-4">
             <button
               onClick={() => {

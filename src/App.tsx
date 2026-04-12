@@ -1467,8 +1467,9 @@ function App() {
         locationError={locationError}
         restaurantCount={roundRestaurants.length}
         onGroupSpin={() => { trackEvent('hero_group_spin'); scrollToSection('group-spin'); }}
-        activeServesFilters={activeServesFilters}
-        onToggleServesFilter={handleToggleServesFilter}
+        isLoadingRestaurants={nearbyRestaurantsLoading}
+        totalNearbyCount={autoSourceRestaurants.length}
+        closedNowCount={closedNowExcludedCount}
         searchQuery={textSearch.query}
         onSearch={textSearch.search}
         searchResults={textSearch.results}
@@ -1543,6 +1544,8 @@ function App() {
                   closingSoonCount={closingSoonExcludedCount}
                   closedNowCount={closedNowExcludedCount}
                   favouriteCategoryCounts={favouriteCategoryCounts}
+                  activeServesFilters={activeServesFilters}
+                  onToggleServesFilter={handleToggleServesFilter}
                 />
               )}
 

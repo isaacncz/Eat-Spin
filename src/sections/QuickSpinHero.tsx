@@ -285,9 +285,10 @@ export function QuickSpinHero({
                   trackEvent('search_mode_open');
                 }}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold
-                           text-eatspin-gray-2 transition-colors hover:text-brand-orange"
+                           text-brand-orange underline underline-offset-2
+                           transition-colors hover:text-brand-orange/80"
               >
-                <Search size={14} />
+                <Search size={16} />
                 Know what you want? Search instead
               </button>
             </>

@@ -19,8 +19,8 @@ export function ServesFilterPills({ activeFilters, onToggle }: ServesFilterPills
             key={id}
             onClick={() => onToggle(id)}
             aria-pressed={isActive}
-            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5
-                        text-xs font-semibold transition-all duration-200
+            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2.5
+                        min-h-[44px] text-xs font-semibold transition-all duration-200
                         hover:scale-[1.04] active:scale-[0.97]
                         ${
                           isActive

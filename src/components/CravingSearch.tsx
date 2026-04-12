@@ -118,8 +118,8 @@ export function CravingSearch({
                 key={s}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => onSearch(s)}
-                className="rounded-full border border-eatspin-gray-3 px-3 py-1 text-xs
-                           text-eatspin-gray-1 hover:border-brand-orange hover:text-brand-orange
+                className="rounded-full border border-eatspin-gray-3 px-3.5 py-2 text-xs
+                           min-h-[44px] text-eatspin-gray-1 hover:border-brand-orange hover:text-brand-orange
                            transition-all"
               >
                 {s}
@@ -138,8 +138,8 @@ export function CravingSearch({
               <button
                 key={chip.query}
                 onClick={() => onSearch(chip.query)}
-                className="rounded-full border border-eatspin-gray-3 bg-white px-3 py-1.5
-                           text-xs font-semibold text-eatspin-gray-1
+                className="rounded-full border border-eatspin-gray-3 bg-white px-3.5 py-2.5
+                           min-h-[44px] text-xs font-semibold text-eatspin-gray-1
                            hover:border-brand-orange hover:text-brand-orange
                            hover:scale-[1.04] active:scale-[0.97] transition-all"
               >

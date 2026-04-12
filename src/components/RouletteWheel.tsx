@@ -138,20 +138,10 @@ const loadSoundPreference = (): boolean => {
 };
 
 
+import { getSmartHoursLabel } from '@/lib/smartHours';
+
 const getOpeningHoursLabel = (restaurant: Restaurant): string => {
-  const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-  const dayKey = dayOrder[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
-  const todayHours = restaurant.hours[dayKey];
-  const dailyHours = restaurant.hours.daily;
-  const fallbackHours = Object.values(restaurant.hours)[0];
-  const selectedHours = todayHours ?? dailyHours ?? fallbackHours;
-
-  if (!selectedHours || selectedHours.closed || selectedHours.windows.length === 0) {
-    return 'Closed today';
-  }
-
-  const windowsLabel = selectedHours.windows.map((window) => `${window.open}-${window.close}`).join(', ');
-  return `Open ${windowsLabel}`;
+  return getSmartHoursLabel(restaurant).label;
 };
 
 export function RouletteWheel({
@@ -867,10 +857,34 @@ export function RouletteWheel({
                   )}
                 </div>
 
-                <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                  <Clock3 size={16} className="text-brand-orange flex-shrink-0" />
-                  <span>{getOpeningHoursLabel(spinResult)}</span>
-                </div>
+                {(() => {
+                  const hoursInfo = getSmartHoursLabel(spinResult);
+                  return (
+                    <div className="flex items-center justify-center gap-2">
+                      <Clock3
+                        size={16}
+                        className={
+                          hoursInfo.status === 'closing-soon'
+                            ? 'text-amber-500 flex-shrink-0'
+                            : hoursInfo.status === 'closed'
+                              ? 'text-red-400 flex-shrink-0'
+                              : 'text-brand-orange flex-shrink-0'
+                        }
+                      />
+                      <span
+                        className={
+                          hoursInfo.status === 'closing-soon'
+                            ? 'text-amber-600 font-medium'
+                            : hoursInfo.status === 'closed'
+                              ? 'text-red-400'
+                              : 'text-eatspin-gray-1'
+                        }
+                      >
+                        {hoursInfo.label}
+                      </span>
+                    </div>
+                  );
+                })()}
                 
                 {spinResult.phone && (
                   <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">

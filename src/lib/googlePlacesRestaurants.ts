@@ -240,7 +240,7 @@ const googleTypeToCategory = new Map<string, FoodCategory>([
   ['seafood_restaurant', 'seafood'],
   ['chicken_restaurant', 'chicken'],
   ['steak_house', 'beef'],
-  ['barbecue_restaurant', 'beef'],
+  ['barbecue_restaurant', 'bbq'],
   ['vegetarian_restaurant', 'vegetarian'],
   ['vegan_restaurant', 'vegetarian'],
   ['cafe', 'cafe'],
@@ -250,16 +250,17 @@ const googleTypeToCategory = new Map<string, FoodCategory>([
   ['dessert_shop', 'dessert'],
   ['ice_cream_shop', 'dessert'],
   ['breakfast_restaurant', 'breakfast'],
-  ['brunch_restaurant', 'breakfast'],
+  ['brunch_restaurant', 'brunch'],
   ['american_restaurant', 'western'],
   ['italian_restaurant', 'western'],
   ['french_restaurant', 'western'],
   ['hamburger_restaurant', 'western'],
-  ['pizza_restaurant', 'western'],
+  ['pizza_restaurant', 'pizza'],
   ['sandwich_shop', 'western'],
   ['mediterranean_restaurant', 'western'],
   ['mexican_restaurant', 'western'],
   ['spanish_restaurant', 'western'],
+  ['fast_food_restaurant', 'fast-food'],
 ]);
 
 // ---------------------------------------------------------------------------
@@ -275,26 +276,30 @@ const googleTypeToCategory = new Map<string, FoodCategory>([
  * classifier in categoryClassifier.ts handles sub-filtering.
  */
 const CATEGORY_TO_GOOGLE_TYPES: Partial<Record<FoodCategory, string[]>> = {
-  chinese:    ['chinese_restaurant'],
-  indian:     ['indian_restaurant'],
-  japanese:   ['japanese_restaurant', 'sushi_restaurant', 'ramen_restaurant'],
-  korean:     ['korean_restaurant'],
-  thai:       ['thai_restaurant'],
-  malay:      ['malaysian_restaurant'],
-  western:    ['american_restaurant', 'italian_restaurant', 'french_restaurant',
-               'hamburger_restaurant', 'pizza_restaurant', 'steak_house',
-               'sandwich_shop', 'mediterranean_restaurant', 'mexican_restaurant',
-               'spanish_restaurant'],
-  cafe:       ['cafe', 'coffee_shop'],
-  bakery:     ['bakery'],
-  dessert:    ['dessert_restaurant', 'ice_cream_shop', 'bakery'],
-  seafood:    ['seafood_restaurant'],
-  chicken:    ['chicken_restaurant', 'fast_food_restaurant'],
-  beef:       ['steak_house', 'barbecue_restaurant'],
-  vegetarian: ['vegetarian_restaurant', 'vegan_restaurant'],
-  breakfast:  ['breakfast_restaurant', 'brunch_restaurant'],
-  // No Google types for these — use generic 'restaurant' + heuristic post-filter
-  // soup, rice, noodles, 'street food'
+  chinese:      ['chinese_restaurant'],
+  indian:       ['indian_restaurant'],
+  japanese:     ['japanese_restaurant', 'sushi_restaurant', 'ramen_restaurant'],
+  korean:       ['korean_restaurant'],
+  thai:         ['thai_restaurant'],
+  malay:        ['malaysian_restaurant'],
+  western:      ['american_restaurant', 'italian_restaurant', 'french_restaurant',
+                 'hamburger_restaurant', 'steak_house',
+                 'sandwich_shop', 'mediterranean_restaurant', 'mexican_restaurant',
+                 'spanish_restaurant'],
+  cafe:         ['cafe', 'coffee_shop'],
+  bakery:       ['bakery'],
+  dessert:      ['dessert_restaurant', 'ice_cream_shop', 'bakery'],
+  seafood:      ['seafood_restaurant'],
+  chicken:      ['chicken_restaurant'],
+  beef:         ['steak_house'],
+  vegetarian:   ['vegetarian_restaurant', 'vegan_restaurant'],
+  breakfast:    ['breakfast_restaurant'],
+  brunch:       ['brunch_restaurant', 'breakfast_restaurant'],
+  pizza:        ['pizza_restaurant'],
+  'fast-food':  ['fast_food_restaurant'],
+  bbq:          ['barbecue_restaurant'],
+  hotpot:       ['chinese_restaurant'],
+  'bubble-tea': ['cafe'],
 };
 
 /**
@@ -359,7 +364,7 @@ export const getGoogleApiKey = (): string => {
 const CUISINE_CATEGORIES: ReadonlySet<FoodCategory> = new Set([
   'western', 'chinese', 'malay', 'indian', 'thai', 'japanese', 'korean',
   'cafe', 'bakery', 'dessert', 'seafood', 'vegetarian', 'breakfast',
-  'chicken', 'beef',
+  'chicken', 'beef', 'bubble-tea', 'pizza', 'fast-food', 'hotpot', 'bbq', 'brunch',
 ]);
 
 /**

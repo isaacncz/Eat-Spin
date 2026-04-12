@@ -27,7 +27,7 @@ import type { CategoryConfidence, FoodCategory, Restaurant } from '@/types';
 const CUISINE_CATEGORIES: ReadonlySet<FoodCategory> = new Set([
   'western', 'chinese', 'malay', 'indian', 'thai', 'japanese', 'korean',
   'cafe', 'bakery', 'dessert', 'seafood', 'vegetarian', 'breakfast',
-  'chicken', 'beef',
+  'chicken', 'beef', 'bubble-tea', 'pizza', 'fast-food', 'hotpot', 'bbq', 'brunch',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -441,11 +441,87 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
   breakfast: {
     namePatterns: [
       /breakfast/i,
-      /brunch/i,
       /\bsarapan\b/i,
       /morning/i,
     ],
-    googleTypes: ['breakfast_restaurant', 'brunch_restaurant'],
+    googleTypes: ['breakfast_restaurant'],
+  },
+
+  brunch: {
+    namePatterns: [
+      /brunch/i,
+      /\bbrunchery\b/i,
+    ],
+    googleTypes: ['brunch_restaurant'],
+  },
+
+  'bubble-tea': {
+    namePatterns: [
+      /bubble[\s-]?tea/i,
+      /boba/i,
+      /\bmilk[\s-]?tea\b/i,
+      /\btealive\b/i,
+      /\bgong[\s-]?cha\b/i,
+      /\btiger[\s-]?sugar\b/i,
+      /\bkoi\b/i,
+      /\bli[\s-]?ho\b/i,
+      /\beach[\s-]?a[\s-]?cup\b/i,
+      /\bcoco[\s-]?tea\b/i,
+    ],
+    googleTypes: [],
+  },
+
+  pizza: {
+    namePatterns: [
+      /pizza/i,
+      /pizzeria/i,
+      /\bdomino/i,
+      /\bpizza[\s-]?hut\b/i,
+    ],
+    googleTypes: ['pizza_restaurant'],
+  },
+
+  'fast-food': {
+    namePatterns: [
+      /fast[\s-]?food/i,
+      /\bmcdonald/i,
+      /\bkfc\b/i,
+      /\bburger[\s-]?king\b/i,
+      /\bsubway\b/i,
+      /\bwendy/i,
+      /\btaco[\s-]?bell\b/i,
+      /\bjollibee\b/i,
+      /\bpopeyes\b/i,
+      /\ba&w\b/i,
+      /\bcarl/i,
+    ],
+    googleTypes: ['fast_food_restaurant'],
+  },
+
+  hotpot: {
+    namePatterns: [
+      /hot[\s-]?pot/i,
+      /steamboat/i,
+      /\bshabu/i,
+      /\bhaidilao\b/i,
+      /\bsuki\b/i,
+      /\bmala[\s-]?tang\b/i,
+    ],
+    googleTypes: [],
+  },
+
+  bbq: {
+    namePatterns: [
+      /\bbbq\b/i,
+      /barbecue/i,
+      /\bgrill(?:ed)?\b/i,
+      /yakiniku/i,
+      /\bsmoke[\s-]?house\b/i,
+      /\bsamgyeopsal\b/i,
+      /\bkbbq\b/i,
+      /korean[\s-]?bbq/i,
+    ],
+    googleTypes: ['barbecue_restaurant'],
   },
 };
 

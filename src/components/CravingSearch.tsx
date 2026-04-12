@@ -152,8 +152,17 @@ export function CravingSearch({
 
       {/* ── Error state ───────────────────────────────────────── */}
       {error && (
-        <div className="rounded-xl bg-red-50 p-4 text-center text-sm text-red-600">
-          {error}
+        <div className="rounded-xl bg-red-50 p-5 text-center">
+          <p className="text-2xl">😵</p>
+          <p className="mt-2 text-sm font-medium text-red-600">{error}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() => onSearch(query)}
+          >
+            🔄 Tap to retry
+          </Button>
         </div>
       )}
 

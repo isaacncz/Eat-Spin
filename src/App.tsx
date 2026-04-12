@@ -25,7 +25,7 @@ import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { SpinLimitWarning } from '@/components/SpinLimitWarning';
 import { AppNavbar } from '@/sections/AppNavbar';
 import { QuickSpinHero, type FoodMood } from '@/sections/QuickSpinHero';
-import { applyServesFilters, type ServesFilterId } from '@/lib/servesFilters';
+import { applyServesFilters, SERVES_FILTERS, type ServesFilterId } from '@/lib/servesFilters';
 import { getTimeOfDayFilters } from '@/lib/timeOfDayDefaults';
 import { FilterPanel } from '@/components/FilterPanel';
 import { Footer } from '@/sections/Footer';
@@ -571,6 +571,14 @@ function App() {
   }, [closedNowExcludedCount, closingSoonExcludedCount]);
 
   const autoEmptyStateSubtitle = useMemo(() => {
+    // Check if serves-filters are the culprit
+    if (activeServesFilters.length > 0 && filterResult.results.length > 0 && filteredRestaurants.length === 0) {
+      const labels = activeServesFilters.map(
+        (id) => SERVES_FILTERS.find((f) => f.id === id)?.label ?? id,
+      );
+      return `None of the nearby places match your ${labels.join(' + ')} filter${labels.length > 1 ? 's' : ''}. Try removing a filter pill.`;
+    }
+
     if (closingSoonExcludedCount > 0 && filteredRestaurants.length === 0) {
       return `Everything nearby is either closed or shutting within ${AUTO_SPIN_MINUTES_UNTIL_CLOSE_CUTOFF} min. Try a wider range or check back soon.`;
     }
@@ -580,7 +588,7 @@ function App() {
     }
 
     return 'Try selecting different categories or check back during meal hours';
-  }, [closedNowExcludedCount, closingSoonExcludedCount, filteredRestaurants.length]);
+  }, [closedNowExcludedCount, closingSoonExcludedCount, filteredRestaurants.length, activeServesFilters, filterResult.results.length]);
 
   const roundRestaurants = useMemo(() => (
     filteredRestaurants.filter((restaurant) => !roundRemovedRestaurantIds.includes(restaurant.id))
@@ -1540,8 +1548,11 @@ function App() {
 
               {/* Empty state */}
               {location && filteredRestaurants.length === 0 && !nearbyRestaurantsLoading && autoSourceRestaurants.length > 0 && (
-                <div className="mb-5 mt-4 rounded-2xl border border-eatspin-peach/60 bg-white p-4 text-center">
-                  <p className="text-sm font-medium text-brand-black">
+                <div className="mb-5 mt-4 rounded-2xl border border-eatspin-peach/60 bg-white p-5 text-center">
+                  <p className="text-2xl">
+                    {activeServesFilters.length > 0 ? '🔍' : '😕'}
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-brand-black">
                     {closingSoonExcludedCount > 0 || closedNowExcludedCount > 0
                       ? 'No open spots left for the wheel right now.'
                       : 'No matches — try clearing a filter.'}

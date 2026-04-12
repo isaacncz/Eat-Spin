@@ -32,6 +32,10 @@ export const GOOGLE_PLACE_FIELDS = [
   'places.servesDinner',
   'places.servesDessert',
   'places.servesVegetarianFood',
+  'places.goodForGroups',
+  'places.goodForChildren',
+  'places.outdoorSeating',
+  'places.generativeSummary',
 ].join(',');
 const DEFAULT_MAX_RESULTS = 20;
 
@@ -143,6 +147,10 @@ export type GooglePlace = {
   servesDinner?: boolean;
   servesDessert?: boolean;
   servesVegetarianFood?: boolean;
+  goodForGroups?: boolean;
+  goodForChildren?: boolean;
+  outdoorSeating?: boolean;
+  generativeSummary?: { overview?: { text?: string } };
 };
 
 type GoogleNearbyResponse = {
@@ -508,6 +516,10 @@ export const normalizeGooglePlace = (
     servesDinner: place.servesDinner,
     servesDessert: place.servesDessert,
     servesVegetarianFood: place.servesVegetarianFood,
+    goodForGroups: place.goodForGroups,
+    goodForChildren: place.goodForChildren,
+    outdoorSeating: place.outdoorSeating,
+    generativeSummary: place.generativeSummary?.overview?.text?.trim(),
   };
 };
 

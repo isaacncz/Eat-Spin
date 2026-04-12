@@ -45,6 +45,14 @@ export interface Restaurant {
   servesDessert?: boolean;
   /** Whether the place serves vegetarian food. */
   servesVegetarianFood?: boolean;
+  /** Whether the place is good for groups. */
+  goodForGroups?: boolean;
+  /** Whether the place is good for children. */
+  goodForChildren?: boolean;
+  /** Whether the place has outdoor seating. */
+  outdoorSeating?: boolean;
+  /** AI-generated summary from Google. */
+  generativeSummary?: string;
   /**
    * How confident the classification pipeline is about this restaurant's categories.
    * - `high`: primaryType or cuisine-specific API query confirms the category

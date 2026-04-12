@@ -6,7 +6,7 @@ test.use({
   permissions: ['geolocation'],
 });
 
-test.describe('Serves-filter pills', () => {
+test.describe('Serves-filter pills (in FilterPanel)', () => {
   test.beforeEach(async ({ page }) => {
     // Skip the first-run onboarding modal
     await page.addInitScript(() => {
@@ -39,10 +39,10 @@ test.describe('Serves-filter pills', () => {
       await locationBtn.click();
     }
 
-    // Wait for pills to appear
-    await expect(page.getByText(/i'm looking for/i)).toBeVisible({
-      timeout: 15_000,
-    });
+    // Scroll down to the filter panel where pills now live
+    const filterPanel = page.getByText(/i'm looking for/i);
+    await expect(filterPanel).toBeVisible({ timeout: 15_000 });
+    await filterPanel.scrollIntoViewIfNeeded();
   });
 
   test('filter pill group renders with correct ARIA role', async ({ page }) => {

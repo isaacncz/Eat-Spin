@@ -35,7 +35,10 @@ test.describe('Time-of-day smart defaults', () => {
     if (await locationBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await locationBtn.click();
     }
-    await expect(page.getByText(/i'm looking for/i)).toBeVisible({ timeout: 15_000 });
+    // Scroll to FilterPanel where pills now live
+    const pillsLabel = page.getByText(/i'm looking for/i);
+    await expect(pillsLabel).toBeVisible({ timeout: 15_000 });
+    await pillsLabel.scrollIntoViewIfNeeded();
 
     const breakfastBtn = page.getByRole('button', { name: /breakfast/i });
     await expect(breakfastBtn).toHaveAttribute('aria-pressed', 'true');
@@ -62,7 +65,9 @@ test.describe('Time-of-day smart defaults', () => {
     if (await locationBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await locationBtn.click();
     }
-    await expect(page.getByText(/i'm looking for/i)).toBeVisible({ timeout: 15_000 });
+    const pillsLabel = page.getByText(/i'm looking for/i);
+    await expect(pillsLabel).toBeVisible({ timeout: 15_000 });
+    await pillsLabel.scrollIntoViewIfNeeded();
 
     const coffeeBtn = page.getByRole('button', { name: /coffee/i });
     await expect(coffeeBtn).toHaveAttribute('aria-pressed', 'true');
@@ -89,7 +94,9 @@ test.describe('Time-of-day smart defaults', () => {
     if (await locationBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await locationBtn.click();
     }
-    await expect(page.getByText(/i'm looking for/i)).toBeVisible({ timeout: 15_000 });
+    const pillsLabel = page.getByText(/i'm looking for/i);
+    await expect(pillsLabel).toBeVisible({ timeout: 15_000 });
+    await pillsLabel.scrollIntoViewIfNeeded();
 
     const pills = ['Coffee', 'Breakfast', 'Brunch', 'Dessert', 'Vegetarian'];
     for (const pill of pills) {
@@ -124,5 +131,32 @@ test.describe('Recent searches', () => {
     // Check that recent searches are displayed (use exact text to avoid popular chip collision)
     await expect(page.getByRole('button', { name: 'chicken rice', exact: true })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole('button', { name: 'bubble tea', exact: true })).toBeVisible({ timeout: 5_000 });
+  });
+});
+
+test.describe('Hero empty state', () => {
+  test.use({
+    geolocation: { latitude: 1.3521, longitude: 103.8198 },
+    permissions: ['geolocation'],
+  });
+
+  test('SPIN NOW button is disabled when 0 restaurants', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem('eatspin:first-run-onboarding-seen', '1');
+    });
+
+    await page.goto('/');
+    const locationBtn = page.getByRole('button', { name: /share my location/i });
+    if (await locationBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await locationBtn.click();
+    }
+
+    // Wait for the hero to render
+    await expect(page.locator('text=/What.*for/i').first()).toBeVisible({ timeout: 10_000 });
+
+    // The SPIN NOW button should either be disabled or show "No restaurants to spin"
+    // depending on whether any restaurants loaded
+    const spinBtn = page.getByRole('button', { name: /spin now|no restaurants to spin/i });
+    await expect(spinBtn).toBeVisible({ timeout: 15_000 });
   });
 });

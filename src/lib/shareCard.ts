@@ -1,5 +1,3 @@
-import { toBlob } from 'html-to-image';
-
 export type ShareCardMethod = 'native-file' | 'native-text' | 'download';
 
 interface ShareCardOptions {
@@ -39,6 +37,9 @@ export const shareCard = async ({
   text,
   url,
 }: ShareCardOptions): Promise<ShareCardMethod> => {
+  // Dynamic import — html-to-image (~150KB) only loaded when user shares
+  const { toBlob } = await import('html-to-image');
+
   const imageBlob = await toBlob(element, {
     pixelRatio: 2,
     cacheBust: true,

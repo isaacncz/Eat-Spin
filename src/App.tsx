@@ -984,6 +984,7 @@ function App() {
       setManualSpinResult(null);
       setManualWheelKey((prev) => prev + 1);
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const addManualRestaurant = () => {
@@ -1455,30 +1456,32 @@ function App() {
         onAbout={() => setShowAboutSections(prev => !prev)}
       />
 
-      {/* QuickSpinHero - the FIRST thing users see */}
-      <QuickSpinHero
-        currentMealTime={currentMealTime}
-        onQuickSpin={handleQuickSpin}
-        onMoodSelect={handleMoodSelect}
-        isSpinning={isSpinning}
-        hasLocation={Boolean(location)}
-        onRequestLocation={requestLocation}
-        isLocationLoading={locationLoading}
-        locationError={locationError}
-        restaurantCount={roundRestaurants.length}
-        onGroupSpin={() => { trackEvent('hero_group_spin'); scrollToSection('group-spin'); }}
-        isLoadingRestaurants={nearbyRestaurantsLoading}
-        totalNearbyCount={autoSourceRestaurants.length}
-        closedNowCount={closedNowExcludedCount}
-        searchQuery={textSearch.query}
-        onSearch={textSearch.search}
-        searchResults={textSearch.results}
-        isSearching={textSearch.isLoading}
-        searchError={textSearch.error}
-        recentSearches={textSearch.recentSearches}
-        onLetsGo={handleLetsGo}
-        onClearSearch={textSearch.clearResults}
-      />
+      {/* QuickSpinHero - only in auto (discovery) mode */}
+      {activeTab === 'auto' && (
+        <QuickSpinHero
+          currentMealTime={currentMealTime}
+          onQuickSpin={handleQuickSpin}
+          onMoodSelect={handleMoodSelect}
+          isSpinning={isSpinning}
+          hasLocation={Boolean(location)}
+          onRequestLocation={requestLocation}
+          isLocationLoading={locationLoading}
+          locationError={locationError}
+          restaurantCount={roundRestaurants.length}
+          onGroupSpin={() => { trackEvent('hero_group_spin'); scrollToSection('group-spin'); }}
+          isLoadingRestaurants={nearbyRestaurantsLoading}
+          totalNearbyCount={autoSourceRestaurants.length}
+          closedNowCount={closedNowExcludedCount}
+          searchQuery={textSearch.query}
+          onSearch={textSearch.search}
+          searchResults={textSearch.results}
+          isSearching={textSearch.isLoading}
+          searchError={textSearch.error}
+          recentSearches={textSearch.recentSearches}
+          onLetsGo={handleLetsGo}
+          onClearSearch={textSearch.clearResults}
+        />
+      )}
 
       {/* Main app section */}
       <section id="app-main-section" className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 bg-white">

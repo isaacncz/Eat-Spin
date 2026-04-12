@@ -38,4 +38,25 @@ test.describe('Smoke tests', () => {
     const twitterCard = page.locator('meta[name="twitter:card"]');
     await expect(twitterCard).toHaveAttribute('content', 'summary');
   });
+
+  test('"I know where" tab hides hero and shows wheel section', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem('eatspin:first-run-onboarding-seen', '1');
+    });
+    await page.goto('/');
+
+    // Hero should be visible in auto mode
+    const heading = page.locator('text=/What.*for/i').first();
+    await expect(heading).toBeVisible({ timeout: 10_000 });
+
+    // Switch to manual mode
+    const manualTab = page.getByRole('tab', { name: /i know where|my list/i });
+    await manualTab.click();
+
+    // Hero should disappear
+    await expect(heading).not.toBeVisible({ timeout: 5_000 });
+
+    // Manual mode content should be visible (wheel or add input)
+    await expect(page.getByText(/add restaurants to start/i)).toBeVisible({ timeout: 5_000 });
+  });
 });

@@ -5,6 +5,7 @@ import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
 import { playSpinTick, playSpinWin, startSpinDrumroll, stopSpinDrumroll, triggerSpinHaptic } from '@/lib/spinAudio';
+import { PhotoCarousel } from '@/components/PhotoCarousel';
 
 interface RouletteWheelProps {
   restaurants: Restaurant[];
@@ -825,7 +826,13 @@ export function RouletteWheel({
                 <Trophy size={22} className="celebration-floating-icon text-[#FFD700]" />
               </h3>
 
-              {!isManualResult && spinResult.image && (
+              {!isManualResult && (spinResult.photos?.length ?? 0) > 1 ? (
+                <PhotoCarousel
+                  photos={spinResult.photos!}
+                  alt={`Photos of ${spinResult.name}`}
+                  className="mb-4"
+                />
+              ) : !isManualResult && spinResult.image ? (
                 <div className="mb-4 overflow-hidden rounded-xl border border-eatspin-peach/60">
                   <img
                     src={spinResult.image}
@@ -835,7 +842,7 @@ export function RouletteWheel({
                     referrerPolicy="no-referrer"
                   />
                 </div>
-              )}
+              ) : null}
               
               {!isManualResult && (
                 <div className="space-y-2 text-sm">

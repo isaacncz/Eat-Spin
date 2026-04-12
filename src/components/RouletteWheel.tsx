@@ -141,10 +141,6 @@ const loadSoundPreference = (): boolean => {
 
 import { getSmartHoursLabel } from '@/lib/smartHours';
 
-const getOpeningHoursLabel = (restaurant: Restaurant): string => {
-  return getSmartHoursLabel(restaurant).label;
-};
-
 export function RouletteWheel({
   restaurants,
   totalCount,

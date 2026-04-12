@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { Search, Star, MapPin, Navigation, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Restaurant } from '@/types';
@@ -50,7 +50,7 @@ function estimateWalkTime(distanceKm: number | undefined): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function CravingSearch({
+export const CravingSearch = memo(function CravingSearch({
   query,
   onSearch,
   results,
@@ -254,4 +254,4 @@ export function CravingSearch({
       )}
     </div>
   );
-}
+});

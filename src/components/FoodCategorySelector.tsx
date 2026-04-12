@@ -1,4 +1,4 @@
-import { useMemo, type CSSProperties } from 'react';
+import { useMemo, memo, type CSSProperties } from 'react';
 import { trackEvent } from '@/lib/analytics';
 import type { FoodCategory } from '@/types';
 import { cuisineCategories, foodCategories } from '@/data/restaurants';
@@ -12,7 +12,7 @@ interface FoodCategorySelectorProps {
   favouriteCategoryCounts?: Partial<Record<FoodCategory, number>>;
 }
 
-export function FoodCategorySelector({
+export const FoodCategorySelector = memo(function FoodCategorySelector({
   selectedCategories,
   onCategoryChange,
   maxSelection = 3,
@@ -132,4 +132,4 @@ export function FoodCategorySelector({
 
     </div>
   );
-}
+});

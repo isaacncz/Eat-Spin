@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { ChevronDown, MapPin, Loader2 } from 'lucide-react';
 import { FoodCategorySelector } from '@/components/FoodCategorySelector';
 import { ServesFilterPills } from '@/components/ServesFilterPills';
@@ -53,7 +53,7 @@ export interface FilterPanelProps {
 
 // ── Component ────────────────────────────────────────────────────────────
 
-export function FilterPanel({
+export const FilterPanel = memo(function FilterPanel({
   rangeMode,
   onRangeModeChange,
   selectedPriceRanges,
@@ -213,4 +213,4 @@ export function FilterPanel({
       </div>
     </div>
   );
-}
+});

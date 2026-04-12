@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { SERVES_FILTERS, type ServesFilterId } from '@/lib/servesFilters';
 
 interface ServesFilterPillsProps {
@@ -5,7 +6,7 @@ interface ServesFilterPillsProps {
   onToggle: (id: ServesFilterId) => void;
 }
 
-export function ServesFilterPills({ activeFilters, onToggle }: ServesFilterPillsProps) {
+export const ServesFilterPills = memo(function ServesFilterPills({ activeFilters, onToggle }: ServesFilterPillsProps) {
   return (
     <div
       className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide"
@@ -35,4 +36,4 @@ export function ServesFilterPills({ activeFilters, onToggle }: ServesFilterPills
       })}
     </div>
   );
-}
+});

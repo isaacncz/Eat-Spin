@@ -188,8 +188,9 @@ export function CravingSearch({
           {results.map((r, i) => (
             <div
               key={r.id}
-              className="flex items-start gap-3 rounded-xl border border-eatspin-gray-3
-                         bg-white p-3 shadow-sm hover:shadow-md transition-shadow"
+              className="animate-fade-in-up flex items-start gap-3 rounded-xl border border-eatspin-gray-3
+                         bg-white p-3 shadow-sm hover:shadow-md transition-shadow
+                         hover:scale-[1.01] active:scale-[0.99]"
               style={{ animationDelay: `${i * 60}ms` }}
             >
               {/* Thumbnail */}

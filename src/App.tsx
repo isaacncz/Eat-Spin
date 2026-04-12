@@ -1792,46 +1792,57 @@ function App() {
                   {/* Header */}
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-eatspin-gray-1">Saved lists</p>
 
-                  {/* Horizontal chip bar */}
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide" role="listbox" aria-label="Saved lists">
-                    {manualLists.map((list) => {
-                      const isSelected = list.id === selectedManualListId;
-                      const emoji = getMealTimeEmoji(list.mealTime);
-                      return (
-                        <button
-                          key={list.id}
-                          type="button"
-                          role="option"
-                          aria-selected={isSelected}
-                          onClick={() => {
-                            if (!isSelected) handleSelectSavedManualList(list.id);
-                          }}
-                          disabled={isManualListReadOnly}
-                          className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                            isSelected
-                              ? 'bg-brand-orange text-white shadow-sm'
-                              : 'border border-eatspin-peach/70 bg-white text-brand-black hover:border-brand-orange/40 hover:bg-brand-linen'
-                          } disabled:opacity-40`}
-                        >
-                          {emoji && <span>{emoji}</span>}
-                          <span className="truncate max-w-[120px]">{list.name}</span>
-                          <span className={`ml-0.5 text-xs tabular-nums ${isSelected ? 'text-white/80' : 'text-eatspin-gray-1'}`}>
-                            {list.restaurants.length}
-                          </span>
-                        </button>
-                      );
-                    })}
-                    {/* New list chip */}
-                    <button
-                      type="button"
-                      onClick={handleCreateManualList}
-                      disabled={isManualListReadOnly}
-                      className="flex shrink-0 items-center gap-1 rounded-full border border-dashed border-eatspin-peach px-3 py-2 text-sm font-medium text-eatspin-gray-1 transition hover:border-brand-orange/50 hover:text-brand-orange disabled:opacity-40"
-                      aria-label="Create new list"
-                    >
-                      <Plus size={14} />
-                      <span>New</span>
-                    </button>
+                  {/* Horizontal chip bar with overflow fade hint */}
+                  <div className="relative">
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide" role="listbox" aria-label="Saved lists">
+                      {manualLists.map((list) => {
+                        const isSelected = list.id === selectedManualListId;
+                        const emoji = getMealTimeEmoji(list.mealTime);
+                        return (
+                          <button
+                            key={list.id}
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            title={`${list.name} — ${list.restaurants.length} picks`}
+                            onClick={() => {
+                              if (!isSelected) handleSelectSavedManualList(list.id);
+                            }}
+                            disabled={isManualListReadOnly}
+                            className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                              isSelected
+                                ? 'bg-brand-orange text-white shadow-sm'
+                                : 'border border-eatspin-peach/70 bg-white text-brand-black hover:border-brand-orange/40 hover:bg-brand-linen'
+                            } disabled:opacity-40`}
+                          >
+                            {emoji && <span>{emoji}</span>}
+                            <span className="truncate max-w-[140px]">{list.name}</span>
+                            <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-xs tabular-nums ${
+                              isSelected
+                                ? list.restaurants.length === 0 ? 'bg-white/20 text-white/90' : 'bg-white/25 text-white'
+                                : list.restaurants.length === 0 ? 'bg-eatspin-peach/50 text-eatspin-gray-1' : 'bg-eatspin-peach/70 text-brand-black'
+                            }`}>
+                              {list.restaurants.length}
+                            </span>
+                          </button>
+                        );
+                      })}
+                      {/* New list chip */}
+                      <button
+                        type="button"
+                        onClick={handleCreateManualList}
+                        disabled={isManualListReadOnly}
+                        className="flex shrink-0 items-center gap-1 rounded-full border border-dashed border-eatspin-peach px-3 py-2 text-sm font-medium text-eatspin-gray-1 transition hover:border-brand-orange/50 hover:text-brand-orange disabled:opacity-40"
+                        aria-label="Create new list"
+                      >
+                        <Plus size={14} />
+                        <span>New</span>
+                      </button>
+                    </div>
+                    {/* Right fade hint when many lists */}
+                    {manualLists.length > 3 && (
+                      <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-white to-transparent" aria-hidden="true" />
+                    )}
                   </div>
 
                   {/* Inline actions for selected list (view mode) */}

@@ -8,7 +8,7 @@ import { useTextSearch } from '@/hooks/useTextSearch';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
-import { getManualListMealTimeLabel, getSuggestedManualListName, useManualLists } from '@/hooks/useManualLists';
+import { getMealTimeEmoji, getSuggestedManualListName, useManualLists } from '@/hooks/useManualLists';
 import { useSpinChallenge } from '@/hooks/useSpinChallenge';
 import { useDiscoverFeed } from '@/hooks/useDiscoverFeed';
 import type { FoodCategory, ManualListMealTime, MealTime, Restaurant } from '@/types';
@@ -1243,7 +1243,7 @@ function App() {
       ? `Use suggestion: ${listNameSuggestion}`
       : '';
 
-  const selectedManualListLabel = selectedManualList?.name ?? 'My list';
+  // selectedManualListLabel removed — chip bar shows names inline
 
   const groupSpinDisplay = useMemo(() => {
     if (!isGroupRoomActive || !groupCurrentSpin) return null;
@@ -1786,81 +1786,85 @@ function App() {
                   )}
                 </div>
               )}
+              {/* ── Saved Lists: chip-based selector ── */}
               <div className="mb-6 max-w-2xl mx-auto rounded-2xl border border-eatspin-peach/60 bg-white p-4 shadow-sm">
                 <div className="flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-eatspin-gray-1">Saved lists</p>
-                      <h3 className="font-heading text-xl font-bold text-brand-black">{selectedManualListLabel}</h3>
-                      <p className="text-xs text-eatspin-gray-1">
-                        {selectedManualList
-                          ? `${selectedManualList.restaurants.length} picks${selectedManualList.mealTime ? ` • ${getManualListMealTimeLabel(selectedManualList.mealTime)}` : ''}`
-                          : 'Create a named list to keep separate lunch, dinner, and coffee spins.'}
-                      </p>
-                    </div>
-                    <Button
+                  {/* Header */}
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-eatspin-gray-1">Saved lists</p>
+
+                  {/* Horizontal chip bar */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide" role="listbox" aria-label="Saved lists">
+                    {manualLists.map((list) => {
+                      const isSelected = list.id === selectedManualListId;
+                      const emoji = getMealTimeEmoji(list.mealTime);
+                      return (
+                        <button
+                          key={list.id}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => {
+                            if (!isSelected) handleSelectSavedManualList(list.id);
+                          }}
+                          disabled={isManualListReadOnly}
+                          className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                            isSelected
+                              ? 'bg-brand-orange text-white shadow-sm'
+                              : 'border border-eatspin-peach/70 bg-white text-brand-black hover:border-brand-orange/40 hover:bg-brand-linen'
+                          } disabled:opacity-40`}
+                        >
+                          {emoji && <span>{emoji}</span>}
+                          <span className="truncate max-w-[120px]">{list.name}</span>
+                          <span className={`ml-0.5 text-xs tabular-nums ${isSelected ? 'text-white/80' : 'text-eatspin-gray-1'}`}>
+                            {list.restaurants.length}
+                          </span>
+                        </button>
+                      );
+                    })}
+                    {/* New list chip */}
+                    <button
                       type="button"
                       onClick={handleCreateManualList}
                       disabled={isManualListReadOnly}
-                      className="h-10 shrink-0 bg-brand-orange px-4 text-sm font-semibold text-white hover:bg-brand-orange/90"
+                      className="flex shrink-0 items-center gap-1 rounded-full border border-dashed border-eatspin-peach px-3 py-2 text-sm font-medium text-eatspin-gray-1 transition hover:border-brand-orange/50 hover:text-brand-orange disabled:opacity-40"
+                      aria-label="Create new list"
                     >
-                      <Plus size={16} className="mr-1" /> New list
-                    </Button>
+                      <Plus size={14} />
+                      <span>New</span>
+                    </button>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-list">Choose a saved list</label>
-                    <div className="relative">
-                      <select
-                        id="saved-manual-list"
-                        value={selectedManualListId}
-                        onChange={(e) => handleSelectSavedManualList(e.target.value)}
-                        className="preset-select h-11 w-full rounded-md border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
+                  {/* Inline actions for selected list (view mode) */}
+                  {!isEditingListDetails && selectedManualList && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingListDetails(true)}
                         disabled={isManualListReadOnly}
+                        className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-eatspin-gray-1 transition hover:bg-eatspin-peach/30 hover:text-brand-black disabled:opacity-40"
+                        aria-label="Edit list name and meal time"
                       >
-                        {manualLists.map((list) => (
-                          <option key={list.id} value={list.id}>
-                            {list.name}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
-                    </div>
-                  </div>
-
-                  {!isEditingListDetails ? (
-                    <>
-                      <div className="flex items-center justify-between rounded-md border border-eatspin-peach/70 bg-brand-linen px-3 py-2.5">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-brand-black">{selectedManualList?.name ?? '—'}</p>
-                          <p className="text-xs text-eatspin-gray-1">
-                            {selectedManualList?.mealTime ? getManualListMealTimeLabel(selectedManualList.mealTime) : 'No meal time'}
-                          </p>
-                        </div>
+                        <PencilLine size={13} />
+                        <span>Rename</span>
+                      </button>
+                      {manualLists.length > 1 && (
                         <button
                           type="button"
-                          onClick={() => setIsEditingListDetails(true)}
-                          disabled={isManualListReadOnly || !selectedManualList}
-                          className="ml-3 shrink-0 rounded-md p-1.5 text-eatspin-gray-1 transition hover:bg-eatspin-peach/30 hover:text-brand-black disabled:opacity-40"
-                          aria-label="Edit list name and meal time"
-                        >
-                          <PencilLine size={16} />
-                        </button>
-                      </div>
-                      <div className="flex justify-end">
-                        <Button
-                          type="button"
-                          variant="outline"
                           onClick={handleDeleteManualList}
-                          disabled={isManualListReadOnly || !selectedManualList}
-                          className="h-11 border-red-200 px-4 text-sm font-semibold text-red-600 hover:bg-red-50"
+                          disabled={isManualListReadOnly}
+                          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                          aria-label={`Delete ${selectedManualList.name}`}
                         >
-                          <Trash2 size={16} className="mr-1" /> Delete
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="space-y-3">
+                          <Trash2 size={13} />
+                          <span>Delete</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Edit mode (inline expansion) */}
+                  {isEditingListDetails && (
+                    <div className="space-y-3 rounded-lg border border-eatspin-peach/50 bg-brand-linen/50 p-3">
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-1">
                           <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-name">List name</label>
@@ -1869,7 +1873,7 @@ function App() {
                             value={listNameInput}
                             onChange={(e) => setListNameInput(e.target.value)}
                             placeholder="Isaac lunch list"
-                            className="h-11"
+                            className="h-10"
                           />
                         </div>
                         <div className="space-y-1">
@@ -1886,7 +1890,7 @@ function App() {
                                 }
                                 setListMealTimeInput(null);
                               }}
-                              className="preset-select h-11 w-full rounded-md border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
+                              className="preset-select h-10 w-full rounded-md border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
                             >
                               <option value="">🕒 No meal time</option>
                               <option value="breakfast">🌅 Breakfast</option>
@@ -1914,16 +1918,16 @@ function App() {
                           variant="outline"
                           onClick={handleDeleteManualList}
                           disabled={isManualListReadOnly || !selectedManualList}
-                          className="h-11 border-red-200 px-4 text-sm font-semibold text-red-600 hover:bg-red-50"
+                          className="h-9 border-red-200 px-3 text-xs font-semibold text-red-600 hover:bg-red-50"
                         >
-                          <Trash2 size={16} className="mr-1" /> Delete
+                          <Trash2 size={14} className="mr-1" /> Delete
                         </Button>
                         <div className="flex gap-2">
                           <Button
                             type="button"
                             variant="outline"
                             onClick={handleCancelEditListDetails}
-                            className="h-11 px-4 text-sm font-semibold"
+                            className="h-9 px-3 text-xs font-semibold"
                           >
                             Cancel
                           </Button>
@@ -1931,7 +1935,7 @@ function App() {
                             type="button"
                             onClick={handleSaveManualListDetails}
                             disabled={isManualListReadOnly || (!isCreatingNewList && (!selectedManualList || !hasManualListDetailsChanged)) || Boolean(duplicateManualListForSave)}
-                            className="h-11 bg-brand-orange px-4 text-sm font-semibold text-white hover:bg-brand-orange/90"
+                            className="h-9 bg-brand-orange px-3 text-xs font-semibold text-white hover:bg-brand-orange/90"
                           >
                             Save
                           </Button>
@@ -1939,10 +1943,6 @@ function App() {
                       </div>
                     </div>
                   )}
-
-                  <p className="text-xs text-eatspin-gray-1">
-                    Pick a saved list to load it into the wheel. Meal-time matches auto-select the most recently updated list until you choose one yourself.
-                  </p>
                 </div>
               </div>
 

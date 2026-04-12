@@ -225,6 +225,13 @@ const pickDeterministicList = (lists: ManualList[], mealTime: ManualListMealTime
 
 export const getManualListMealTimeLabel = getMealTimeLabel;
 
+export const getMealTimeEmoji = (mealTime: ManualListMealTime): string => {
+  if (mealTime === 'breakfast') return '🌅';
+  if (mealTime === 'lunch') return '☀️';
+  if (mealTime === 'dinner') return '🌙';
+  return '';
+};
+
 const loadInitialState = () => {
   const manualLists = loadInitialManualLists();
   return {

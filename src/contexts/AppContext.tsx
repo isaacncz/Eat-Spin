@@ -21,7 +21,7 @@ import type { SpinResult } from '@/types';
 // Type definitions
 // ---------------------------------------------------------------------------
 
-export type SpinTab = 'auto' | 'manual';
+export type SpinTab = 'auto' | 'manual' | 'midspin';
 export type AutoRangeMode = 'walk' | 'drive10' | 'drive20';
 
 // ---------------------------------------------------------------------------

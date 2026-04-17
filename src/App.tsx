@@ -30,6 +30,7 @@ import { getTimeOfDayFilters } from '@/lib/timeOfDayDefaults';
 import { FilterPanel } from '@/components/FilterPanel';
 import { Footer } from '@/sections/Footer';
 import { GroupSpin } from '@/sections/GroupSpin';
+import { MidSpin } from '@/sections/MidSpin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
@@ -51,7 +52,7 @@ const Features = lazy(() => import('@/sections/Features').then(m => ({ default: 
 const Testimonials = lazy(() => import('@/sections/Testimonials').then(m => ({ default: m.Testimonials })));
 const CTA = lazy(() => import('@/sections/CTA').then(m => ({ default: m.CTA })));
 
-type SpinTab = 'auto' | 'manual';
+type SpinTab = 'auto' | 'manual' | 'midspin';
 type AutoRangeMode = 'walk' | 'drive10' | 'drive20';
 
 const AUTO_RANGE_MODE_STORAGE_KEY = 'eatspin:auto-range-mode';
@@ -319,6 +320,7 @@ function App() {
     roomId: groupRoomId,
     hostUid: groupHostUid,
     roomLink: groupRoomLink,
+    roomType: groupRoomType,
     isHost: isGroupHost,
     isCohost: isGroupCohost,
     canEditList: canEditGroupList,
@@ -340,6 +342,7 @@ function App() {
     requestHostSpin,
     sendReaction: sendGroupReaction,
     setGoingVote: setGroupGoingVote,
+    updateLocation: updateGroupLocation,
   } = useFirebaseGroupRoom();
   const {
     shouldShowBanner: showPwaInstallBanner,
@@ -984,7 +987,7 @@ function App() {
       setRoundRemovedRestaurantIds([]);
       setPendingAutoRemovalId(null);
       setAutoWheelKey((prev) => prev + 1);
-    } else {
+    } else if (tab === 'manual') {
       setManualSpinResult(null);
       setManualWheelKey((prev) => prev + 1);
     }
@@ -1342,6 +1345,44 @@ function App() {
       setIsManualRoomLeavePending(false);
     }
   }, [groupRoomId, leaveGroupRoom]);
+
+  // ── MidSpin handlers ──
+  const handleCreateMidSpinRoom = useCallback(async () => {
+    trackEvent('midspin_room_created');
+    await createGroupRoom('midspin');
+  }, [createGroupRoom]);
+
+  const handleJoinMidSpinRoom = useCallback(async (value: string) => {
+    trackEvent('midspin_room_joined', { room_id: value });
+    await joinGroupRoom(value);
+  }, [joinGroupRoom]);
+
+  const handleLeaveMidSpinRoom = useCallback(async () => {
+    trackEvent('midspin_room_left', { room_id: groupRoomId });
+    try {
+      await leaveGroupRoom();
+    } catch {
+      // Best-effort
+    }
+  }, [groupRoomId, leaveGroupRoom]);
+
+  const handleMidSpin = useCallback((centroid: { lat: number; lng: number }, _radiusM: number) => {
+    trackEvent('midspin_spin', { lat: centroid.lat, lng: centroid.lng, radius_m: _radiusM });
+    toast.success(`Midpoint found! ${centroid.lat.toFixed(4)}, ${centroid.lng.toFixed(4)} — radius ${_radiusM >= 1000 ? `${(_radiusM / 1000).toFixed(1)} km` : `${_radiusM} m`}`);
+  }, []);
+
+  // Keep Firebase location in sync with browser geolocation
+  useEffect(() => {
+    if (!location) return;
+    updateGroupLocation(location.lat, location.lng);
+  }, [location, updateGroupLocation]);
+
+  // Auto-detect midspin room from URL and switch tab
+  useEffect(() => {
+    if (groupRoomType === 'midspin' && activeTab !== 'midspin') {
+      setActiveTab('midspin');
+    }
+  }, [groupRoomType, activeTab]);
 
   useEffect(() => {
     if (!isGroupRoomActive || !canEditGroupList || !groupRoomId) return;
@@ -2260,6 +2301,45 @@ function App() {
         onClearRoomError={clearGroupRoomError}
         showCompletedListReminder={isGroupRoomActive && !isGroupHost && !isGroupCohost && groupRoomStatus === 'completed' && Boolean(groupCurrentSpin)}
       />
+
+      {/* MidSpin section — always rendered when on midspin tab */}
+      {activeTab === 'midspin' && (
+        <MidSpin
+          isFirebaseConfigured={isFirebaseConfigured}
+          firebaseConfigError={firebaseConfigError}
+          authLoading={groupAuthLoading}
+          authError={groupAuthError}
+          authUid={groupAuthUid}
+          displayName={groupDisplayName}
+          resolvedDisplayName={groupResolvedDisplayName}
+          setDisplayName={setGroupDisplayName}
+          roomId={groupRoomId}
+          hostUid={groupHostUid}
+          roomLink={groupRoomLink}
+          roomType={groupRoomType}
+          isHost={isGroupHost}
+          isCohost={isGroupCohost}
+          cohostUids={groupCohostUids}
+          isBusy={groupRoomBusy}
+          roomError={groupRoomError}
+          participants={groupParticipants}
+          reactions={groupReactions}
+          votes={groupVotes}
+          userLocation={location}
+          locationLoading={locationLoading}
+          locationError={locationError}
+          onRequestLocation={requestLocation}
+          onCreateRoom={handleCreateMidSpinRoom}
+          onJoinRoom={handleJoinMidSpinRoom}
+          onLeaveRoom={handleLeaveMidSpinRoom}
+          onSetParticipantCohost={setParticipantCohost}
+          onSendReaction={sendGroupReaction}
+          onSetGoingVote={setGroupGoingVote}
+          onClearRoomError={clearGroupRoomError}
+          onMidSpin={handleMidSpin}
+          canSpin={!isSpinning && (isGroupHost || isGroupCohost)}
+        />
+      )}
 
       {/* Spin Stats - show only when user has history */}
       {spinHistorySummary.totalSpins > 0 && (

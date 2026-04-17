@@ -76,8 +76,9 @@ interface MidSpinProps {
   onClearRoomError: () => void;
 
   // Spin callback — parent handles the actual search + wheel
-  onMidSpin: (centroid: GeoPoint, radiusM: number) => void;
+  onMidSpin: (centroid: GeoPoint, radiusM: number) => void | Promise<void>;
   canSpin: boolean;
+  isSpinFetching?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -118,6 +119,7 @@ export function MidSpin({
   onClearRoomError,
   onMidSpin,
   canSpin,
+  isSpinFetching = false,
 }: MidSpinProps) {
   const [joinValue, setJoinValue] = useState('');
   const [hasCopied, setHasCopied] = useState(false);
@@ -387,11 +389,11 @@ export function MidSpin({
                     <Button
                       className="bg-brand-orange text-white hover:bg-brand-orange/90"
                       onClick={handleSpin}
-                      disabled={!canSpin || !centroid || locatedParticipants.length < 1}
+                      disabled={!canSpin || !centroid || locatedParticipants.length < 1 || isSpinFetching}
                       title={!centroid ? 'Waiting for participant locations…' : 'Spin for restaurants near midpoint'}
                     >
                       <Sparkles size={16} />
-                      Spin midpoint
+                      {isSpinFetching ? 'Finding restaurants…' : 'Spin midpoint'}
                     </Button>
                   )}
                   <Button

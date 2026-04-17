@@ -18,6 +18,11 @@ import {
   enhancedFilterRestaurants,
   findNearbyFavourites,
 } from '@/lib/restaurantUtils';
+import {
+  fetchNearbyGoogleRestaurants,
+  rankNearbyRestaurants,
+} from '@/lib/googlePlacesRestaurants';
+import { enrichRestaurantListCategories } from '@/lib/categoryClassifier';
 import { getCurrentMealTime } from '@/lib/utils';
 import { RouletteWheel } from '@/components/RouletteWheel';
 import { LocationPermission } from '@/components/LocationPermission';
@@ -196,6 +201,10 @@ function App() {
     return new URLSearchParams(window.location.search).get('room') ? 'manual' : 'auto';
   });
   const [autoWheelKey, setAutoWheelKey] = useState(0);
+  const [midWheelRestaurants, setMidWheelRestaurants] = useState<Restaurant[]>([]);
+  const [showMidWheelSection, setShowMidWheelSection] = useState(false);
+  const [isMidSpinFetching, setIsMidSpinFetching] = useState(false);
+  const [midWheelKey, setMidWheelKey] = useState(0);
   const [isReviewExpanded, setIsReviewExpanded] = useState(false);
   const [showAllRoundRestaurants, setShowAllRoundRestaurants] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
@@ -990,6 +999,13 @@ function App() {
     } else if (tab === 'manual') {
       setManualSpinResult(null);
       setManualWheelKey((prev) => prev + 1);
+    } else if (tab === 'midspin') {
+      setShowMidWheelSection(false);
+      setMidWheelRestaurants([]);
+    }
+    if (tab !== 'midspin') {
+      setShowMidWheelSection(false);
+      setMidWheelRestaurants([]);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -1366,10 +1382,86 @@ function App() {
     }
   }, [groupRoomId, leaveGroupRoom]);
 
-  const handleMidSpin = useCallback((centroid: { lat: number; lng: number }, _radiusM: number) => {
-    trackEvent('midspin_spin', { lat: centroid.lat, lng: centroid.lng, radius_m: _radiusM });
-    toast.success(`Midpoint found! ${centroid.lat.toFixed(4)}, ${centroid.lng.toFixed(4)} — radius ${_radiusM >= 1000 ? `${(_radiusM / 1000).toFixed(1)} km` : `${_radiusM} m`}`);
+  const handleMidSpin = useCallback(async (centroid: { lat: number; lng: number }, radiusM: number) => {
+    trackEvent('midspin_spin', { lat: centroid.lat, lng: centroid.lng, radius_m: radiusM });
+
+    setIsMidSpinFetching(true);
+    setShowMidWheelSection(false);
+    setMidWheelRestaurants([]);
+
+    const radiusKm = Math.max(0.5, radiusM / 1000);
+    const region = (import.meta.env.VITE_GOOGLE_PLACES_REGION as string | undefined) ?? 'MY';
+    const language = (import.meta.env.VITE_GOOGLE_PLACES_LANGUAGE as string | undefined) ?? 'en';
+
+    let restaurants: Restaurant[] = [];
+    let usedFallback = false;
+
+    try {
+      const live = await fetchNearbyGoogleRestaurants({
+        location: centroid,
+        radiusKm,
+        region,
+        language,
+      });
+      restaurants = enrichRestaurantListCategories(
+        rankNearbyRestaurants(live, centroid, radiusKm, 20, 'google-live'),
+      );
+    } catch {
+      usedFallback = true;
+    }
+
+    if (restaurants.length === 0) {
+      usedFallback = true;
+      // Fall back to local dataset filtered by distance from centroid
+      restaurants = enrichRestaurantListCategories(
+        rankNearbyRestaurants(localRestaurants as Restaurant[], centroid, Math.max(radiusKm, 10), 20, 'local-fallback'),
+      );
+    }
+
+    // Apply quality gate + open-hours filter (no distance or category filters for MidSpin)
+    const { results: filtered } = enhancedFilterRestaurants(
+      restaurants,
+      centroid,
+      [],
+      'drive20',
+      [],
+      'all',
+    );
+
+    const sliced = filtered.slice(0, 12);
+
+    if (sliced.length === 0) {
+      toast.error('No open restaurants found near the midpoint. Try again later.');
+      setIsMidSpinFetching(false);
+      return;
+    }
+
+    if (usedFallback) {
+      toast.info('Using sample restaurants — live data unavailable near the midpoint.');
+    }
+
+    setMidWheelRestaurants(sliced);
+    setMidWheelKey((prev) => prev + 1);
+    setShowMidWheelSection(true);
+    setIsMidSpinFetching(false);
+
+    setTimeout(() => {
+      document.getElementById('midspin-wheel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
   }, []);
+
+  const handleMidSpinComplete = useCallback((restaurant: Restaurant) => {
+    trackEvent('spin_complete', { mode: 'midspin', restaurant_name: restaurant.name, category: restaurant.category?.[0] ?? '' });
+    recordSpin(restaurant, currentMealTime);
+    void recordDailySpin();
+    void publishDiscoverSpin(restaurant.name, currentMealTime);
+    setMidWheelRestaurants((prev) => prev.filter((r) => r.id !== restaurant.id));
+  }, [currentMealTime, publishDiscoverSpin, recordDailySpin, recordSpin]);
+
+  const handleMidSpinAgain = useCallback((restaurant: Restaurant) => {
+    trackEvent('spin_again_requested', { restaurant_name: restaurant.name, round_size: midWheelRestaurants.length, respin_count: 0 });
+    setMidWheelRestaurants((prev) => prev.filter((r) => r.id !== restaurant.id));
+  }, [midWheelRestaurants.length]);
 
   // Keep Firebase location in sync with browser geolocation
   useEffect(() => {
@@ -2336,9 +2428,43 @@ function App() {
           onSendReaction={sendGroupReaction}
           onSetGoingVote={setGroupGoingVote}
           onClearRoomError={clearGroupRoomError}
-          onMidSpin={handleMidSpin}
-          canSpin={!isSpinning && (isGroupHost || isGroupCohost)}
+          onMidSpin={(centroid, radiusM) => { void handleMidSpin(centroid, radiusM); }}
+          canSpin={!isSpinning && !isMidSpinFetching && (isGroupHost || isGroupCohost)}
+          isSpinFetching={isMidSpinFetching}
         />
+      )}
+
+      {/* MidSpin wheel — rendered below MidSpin section after fetch completes */}
+      {activeTab === 'midspin' && showMidWheelSection && midWheelRestaurants.length > 0 && (
+        <section id="midspin-wheel" className="py-10 sm:py-12 px-4 sm:px-6 lg:px-8 bg-brand-linen">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-5 sm:mb-6">
+              <h2 className="font-heading text-xl sm:text-2xl font-bold text-brand-black mb-1.5">
+                Spin the Wheel!
+              </h2>
+              <p className="text-sm sm:text-base text-eatspin-gray-1">
+                {midWheelRestaurants.length} restaurants near your midpoint
+              </p>
+            </div>
+            <RouletteWheel
+              key={`midspin-${midWheelKey}`}
+              restaurants={midWheelRestaurants}
+              totalCount={midWheelRestaurants.length}
+              onSpinComplete={handleMidSpinComplete}
+              isSpinning={isSpinning}
+              setIsSpinning={setIsSpinning}
+              onShuffle={() => setMidWheelRestaurants((prev) => [...prev].sort(() => Math.random() - 0.5))}
+              onSaveFavourite={(r) => handleSaveFavourite(r, 'auto')}
+              onLetsGo={handleLetsGo}
+              onShareResult={handleShareResult}
+              onSpinAgain={handleMidSpinAgain}
+              canSpinAgain={midWheelRestaurants.length >= 2}
+              isFavourite={isFavouriteCheck}
+              emptyStateTitle="No restaurants left to spin"
+              emptyStateSubtitle="All restaurants near the midpoint have been spun."
+            />
+          </div>
+        </section>
       )}
 
       {/* Spin Stats - show only when user has history */}

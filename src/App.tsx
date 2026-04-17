@@ -708,7 +708,7 @@ function App() {
     }
 
     if (outcome === 'dismissed') {
-      trackEvent('pwa_install_dismissed', { spin_count: spins.length });
+      trackEvent('pwa_install_prompt_dismissed', { spin_count: spins.length });
       toast('Install prompt dismissed for now.');
       return;
     }
@@ -718,7 +718,7 @@ function App() {
 
   const handleDismissPwaBanner = useCallback(() => {
     dismissPwaInstallBanner();
-    trackEvent('pwa_install_banner_dismissed', { spin_count: spins.length });
+    trackEvent('pwa_install_banner_closed', { spin_count: spins.length });
   }, [dismissPwaInstallBanner, spins.length]);
 
   const handleShareSpinWrapped = useCallback(async () => {

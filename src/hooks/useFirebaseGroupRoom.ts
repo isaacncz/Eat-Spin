@@ -26,6 +26,7 @@ export const GROUP_ROOM_SPIN_COOLDOWN_MS = 7_000;
 export const GROUP_ROOM_NAME_MAX_LENGTH = 24;
 
 type RoomStatus = 'waiting' | 'spinning' | 'completed';
+export type RoomType = 'default' | 'midspin';
 
 interface RoomMeta {
   hostUid: string;
@@ -33,6 +34,7 @@ interface RoomMeta {
   createdAt: number;
   expiresAt: number;
   lastSpinAt: number;
+  roomType?: RoomType;
 }
 
 export interface GroupRoomParticipant {
@@ -41,6 +43,8 @@ export interface GroupRoomParticipant {
   joinedAt: number;
   lastSeenAt: number;
   ready: boolean;
+  lat?: number;
+  lng?: number;
 }
 
 interface RoomListItem {
@@ -117,6 +121,11 @@ const parseRoomStatus = (value: unknown): RoomStatus => {
   return 'waiting';
 };
 
+const parseRoomType = (value: unknown): RoomType => {
+  if (value === 'midspin') return 'midspin';
+  return 'default';
+};
+
 const parseRoomMeta = (raw: unknown): RoomMeta | null => {
   if (!raw || typeof raw !== 'object') return null;
 
@@ -125,6 +134,7 @@ const parseRoomMeta = (raw: unknown): RoomMeta | null => {
   const createdAt = typeof candidate.createdAt === 'number' ? candidate.createdAt : 0;
   const expiresAt = typeof candidate.expiresAt === 'number' ? candidate.expiresAt : 0;
   const lastSpinAt = typeof candidate.lastSpinAt === 'number' ? candidate.lastSpinAt : 0;
+  const roomType = parseRoomType(candidate.roomType);
 
   if (!hostUid || createdAt <= 0 || expiresAt <= 0) return null;
 
@@ -134,6 +144,7 @@ const parseRoomMeta = (raw: unknown): RoomMeta | null => {
     createdAt,
     expiresAt,
     lastSpinAt,
+    roomType,
   };
 };
 
@@ -148,6 +159,8 @@ const parseParticipants = (raw: unknown) => {
     const joinedAt = typeof candidate.joinedAt === 'number' ? candidate.joinedAt : 0;
     const lastSeenAt = typeof candidate.lastSeenAt === 'number' ? candidate.lastSeenAt : 0;
     const ready = typeof candidate.ready === 'boolean' ? candidate.ready : false;
+    const lat = typeof candidate.lat === 'number' ? candidate.lat : undefined;
+    const lng = typeof candidate.lng === 'number' ? candidate.lng : undefined;
     if (!uid || joinedAt <= 0 || lastSeenAt <= 0) return accumulator;
 
     accumulator.push({
@@ -156,6 +169,7 @@ const parseParticipants = (raw: unknown) => {
       joinedAt,
       lastSeenAt,
       ready,
+      ...(lat !== undefined && lng !== undefined ? { lat, lng } : {}),
     });
 
     return accumulator;
@@ -328,6 +342,7 @@ export function useFirebaseGroupRoom() {
   const [roomId, setRoomId] = useState('');
   const [hostUid, setHostUid] = useState('');
   const [isHost, setIsHost] = useState(false);
+  const [roomType, setRoomType] = useState<RoomType>('default');
   const [cohostUids, setCohostUids] = useState<string[]>([]);
   const [participants, setParticipants] = useState<GroupRoomParticipant[]>([]);
   const [roomListNames, setRoomListNames] = useState<string[]>([]);
@@ -348,6 +363,8 @@ export function useFirebaseGroupRoom() {
   const lastStaleCleanupRef = useRef(0);
   const lastSyncedListRef = useRef('');
   const autoJoinAttemptedRef = useRef(false);
+  const locationRef = useRef<{ lat: number; lng: number } | null>(null);
+  const roomTypeRef = useRef<RoomType>('default');
 
   const resolvedDisplayName = useMemo(() => {
     const normalized = normalizeDisplayName(displayName);
@@ -396,6 +413,7 @@ export function useFirebaseGroupRoom() {
     setRoomId('');
     setHostUid('');
     setIsHost(false);
+    setRoomType('default');
     setCohostUids([]);
     setParticipants([]);
     setRoomListNames([]);
@@ -406,6 +424,7 @@ export function useFirebaseGroupRoom() {
     roomIdRef.current = '';
     isHostRef.current = false;
     isCohostRef.current = false;
+    roomTypeRef.current = 'default';
     lastSyncedListRef.current = '';
   }, []);
 
@@ -487,6 +506,9 @@ export function useFirebaseGroupRoom() {
       const shouldBeHost = parsedMeta.hostUid === authUid;
       setHostUid(parsedMeta.hostUid);
       setRoomStatus(parsedMeta.status);
+      const metaRoomType = parsedMeta.roomType ?? 'default';
+      roomTypeRef.current = metaRoomType;
+      setRoomType(metaRoomType);
       if (shouldBeHost !== isHostRef.current) {
         isHostRef.current = shouldBeHost;
         setIsHost(shouldBeHost);
@@ -517,14 +539,23 @@ export function useFirebaseGroupRoom() {
   const writePresenceHeartbeat = useCallback(async (targetRoomId: string) => {
     if (!firebaseDb || !authUid || !targetRoomId) return;
 
-    await update(ref(firebaseDb, `rooms/${targetRoomId}/participants/${authUid}`), {
+    const payload: Record<string, unknown> = {
       name: resolvedDisplayNameRef.current,
       lastSeenAt: Date.now(),
       ready: true,
-    });
+    };
+
+    // Broadcast fuzzy location for midspin rooms
+    const loc = locationRef.current;
+    if (roomTypeRef.current === 'midspin' && loc) {
+      payload.lat = Math.round(loc.lat * 1_000) / 1_000;
+      payload.lng = Math.round(loc.lng * 1_000) / 1_000;
+    }
+
+    await update(ref(firebaseDb, `rooms/${targetRoomId}/participants/${authUid}`), payload);
   }, [authUid]);
 
-  const enterRoom = useCallback(async (input: string, createMode: boolean) => {
+  const enterRoom = useCallback(async (input: string, createMode: boolean, enterRoomType: RoomType = 'default') => {
     if (!firebaseDb || !authUid) {
       setRoomError('Firebase Auth is not ready yet.');
       return;
@@ -555,6 +586,7 @@ export function useFirebaseGroupRoom() {
       const metaSnapshot = await get(metaRef);
       const existingMeta = parseRoomMeta(metaSnapshot.val());
       let nextHost = false;
+      let resolvedRoomType: RoomType = enterRoomType;
 
       if (createMode) {
         if (existingMeta && existingMeta.expiresAt > now) {
@@ -568,6 +600,7 @@ export function useFirebaseGroupRoom() {
           createdAt: now,
           expiresAt: now + ROOM_TTL_MS,
           lastSpinAt: 0,
+          roomType: enterRoomType,
         };
 
         await set(metaRef, nextMeta);
@@ -587,6 +620,7 @@ export function useFirebaseGroupRoom() {
         }
 
         nextHost = existingMeta.hostUid === authUid;
+        resolvedRoomType = existingMeta.roomType ?? 'default';
       }
 
       const participantsSnapshot = await get(participantsRef);
@@ -607,13 +641,26 @@ export function useFirebaseGroupRoom() {
         await leaveRoom();
       }
 
-      const participantRef = ref(firebaseDb, `rooms/${parsedRoomCode}/participants/${authUid}`);
-      await set(participantRef, {
+      // Store room type before writing participant (heartbeat reads it)
+      roomTypeRef.current = resolvedRoomType;
+      setRoomType(resolvedRoomType);
+
+      const participantPayload: Record<string, unknown> = {
         name: resolvedDisplayName,
         joinedAt: existingSelf?.joinedAt ?? now,
         lastSeenAt: now,
         ready: true,
-      });
+      };
+
+      // Include location for midspin rooms
+      const loc = locationRef.current;
+      if (resolvedRoomType === 'midspin' && loc) {
+        participantPayload.lat = Math.round(loc.lat * 1_000) / 1_000;
+        participantPayload.lng = Math.round(loc.lng * 1_000) / 1_000;
+      }
+
+      const participantRef = ref(firebaseDb, `rooms/${parsedRoomCode}/participants/${authUid}`);
+      await set(participantRef, participantPayload);
 
       const disconnect = onDisconnect(participantRef);
       await disconnect.remove();
@@ -656,7 +703,7 @@ export function useFirebaseGroupRoom() {
     writePresenceHeartbeat,
   ]);
 
-  const createRoom = useCallback(async () => {
+  const createRoom = useCallback(async (createRoomType: RoomType = 'default') => {
     if (!authUid) {
       setRoomError('Authentication is still initializing.');
       return;
@@ -667,7 +714,7 @@ export function useFirebaseGroupRoom() {
       attempts += 1;
       const code = generateRoomCode();
       if (code.length !== ROOM_CODE_LENGTH) continue;
-      await enterRoom(code, true);
+      await enterRoom(code, true, createRoomType);
       if (roomIdRef.current === code) return;
     }
 
@@ -841,6 +888,11 @@ export function useFirebaseGroupRoom() {
     setDisplayNameState(value.slice(0, GROUP_ROOM_NAME_MAX_LENGTH));
   }, []);
 
+  /** Update the location that gets broadcast on each heartbeat. */
+  const updateLocation = useCallback((lat: number, lng: number) => {
+    locationRef.current = { lat, lng };
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(DISPLAY_NAME_KEY, resolvedDisplayName);
@@ -914,6 +966,7 @@ export function useFirebaseGroupRoom() {
     roomId,
     hostUid,
     roomLink,
+    roomType,
     isHost,
     isCohost,
     canEditList,
@@ -935,5 +988,6 @@ export function useFirebaseGroupRoom() {
     requestHostSpin,
     sendReaction,
     setGoingVote,
+    updateLocation,
   };
 }

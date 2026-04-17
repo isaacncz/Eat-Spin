@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Users, Info, Menu, X, Sparkles, PencilLine, LogOut } from 'lucide-react';
+import { Users, Info, Menu, X, Sparkles, PencilLine, MapPin, LogOut } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
 
 interface AppNavbarProps {
-  activeTab: 'auto' | 'manual';
-  onTabChange: (tab: 'auto' | 'manual') => void;
+  activeTab: 'auto' | 'manual' | 'midspin';
+  onTabChange: (tab: 'auto' | 'manual' | 'midspin') => void;
   activeRoomId: string;
   onGroupSpin: () => void;
   onAbout: () => void;
@@ -48,7 +48,7 @@ export function AppNavbar({
   }, []);
 
   const handleTabChange = useCallback(
-    (tab: 'auto' | 'manual') => {
+    (tab: 'auto' | 'manual' | 'midspin') => {
       onTabChange(tab);
     },
     [onTabChange],
@@ -217,10 +217,15 @@ function TabToggle({
   activeTab,
   onChange,
 }: {
-  activeTab: 'auto' | 'manual';
-  onChange: (tab: 'auto' | 'manual') => void;
+  activeTab: 'auto' | 'manual' | 'midspin';
+  onChange: (tab: 'auto' | 'manual' | 'midspin') => void;
 }) {
-  const isAuto = activeTab === 'auto';
+  const pillLeft =
+    activeTab === 'auto'
+      ? '2px'
+      : activeTab === 'manual'
+        ? 'calc(33.33% + 0px)'
+        : 'calc(66.66% + 0px)';
 
   return (
     <div
@@ -233,14 +238,14 @@ function TabToggle({
       <span
         className="absolute top-0.5 bottom-0.5 rounded-full bg-brand-orange shadow-sm transition-all duration-200 ease-out"
         style={{
-          width: 'calc(50% - 2px)',
-          left: isAuto ? '2px' : 'calc(50% + 0px)',
+          width: 'calc(33.33% - 2px)',
+          left: pillLeft,
         }}
         aria-hidden
       />
 
       <TabButton
-        active={isAuto}
+        active={activeTab === 'auto'}
         onClick={() => onChange('auto')}
         icon={<Sparkles size={14} />}
         label="Spin for me"
@@ -248,12 +253,20 @@ function TabToggle({
         id="tab-auto"
       />
       <TabButton
-        active={!isAuto}
+        active={activeTab === 'manual'}
         onClick={() => onChange('manual')}
         icon={<PencilLine size={14} />}
         label="I know where"
         shortLabel="My List"
         id="tab-manual"
+      />
+      <TabButton
+        active={activeTab === 'midspin'}
+        onClick={() => onChange('midspin')}
+        icon={<MapPin size={14} />}
+        label="MidSpin"
+        shortLabel="Mid"
+        id="tab-midspin"
       />
     </div>
   );

@@ -89,6 +89,12 @@ export interface AnalyticsEventMap {
   group_room_created: void;
   group_room_joined: { room_id: string };
   group_room_left: { room_id: string };
+
+  // MidSpin
+  midspin_room_created: void;
+  midspin_room_joined: { room_id: string };
+  midspin_room_left: { room_id: string };
+  midspin_spin: { lat: number; lng: number; radius_m: number };
 }
 
 /** All valid event names. */

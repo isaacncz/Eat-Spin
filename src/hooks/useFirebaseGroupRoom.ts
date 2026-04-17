@@ -15,7 +15,7 @@ import { ensureAnonymousAuthUser, firebaseConfigError, firebaseDb, isFirebaseCon
 
 const DISPLAY_NAME_KEY = 'eatspin:display-name';
 const ROOM_CODE_LENGTH = 6;
-const ROOM_TTL_MS = 2 * 60 * 60 * 1000;
+const ROOM_TTL_MS = 3 * 60 * 60 * 1000;
 const PRESENCE_HEARTBEAT_MS = 10_000;
 const PARTICIPANT_STALE_MS = 45_000;
 const STALE_CLEANUP_COOLDOWN_MS = 30_000;
@@ -341,9 +341,11 @@ export function useFirebaseGroupRoom() {
   const unsubscribersRef = useRef<Array<() => void>>([]);
   const heartbeatIntervalRef = useRef<number | null>(null);
   const disconnectRef = useRef<OnDisconnect | null>(null);
+  const hostDisconnectRef = useRef<OnDisconnect | null>(null);
   const roomIdRef = useRef('');
   const isHostRef = useRef(false);
   const isCohostRef = useRef(false);
+  const hostUidRef = useRef('');
   const resolvedDisplayNameRef = useRef('Guest');
   const lastStaleCleanupRef = useRef(0);
   const lastSyncedListRef = useRef('');
@@ -383,6 +385,16 @@ export function useFirebaseGroupRoom() {
     disconnectRef.current = null;
   }, []);
 
+  const cancelHostDisconnectCleanup = useCallback(async () => {
+    if (!hostDisconnectRef.current) return;
+    try {
+      await hostDisconnectRef.current.cancel();
+    } catch {
+      // Best-effort cleanup
+    }
+    hostDisconnectRef.current = null;
+  }, []);
+
   const removeSelfFromRoom = useCallback(async (targetRoomId: string) => {
     if (!firebaseDb || !authUid || !targetRoomId) return;
     try {
@@ -406,17 +418,27 @@ export function useFirebaseGroupRoom() {
     roomIdRef.current = '';
     isHostRef.current = false;
     isCohostRef.current = false;
+    hostUidRef.current = '';
     lastSyncedListRef.current = '';
   }, []);
 
   const leaveRoom = useCallback(async () => {
     const activeRoomId = roomIdRef.current;
+    const wasHost = isHostRef.current;
     clearRoomListeners();
     await cancelDisconnectCleanup();
+    await cancelHostDisconnectCleanup();
     await removeSelfFromRoom(activeRoomId);
+    if (wasHost && firebaseDb && activeRoomId) {
+      try {
+        await remove(ref(firebaseDb, `rooms/${activeRoomId}/meta`));
+      } catch {
+        // Best-effort: meta deletion triggers "Room closed" for others
+      }
+    }
     clearRoomState();
     updateRoomCodeInUrl('');
-  }, [cancelDisconnectCleanup, clearRoomListeners, clearRoomState, removeSelfFromRoom]);
+  }, [cancelDisconnectCleanup, cancelHostDisconnectCleanup, clearRoomListeners, clearRoomState, removeSelfFromRoom]);
 
   const cleanupStaleParticipants = useCallback(async (targetRoomId: string, currentParticipants: GroupRoomParticipant[]) => {
     const db = firebaseDb;
@@ -449,6 +471,16 @@ export function useFirebaseGroupRoom() {
       const activeParticipants = parsedParticipants.filter((participant) => now - participant.lastSeenAt <= PARTICIPANT_STALE_MS);
       setParticipants(activeParticipants);
       void cleanupStaleParticipants(targetRoomId, parsedParticipants);
+
+      // Option B: detect host gone from participants → close room for guests
+      const currentHostUid = hostUidRef.current;
+      if (currentHostUid && !isHostRef.current && activeParticipants.length > 0) {
+        const hostStillPresent = activeParticipants.some((p) => p.uid === currentHostUid);
+        if (!hostStillPresent) {
+          setRoomError('Host left. Room closed.');
+          void leaveRoom();
+        }
+      }
     });
 
     const unsubscribeList = onValue(listRef, (snapshot) => {
@@ -486,6 +518,7 @@ export function useFirebaseGroupRoom() {
 
       const shouldBeHost = parsedMeta.hostUid === authUid;
       setHostUid(parsedMeta.hostUid);
+      hostUidRef.current = parsedMeta.hostUid;
       setRoomStatus(parsedMeta.status);
       if (shouldBeHost !== isHostRef.current) {
         isHostRef.current = shouldBeHost;
@@ -619,9 +652,17 @@ export function useFirebaseGroupRoom() {
       await disconnect.remove();
       disconnectRef.current = disconnect;
 
+      // Option A: host disconnecting deletes room meta, triggering "Room closed" for all
+      if (nextHost) {
+        const metaDisconnect = onDisconnect(ref(firebaseDb, `rooms/${parsedRoomCode}/meta`));
+        await metaDisconnect.remove();
+        hostDisconnectRef.current = metaDisconnect;
+      }
+
       roomIdRef.current = parsedRoomCode;
       isHostRef.current = nextHost;
       isCohostRef.current = false;
+      hostUidRef.current = nextHost ? authUid : (existingMeta?.hostUid ?? '');
       setRoomId(parsedRoomCode);
       setHostUid(nextHost ? authUid : (existingMeta?.hostUid ?? ''));
       setIsHost(nextHost);
@@ -649,6 +690,7 @@ export function useFirebaseGroupRoom() {
     attachRoomSubscriptions,
     authUid,
     cancelDisconnectCleanup,
+    cancelHostDisconnectCleanup,
     cleanupStaleParticipants,
     clearRoomListeners,
     leaveRoom,

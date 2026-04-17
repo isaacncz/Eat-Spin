@@ -49,7 +49,6 @@ export function AppNavbar({
 
   const handleTabChange = useCallback(
     (tab: 'auto' | 'manual') => {
-      trackEvent('navbar_tab_change', { tab });
       onTabChange(tab);
     },
     [onTabChange],

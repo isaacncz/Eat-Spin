@@ -181,6 +181,7 @@ function App() {
   const [selectedPriceRanges, setSelectedPriceRanges] = useState<Restaurant['priceRange'][]>([]);
   const [rangeMode, setRangeMode] = useState<AutoRangeMode>(() => loadAutoRangeMode());
   const [isSpinning, setIsSpinning] = useState(false);
+  const respinCountRef = useRef(0);
   const [showSubscription, setShowSubscription] = useState(false);
   const [showSpinLimitWarning, setShowSpinLimitWarning] = useState(false);
   const [currentMealTime, setCurrentMealTime] = useState<MealTime>('none');
@@ -679,9 +680,11 @@ function App() {
   }, [activeTab]);
 
   const handleAutoSpinAgain = useCallback((restaurant: Restaurant) => {
+    respinCountRef.current += 1;
     trackEvent('spin_again_requested', {
       restaurant_name: restaurant.name,
       round_size: wheelRestaurants.length,
+      respin_count: respinCountRef.current,
     });
 
     if (typeof window === 'undefined') return;
@@ -708,7 +711,7 @@ function App() {
     }
 
     if (outcome === 'dismissed') {
-      trackEvent('pwa_install_dismissed', { spin_count: spins.length });
+      trackEvent('pwa_install_prompt_dismissed', { spin_count: spins.length });
       toast('Install prompt dismissed for now.');
       return;
     }
@@ -718,7 +721,7 @@ function App() {
 
   const handleDismissPwaBanner = useCallback(() => {
     dismissPwaInstallBanner();
-    trackEvent('pwa_install_banner_dismissed', { spin_count: spins.length });
+    trackEvent('pwa_install_banner_closed', { spin_count: spins.length });
   }, [dismissPwaInstallBanner, spins.length]);
 
   const handleShareSpinWrapped = useCallback(async () => {
@@ -913,6 +916,7 @@ function App() {
       return false;
     }
     trackEvent('spin_start', { mode: activeTab, restaurant_count: activeTab === 'auto' ? wheelRestaurants.length : displayedManualRestaurants.length });
+    respinCountRef.current = 0;
     return true;
   };
 
@@ -1452,7 +1456,7 @@ function App() {
         activeTab={activeTab}
         onTabChange={switchTab}
         activeRoomId={groupRoomId}
-        onGroupSpin={() => { trackEvent('nav_group_spin'); scrollToSection('group-spin'); }}
+        onGroupSpin={() => scrollToSection('group-spin')}
         onAbout={() => setShowAboutSections(prev => !prev)}
         onLeaveRoom={isGroupRoomActive ? handleLeaveGroupRoom : undefined}
       />
@@ -1469,7 +1473,7 @@ function App() {
           isLocationLoading={locationLoading}
           locationError={locationError}
           restaurantCount={roundRestaurants.length}
-          onGroupSpin={() => { trackEvent('hero_group_spin'); scrollToSection('group-spin'); }}
+          onGroupSpin={() => scrollToSection('group-spin')}
           isLoadingRestaurants={nearbyRestaurantsLoading}
           totalNearbyCount={autoSourceRestaurants.length}
           closedNowCount={closedNowExcludedCount}

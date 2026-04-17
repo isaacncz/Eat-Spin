@@ -181,6 +181,7 @@ function App() {
   const [selectedPriceRanges, setSelectedPriceRanges] = useState<Restaurant['priceRange'][]>([]);
   const [rangeMode, setRangeMode] = useState<AutoRangeMode>(() => loadAutoRangeMode());
   const [isSpinning, setIsSpinning] = useState(false);
+  const respinCountRef = useRef(0);
   const [showSubscription, setShowSubscription] = useState(false);
   const [showSpinLimitWarning, setShowSpinLimitWarning] = useState(false);
   const [currentMealTime, setCurrentMealTime] = useState<MealTime>('none');
@@ -679,9 +680,11 @@ function App() {
   }, [activeTab]);
 
   const handleAutoSpinAgain = useCallback((restaurant: Restaurant) => {
+    respinCountRef.current += 1;
     trackEvent('spin_again_requested', {
       restaurant_name: restaurant.name,
       round_size: wheelRestaurants.length,
+      respin_count: respinCountRef.current,
     });
 
     if (typeof window === 'undefined') return;
@@ -913,6 +916,7 @@ function App() {
       return false;
     }
     trackEvent('spin_start', { mode: activeTab, restaurant_count: activeTab === 'auto' ? wheelRestaurants.length : displayedManualRestaurants.length });
+    respinCountRef.current = 0;
     return true;
   };
 

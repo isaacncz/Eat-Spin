@@ -33,7 +33,7 @@ export interface AnalyticsEventMap {
   spin_start: { mode: string; restaurant_count: number };
   spin_complete: { mode: string; restaurant_name: string; category?: string };
   spin_blocked: { mode: string };
-  spin_again_requested: { restaurant_name: string; round_size: number };
+  spin_again_requested: { restaurant_name: string; round_size: number; respin_count: number };
   shuffle_wheel: { restaurant_count: number };
   range_mode_changed: { mode: string };
 

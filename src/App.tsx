@@ -75,6 +75,9 @@ const AUTO_RANGE_RADIUS_KM: Record<AutoRangeMode, number> = {
   drive10: 4.3,
   drive20: 8.5,
 };
+const MIDSPIN_WHEEL_SECTION_ID = 'midspin-wheel';
+const MAX_MIDSPIN_RESTAURANTS = 12;
+const MIN_FALLBACK_RADIUS_KM = 10;
 
 const isAutoRangeMode = (value: string): value is AutoRangeMode =>
   value === 'walk' || value === 'drive10' || value === 'drive20';
@@ -999,9 +1002,6 @@ function App() {
     } else if (tab === 'manual') {
       setManualSpinResult(null);
       setManualWheelKey((prev) => prev + 1);
-    } else if (tab === 'midspin') {
-      setShowMidWheelSection(false);
-      setMidWheelRestaurants([]);
     }
     if (tab !== 'midspin') {
       setShowMidWheelSection(false);
@@ -1414,7 +1414,7 @@ function App() {
       usedFallback = true;
       // Fall back to local dataset filtered by distance from centroid
       restaurants = enrichRestaurantListCategories(
-        rankNearbyRestaurants(localRestaurants as Restaurant[], centroid, Math.max(radiusKm, 10), 20, 'local-fallback'),
+        rankNearbyRestaurants(localRestaurants as Restaurant[], centroid, Math.max(radiusKm, MIN_FALLBACK_RADIUS_KM), 20, 'local-fallback'),
       );
     }
 
@@ -1428,7 +1428,7 @@ function App() {
       'all',
     );
 
-    const sliced = filtered.slice(0, 12);
+    const sliced = filtered.slice(0, MAX_MIDSPIN_RESTAURANTS);
 
     if (sliced.length === 0) {
       toast.error('No open restaurants found near the midpoint. Try again later.');
@@ -1446,7 +1446,7 @@ function App() {
     setIsMidSpinFetching(false);
 
     setTimeout(() => {
-      document.getElementById('midspin-wheel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById(MIDSPIN_WHEEL_SECTION_ID)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
   }, []);
 
@@ -2436,7 +2436,7 @@ function App() {
 
       {/* MidSpin wheel — rendered below MidSpin section after fetch completes */}
       {activeTab === 'midspin' && showMidWheelSection && midWheelRestaurants.length > 0 && (
-        <section id="midspin-wheel" className="py-10 sm:py-12 px-4 sm:px-6 lg:px-8 bg-brand-linen">
+        <section id={MIDSPIN_WHEEL_SECTION_ID} className="py-10 sm:py-12 px-4 sm:px-6 lg:px-8 bg-brand-linen">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-5 sm:mb-6">
               <h2 className="font-heading text-xl sm:text-2xl font-bold text-brand-black mb-1.5">

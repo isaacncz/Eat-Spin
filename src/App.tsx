@@ -1452,7 +1452,7 @@ function App() {
         activeTab={activeTab}
         onTabChange={switchTab}
         activeRoomId={groupRoomId}
-        onGroupSpin={() => { trackEvent('nav_group_spin'); scrollToSection('group-spin'); }}
+        onGroupSpin={() => scrollToSection('group-spin')}
         onAbout={() => setShowAboutSections(prev => !prev)}
         onLeaveRoom={isGroupRoomActive ? handleLeaveGroupRoom : undefined}
       />
@@ -1469,7 +1469,7 @@ function App() {
           isLocationLoading={locationLoading}
           locationError={locationError}
           restaurantCount={roundRestaurants.length}
-          onGroupSpin={() => { trackEvent('hero_group_spin'); scrollToSection('group-spin'); }}
+          onGroupSpin={() => scrollToSection('group-spin')}
           isLoadingRestaurants={nearbyRestaurantsLoading}
           totalNearbyCount={autoSourceRestaurants.length}
           closedNowCount={closedNowExcludedCount}

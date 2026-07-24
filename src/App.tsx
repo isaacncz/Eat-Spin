@@ -8,7 +8,7 @@ import { useTextSearch } from '@/hooks/useTextSearch';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
-import { getMealTimeEmoji, getSuggestedManualListName, useManualLists } from '@/hooks/useManualLists';
+import { getSuggestedManualListName, useManualLists } from '@/hooks/useManualLists';
 import { useSpinChallenge } from '@/hooks/useSpinChallenge';
 import { useDiscoverFeed } from '@/hooks/useDiscoverFeed';
 import type { FoodCategory, ManualListMealTime, MealTime, Restaurant } from '@/types';
@@ -28,17 +28,24 @@ import { QuickSpinHero, type FoodMood } from '@/sections/QuickSpinHero';
 import { applyServesFilters, SERVES_FILTERS, type ServesFilterId } from '@/lib/servesFilters';
 import { getTimeOfDayFilters } from '@/lib/timeOfDayDefaults';
 import { FilterPanel } from '@/components/FilterPanel';
+import { ManualListSelector } from '@/components/ManualListSelector';
 import { Footer } from '@/sections/Footer';
 import { GroupSpin } from '@/sections/GroupSpin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
-import { RotateCcw, Crown, MapPin, Utensils, PencilLine, Plus, X, Trash2, ChevronDown, CheckCircle2, Heart } from 'lucide-react';
+import { RotateCcw, Crown, MapPin, Utensils, Plus, X, ChevronDown, CheckCircle2, Heart, Share2 } from 'lucide-react';
 import { useFavourites } from '@/hooks/useFavourites';
 import { useFeedbackPrompt } from '@/hooks/useFeedbackPrompt';
 import { enqueueFeedback } from '@/lib/feedbackStore';
 import { deriveFavouriteId } from '@/types/favourites';
 import { shareCard } from '@/lib/shareCard';
+import { estimateTravelTime } from '@/lib/travelTime';
+import {
+  buildWheelShareUrl,
+  parseSharedWheelFromLocation,
+  stripWheelParamFromUrl,
+} from '@/lib/wheelShare';
 import { FeedbackPrompt } from '@/components/FeedbackPrompt';
 import { FirstRunOnboarding } from '@/components/FirstRunOnboarding';
 import SpinStatsPanel from '@/components/SpinStatsPanel';
@@ -72,17 +79,6 @@ const AUTO_RANGE_RADIUS_KM: Record<AutoRangeMode, number> = {
 
 const isAutoRangeMode = (value: string): value is AutoRangeMode =>
   value === 'walk' || value === 'drive10' || value === 'drive20';
-
-/** Estimate travel time from straight-line distance using road detour factor. */
-const estimateTravelTime = (straightLineKm: number): string => {
-  const roadKm = straightLineKm * 1.4;
-  if (roadKm <= 1.2) {
-    const minutes = Math.round((roadKm / 5) * 60);
-    return `~${Math.max(1, minutes)} min walk`;
-  }
-  const minutes = Math.round((roadKm / 30) * 60);
-  return `~${Math.max(1, minutes)} min drive`;
-};
 
 const loadAutoRangeMode = (): AutoRangeMode => {
   if (typeof window === 'undefined') return DEFAULT_AUTO_RANGE_MODE;
@@ -679,6 +675,49 @@ function App() {
     }
   }, [activeTab]);
 
+  // Share the whole wheel (not just the result) as a backend-free ?wheel= link.
+  const handleShareWheel = useCallback(async () => {
+    const names = displayedManualRestaurantNames;
+    if (names.length < 2) {
+      toast.info('Add at least 2 places to share your wheel.');
+      return;
+    }
+
+    const wheelName = isGroupRoomActive
+      ? (groupRoomId ? `Room ${groupRoomId} wheel` : 'Group wheel')
+      : (selectedManualList?.name ?? 'My wheel');
+    const shareUrl = buildWheelShareUrl(wheelName, names);
+    if (!shareUrl) {
+      toast.error('This wheel is too large to share as a link. Try trimming a few places.');
+      return;
+    }
+
+    trackEvent('share_wheel_open', { count: names.length });
+    const previewNames = names.slice(0, 4).join(', ');
+    const shareText = `Spin my EatSpin wheel: ${previewNames}${names.length > 4 ? '…' : ''}`;
+
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: `${wheelName} — EatSpin`, text: shareText, url: shareUrl });
+        trackEvent('share_wheel_success', { method: 'native', count: names.length });
+      } catch {
+        trackEvent('share_wheel_cancelled', { count: names.length });
+      }
+      return;
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Wheel link copied!', {
+        description: 'Send it to friends — they open the same wheel and can spin it too.',
+      });
+      trackEvent('share_wheel_success', { method: 'clipboard', count: names.length });
+      return;
+    }
+
+    toast.info('Sharing is not supported on this browser.');
+  }, [displayedManualRestaurantNames, groupRoomId, isGroupRoomActive, selectedManualList]);
+
   const handleAutoSpinAgain = useCallback((restaurant: Restaurant) => {
     respinCountRef.current += 1;
     trackEvent('spin_again_requested', {
@@ -1002,6 +1041,54 @@ function App() {
       .filter((name, index, arr) => arr.findIndex((item) => item.toLowerCase() === name.toLowerCase()) === index);
 
     return uniqueNames.map((name) => createManualRestaurant(name));
+  }, []);
+
+  // Import a wheel shared via a ?wheel= link into the manual lists. Runs once on
+  // mount — fully client-side, no Firebase or room required. Group room links
+  // (?room=) take precedence, so we skip when one is present.
+  const sharedWheelImportedRef = useRef(false);
+  useEffect(() => {
+    if (sharedWheelImportedRef.current) return;
+    if (typeof window === 'undefined') return;
+    if (new URLSearchParams(window.location.search).get('room')) return;
+
+    const sharedWheel = parseSharedWheelFromLocation();
+    if (!sharedWheel) return;
+
+    sharedWheelImportedRef.current = true;
+    stripWheelParamFromUrl();
+
+    const normalizedSharedNames = sharedWheel.names.map((name) => name.trim()).filter(Boolean);
+    const sharedSignature = [...normalizedSharedNames].map((name) => name.toLowerCase()).sort().join('|');
+
+    // If the friend's wheel already exists locally, select it instead of duplicating.
+    const existingList = manualLists.find((list) => {
+      const listSignature = list.restaurants
+        .map((restaurant) => restaurant.name.trim().toLowerCase())
+        .sort()
+        .join('|');
+      return listSignature === sharedSignature;
+    });
+
+    setActiveTab('manual');
+
+    if (existingList) {
+      selectManualList(existingList.id);
+      trackEvent('shared_wheel_opened', { count: normalizedSharedNames.length, deduped: true });
+      toast.success(`Opened shared wheel "${sharedWheel.name}".`);
+      return;
+    }
+
+    const created = createNewManualList({
+      name: sharedWheel.name,
+      mealTime: null,
+      restaurants: buildRestaurantsFromNames(normalizedSharedNames),
+    });
+    trackEvent('shared_wheel_opened', { count: normalizedSharedNames.length, deduped: false });
+    toast.success(`Added shared wheel "${created.name}" to your lists.`, {
+      description: 'Spin it now or tweak the picks — it saved to your manual lists.',
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const listNameSuggestion = useMemo(
@@ -1791,175 +1878,29 @@ function App() {
                 </div>
               )}
               {/* ── Saved Lists: chip-based selector ── */}
-              <div className="mb-6 max-w-2xl mx-auto rounded-2xl border border-eatspin-peach/60 bg-white p-4 shadow-sm">
-                <div className="flex flex-col gap-3">
-                  {/* Header */}
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-eatspin-gray-1">Saved lists</p>
-
-                  {/* Horizontal chip bar with overflow fade hint */}
-                  <div className="relative">
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide" role="listbox" aria-label="Saved lists">
-                      {manualLists.map((list) => {
-                        const isSelected = list.id === selectedManualListId;
-                        const emoji = getMealTimeEmoji(list.mealTime);
-                        return (
-                          <button
-                            key={list.id}
-                            type="button"
-                            role="option"
-                            aria-selected={isSelected}
-                            title={`${list.name} — ${list.restaurants.length} picks`}
-                            onClick={() => {
-                              if (!isSelected) handleSelectSavedManualList(list.id);
-                            }}
-                            disabled={isManualListReadOnly}
-                            className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                              isSelected
-                                ? 'bg-brand-orange text-white shadow-sm'
-                                : 'border border-eatspin-peach/70 bg-white text-brand-black hover:border-brand-orange/40 hover:bg-brand-linen'
-                            } disabled:opacity-40`}
-                          >
-                            {emoji && <span>{emoji}</span>}
-                            <span className="truncate max-w-[140px]">{list.name}</span>
-                            <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-xs tabular-nums ${
-                              isSelected
-                                ? list.restaurants.length === 0 ? 'bg-white/20 text-white/90' : 'bg-white/25 text-white'
-                                : list.restaurants.length === 0 ? 'bg-eatspin-peach/50 text-eatspin-gray-1' : 'bg-eatspin-peach/70 text-brand-black'
-                            }`}>
-                              {list.restaurants.length}
-                            </span>
-                          </button>
-                        );
-                      })}
-                      {/* New list chip */}
-                      <button
-                        type="button"
-                        onClick={handleCreateManualList}
-                        disabled={isManualListReadOnly}
-                        className="flex shrink-0 items-center gap-1 rounded-full border border-dashed border-eatspin-peach px-3 py-2 text-sm font-medium text-eatspin-gray-1 transition hover:border-brand-orange/50 hover:text-brand-orange disabled:opacity-40"
-                        aria-label="Create new list"
-                      >
-                        <Plus size={14} />
-                        <span>New</span>
-                      </button>
-                    </div>
-                    {/* Right fade hint when many lists */}
-                    {manualLists.length > 3 && (
-                      <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-white to-transparent" aria-hidden="true" />
-                    )}
-                  </div>
-
-                  {/* Inline actions for selected list (view mode) */}
-                  {!isEditingListDetails && selectedManualList && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingListDetails(true)}
-                        disabled={isManualListReadOnly}
-                        className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-eatspin-gray-1 transition hover:bg-eatspin-peach/30 hover:text-brand-black disabled:opacity-40"
-                        aria-label="Edit list name and meal time"
-                      >
-                        <PencilLine size={13} />
-                        <span>Rename</span>
-                      </button>
-                      {manualLists.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={handleDeleteManualList}
-                          disabled={isManualListReadOnly}
-                          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
-                          aria-label={`Delete ${selectedManualList.name}`}
-                        >
-                          <Trash2 size={13} />
-                          <span>Delete</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Edit mode (inline expansion) */}
-                  {isEditingListDetails && (
-                    <div className="space-y-3 rounded-lg border border-eatspin-peach/50 bg-brand-linen/50 p-3">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-name">List name</label>
-                          <Input
-                            id="saved-manual-name"
-                            value={listNameInput}
-                            onChange={(e) => setListNameInput(e.target.value)}
-                            placeholder="Isaac lunch list"
-                            className="h-10"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-mealtime">Meal time</label>
-                          <div className="relative">
-                            <select
-                              id="saved-manual-mealtime"
-                              value={listMealTimeInput ?? ''}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === 'breakfast' || value === 'lunch' || value === 'dinner') {
-                                  setListMealTimeInput(value);
-                                  return;
-                                }
-                                setListMealTimeInput(null);
-                              }}
-                              className="preset-select h-10 w-full rounded-md border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
-                            >
-                              <option value="">🕒 No meal time</option>
-                              <option value="breakfast">🌅 Breakfast</option>
-                              <option value="lunch">☀️ Lunch</option>
-                              <option value="dinner">🌙 Dinner</option>
-                            </select>
-                            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
-                          </div>
-                        </div>
-                      </div>
-                      {duplicateManualListForSave ? (
-                        <p className="text-xs text-red-600">{manualListNameHelperText}</p>
-                      ) : listNameSuggestion.trim() !== listNameInput.trim() ? (
-                        <button
-                          type="button"
-                          onClick={() => setListNameInput(listNameSuggestion)}
-                          className="text-left text-xs text-brand-orange hover:underline"
-                        >
-                          {manualListNameHelperText}
-                        </button>
-                      ) : null}
-                      <div className="flex items-center justify-between gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleDeleteManualList}
-                          disabled={isManualListReadOnly || !selectedManualList}
-                          className="h-9 border-red-200 px-3 text-xs font-semibold text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 size={14} className="mr-1" /> Delete
-                        </Button>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleCancelEditListDetails}
-                            className="h-9 px-3 text-xs font-semibold"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={handleSaveManualListDetails}
-                            disabled={isManualListReadOnly || (!isCreatingNewList && (!selectedManualList || !hasManualListDetailsChanged)) || Boolean(duplicateManualListForSave)}
-                            className="h-9 bg-brand-orange px-3 text-xs font-semibold text-white hover:bg-brand-orange/90"
-                          >
-                            Save
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <ManualListSelector
+                manualLists={manualLists}
+                selectedManualListId={selectedManualListId}
+                selectedManualList={selectedManualList}
+                isManualListReadOnly={isManualListReadOnly}
+                isEditingListDetails={isEditingListDetails}
+                isCreatingNewList={isCreatingNewList}
+                listNameInput={listNameInput}
+                listMealTimeInput={listMealTimeInput}
+                listNameSuggestion={listNameSuggestion}
+                manualListNameHelperText={manualListNameHelperText}
+                hasDuplicateName={Boolean(duplicateManualListForSave)}
+                hasManualListDetailsChanged={hasManualListDetailsChanged}
+                onSelectList={handleSelectSavedManualList}
+                onCreateList={handleCreateManualList}
+                onStartEditDetails={() => setIsEditingListDetails(true)}
+                onDeleteList={handleDeleteManualList}
+                onListNameInputChange={setListNameInput}
+                onListMealTimeChange={setListMealTimeInput}
+                onUseSuggestedName={() => setListNameInput(listNameSuggestion)}
+                onCancelEditDetails={handleCancelEditListDetails}
+                onSaveDetails={handleSaveManualListDetails}
+              />
 
               <RouletteWheel
                 key={isGroupRoomActive ? `manual-room-${groupRoomId || 'none'}` : `manual-${manualWheelKey}-${displayedManualRestaurants.length}`}
@@ -2135,14 +2076,26 @@ function App() {
                   <div className="flex justify-between items-center mb-3">
                     <h4 className="font-heading font-semibold text-brand-black">Restaurant list ({displayedManualRestaurants.length})</h4>
                     {displayedManualRestaurants.length > 0 && (
-                      <button
-                        type="button"
-                        className="text-xs font-medium text-eatspin-orange hover:underline"
-                        onClick={clearManualRestaurants}
-                        disabled={isManualListReadOnly}
-                      >
-                        Clear all
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-brand-orange hover:underline disabled:opacity-40"
+                          onClick={() => { void handleShareWheel(); }}
+                          disabled={displayedManualRestaurants.length < 2}
+                          title={displayedManualRestaurants.length < 2 ? 'Add at least 2 places to share' : 'Share this wheel with friends'}
+                        >
+                          <Share2 size={13} />
+                          Share wheel
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs font-medium text-eatspin-gray-1 hover:text-red-500 hover:underline"
+                          onClick={clearManualRestaurants}
+                          disabled={isManualListReadOnly}
+                        >
+                          Clear all
+                        </button>
+                      </div>
                     )}
                   </div>
 

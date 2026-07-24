@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback, type PointerEvent as ReactPointerEvent } from 'react';
 import type { Restaurant } from '@/types';
 import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Heart, Navigation, Share2, Volume2, VolumeX } from 'lucide-react';
 import gsap from 'gsap';
@@ -6,6 +6,7 @@ import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
 import { playSpinTick, playSpinWin, startSpinDrumroll, stopSpinDrumroll, triggerSpinHaptic } from '@/lib/spinAudio';
 import { PhotoCarousel } from '@/components/PhotoCarousel';
+import { estimateTravelTime } from '@/lib/travelTime';
 
 
 interface RouletteWheelProps {
@@ -42,40 +43,34 @@ interface RouletteWheelProps {
   isFavourite?: (restaurant: Restaurant) => boolean;
 }
 
-// Vibrant appetizing color palette
-const WHEEL_COLORS = [
+// Curated appetizing hues, ordered so neighbours always contrast. Used directly
+// when a wheel is small enough that these already separate every slice.
+const CURATED_SEGMENT_COLORS = [
   '#FF6B6B', // Juicy tomato red
-  '#FF9F43', // Orange spice
-  '#F4C430', // Sunny yellow (slightly darker for white text)
-  '#6BCB77', // Fresh green
   '#4D96FF', // Appetizing blue
+  '#F4C430', // Sunny yellow
   '#A45EE5', // Vibrant purple
-  '#FF6B6B', // Juicy tomato red
   '#FF9F43', // Orange spice
-  '#F4C430', // Sunny yellow (slightly darker for white text)
   '#6BCB77', // Fresh green
-  '#4D96FF', // Appetizing blue
-  '#A45EE5', // Vibrant purple
-  '#FF6B6B', // Juicy tomato red
-  '#FF9F43', // Orange spice
+  '#FF5E9C', // Berry pink
+  '#20C4B5', // Teal
 ];
 
-function getSegmentColor(index: number): string {
-  return WHEEL_COLORS[index % WHEEL_COLORS.length];
-}
-
-/** Estimate travel time from straight-line distance using road detour factor. */
-const estimateTravelTime = (straightLineKm: number): string => {
-  const roadKm = straightLineKm * 1.4; // detour factor
-  if (roadKm <= 1.2) {
-    // Walking range
-    const minutes = Math.round((roadKm / 5) * 60); // 5 km/h walk speed
-    return `~${Math.max(1, minutes)} min walk`;
+/**
+ * Build a palette of `count` colors where adjacent slices are always visually
+ * distinct. Small wheels use the curated brand hues; larger wheels fall back to
+ * evenly spaced HSL so no two neighbours (or the first/last wrap) collide.
+ */
+function getSegmentColors(count: number): string[] {
+  if (count <= 0) return [];
+  if (count <= CURATED_SEGMENT_COLORS.length) {
+    return CURATED_SEGMENT_COLORS.slice(0, count);
   }
-  // Driving range — urban avg ~30 km/h
-  const minutes = Math.round((roadKm / 30) * 60);
-  return `~${Math.max(1, minutes)} min drive`;
-};
+  return Array.from({ length: count }, (_, index) => {
+    const hue = Math.round((index * 360) / count);
+    return `hsl(${hue}, 68%, 54%)`;
+  });
+}
 
 const compactRestaurantName = (name: string, maxLength: number): string => {
   const normalized = name.trim().replace(/\s+/g, ' ');
@@ -169,6 +164,10 @@ export function RouletteWheel({
   const ANTICIPATION_DEG = 50;
   const SPIN_DURATION_S = 5.8;
   const WINNER_PULSE_DURATION_MS = 900;
+  // Flick-to-spin: how hard a drag must be to launch a spin.
+  const FLICK_VELOCITY_THRESHOLD = 0.35; // deg/ms (~350°/s)
+  const FLICK_ROTATION_THRESHOLD = 90; // or a big sweep, even if slow at release
+  const DRAG_MOVED_THRESHOLD = 6; // deg — below this a gesture counts as a tap, not a drag
 
   const wheelRef = useRef<HTMLDivElement>(null);
   const wheelScrollRef = useRef<HTMLDivElement>(null);
@@ -187,6 +186,14 @@ export function RouletteWheel({
   const [isWinnerSliceHighlighted, setIsWinnerSliceHighlighted] = useState(false);
   const resultCardRef = useRef<HTMLDivElement>(null);
   const lastTickSegmentRef = useRef<number | null>(null);
+  const dragStateRef = useRef<{
+    pointerId: number;
+    lastAngle: number;
+    lastTime: number;
+    velocity: number;
+    totalAbsRotation: number;
+    moved: boolean;
+  } | null>(null);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => loadSoundPreference());
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   // No separate drawer state needed — "Let's Go!" opens Google Maps directly
@@ -277,22 +284,25 @@ export function RouletteWheel({
     celebrationTimeoutsRef.current.push(cleanupTimer);
   }, [clearCelebrationEffects]);
 
+  // Distinct color per slice; adjacent slices never share a hue.
+  const segmentColors = useMemo(() => getSegmentColors(restaurants.length), [restaurants.length]);
+
   // Generate conic gradient for wheel segments
   const wheelBackground = useMemo(() => {
     if (restaurants.length === 0) return '';
-    
+
     const segmentAngle = 360 / restaurants.length;
     const stops: string[] = [];
-    
+
     for (let i = 0; i < restaurants.length; i++) {
       const startAngle = i * segmentAngle;
       const endAngle = (i + 1) * segmentAngle;
-      const color = getSegmentColor(i);
+      const color = segmentColors[i];
       stops.push(`${color} ${startAngle}deg ${endAngle}deg`);
     }
-    
+
     return `conic-gradient(from 0deg, ${stops.join(', ')})`;
-  }, [restaurants.length]);
+  }, [restaurants.length, segmentColors]);
 
   const scrollWheelIntoView = useCallback((behavior: ScrollBehavior) => {
     const target = wheelScrollRef.current ?? wheelContainerRef.current;
@@ -437,6 +447,83 @@ export function RouletteWheel({
       return;
     }
     handleLocalSpin();
+  };
+
+  const canInteractWithWheel = () => {
+    if (isSpinning || !canSpin) return false;
+    if (onRequestSpin && !canRequestSpin) return false;
+    return true;
+  };
+
+  const getPointerAngle = (clientX: number, clientY: number): number => {
+    const element = wheelContainerRef.current;
+    if (!element) return 0;
+    const rect = element.getBoundingClientRect();
+    const centerXPos = rect.left + rect.width / 2;
+    const centerYPos = rect.top + rect.height / 2;
+    return (Math.atan2(clientY - centerYPos, clientX - centerXPos) * 180) / Math.PI;
+  };
+
+  // ── Flick / drag to spin ────────────────────────────────────────────────
+  // Dragging on the wheel body rotates it under your finger; releasing with
+  // enough speed (or after a big sweep) launches a spin. Gentle nudges settle
+  // in place, so you can't spin by accident while scrolling.
+  const handleWheelPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!canInteractWithWheel()) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    if (wheelRef.current) {
+      gsap.killTweensOf(wheelRef.current);
+      currentRotationRef.current = gsap.getProperty(wheelRef.current, 'rotation') as number;
+    }
+
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      lastAngle: getPointerAngle(event.clientX, event.clientY),
+      lastTime: performance.now(),
+      velocity: 0,
+      totalAbsRotation: 0,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const handleWheelPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = dragStateRef.current;
+    if (!drag || event.pointerId !== drag.pointerId || !wheelRef.current) return;
+
+    const angle = getPointerAngle(event.clientX, event.clientY);
+    let delta = angle - drag.lastAngle;
+    if (delta > 180) delta -= 360;
+    else if (delta < -180) delta += 360;
+
+    const now = performance.now();
+    const elapsed = Math.max(now - drag.lastTime, 1);
+    drag.velocity = delta / elapsed;
+    drag.lastAngle = angle;
+    drag.lastTime = now;
+    drag.totalAbsRotation += Math.abs(delta);
+    if (drag.totalAbsRotation > DRAG_MOVED_THRESHOLD) drag.moved = true;
+
+    currentRotationRef.current += delta;
+    gsap.set(wheelRef.current, { rotation: currentRotationRef.current });
+    syncWheelRotationVar(currentRotationRef.current);
+  };
+
+  const handleWheelPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = dragStateRef.current;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    dragStateRef.current = null;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+
+    if (!drag.moved) return; // a tap on the wheel body — the SPIN hub handles taps
+    if (!canInteractWithWheel()) return;
+
+    const flickSpeed = Math.abs(drag.velocity);
+    if (flickSpeed >= FLICK_VELOCITY_THRESHOLD || drag.totalAbsRotation >= FLICK_ROTATION_THRESHOLD) {
+      handleSpinClick();
+    }
+    // Otherwise: a soft nudge — leave the wheel resting where it landed.
   };
 
   // Reset wheel position when restaurants change
@@ -598,11 +685,36 @@ export function RouletteWheel({
           <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[30px] border-t-eatspin-orange drop-shadow-lg" />
         </div>
 
+        {/* Sound toggle — compact, tucked into the wheel corner */}
+        <button
+          type="button"
+          onClick={() => setSoundEnabled((previous) => !previous)}
+          aria-pressed={soundEnabled}
+          aria-label={soundEnabled ? 'Turn spin sound off' : 'Turn spin sound on'}
+          title={soundEnabled ? 'Sound on' : 'Sound off'}
+          className="absolute right-2 top-1 z-30 inline-flex h-9 w-9 items-center justify-center rounded-full border border-eatspin-peach/70 bg-white/90 text-eatspin-gray-1 shadow-sm backdrop-blur transition-colors hover:border-brand-orange hover:text-brand-orange sm:right-4"
+        >
+          {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+        </button>
+
         {/* Wheel Container */}
         <div
           ref={wheelContainerRef}
-          className="relative mx-auto w-full aspect-square"
-          style={{ maxWidth: '32.5rem' }}
+          onPointerDown={handleWheelPointerDown}
+          onPointerMove={handleWheelPointerMove}
+          onPointerUp={handleWheelPointerUp}
+          onPointerCancel={handleWheelPointerUp}
+          className={`relative mx-auto w-full aspect-square select-none ${canInteractWithWheel() ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          style={{ maxWidth: '32.5rem', touchAction: 'none' }}
+          role="button"
+          tabIndex={0}
+          aria-label="Flick the wheel to spin, or press Enter"
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              handleSpinClick();
+            }
+          }}
         >
           {/* Wheel */}
           <div
@@ -684,10 +796,21 @@ export function RouletteWheel({
               );
             })}
 
-            {/* Center Circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-[3px] border-eatspin-peach" style={{ boxShadow: '0 14px 28px rgba(0,0,0,0.2), 0 0 20px rgba(245, 71, 3, 0.3)' }}>
+            {/* Center hub — tap to spin */}
+            <button
+              type="button"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                handleSpinClick();
+              }}
+              disabled={isSpinning || !canSpin || (Boolean(onRequestSpin) && !canRequestSpin)}
+              aria-label="Spin the wheel"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-[3px] border-eatspin-peach transition-transform duration-150 hover:scale-105 active:scale-95 disabled:hover:scale-100 disabled:cursor-not-allowed"
+              style={{ boxShadow: '0 14px 28px rgba(0,0,0,0.2), 0 0 20px rgba(245, 71, 3, 0.3)' }}
+            >
               <span className="text-base sm:text-lg font-heading text-eatspin-orange font-bold">SPIN</span>
-            </div>
+            </button>
             
             {/* Inner decorative ring */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-white/20 pointer-events-none" />
@@ -698,6 +821,12 @@ export function RouletteWheel({
           <div className="absolute inset-0 rounded-full border-[3px] border-eatspin-peach/60 pointer-events-none" />
         </div>
       </div>
+
+      {!isSpinning && canSpin && (
+        <p className="-mt-1 text-xs font-medium text-eatspin-gray-2">
+          👆 Flick the wheel or tap the center to spin
+        </p>
+      )}
 
       {/* Spin Button */}
       <button
@@ -722,15 +851,9 @@ export function RouletteWheel({
         )}
       </button>
 
-      <button
-        type="button"
-        onClick={() => setSoundEnabled((previous) => !previous)}
-        className="inline-flex items-center gap-1.5 rounded-full border border-eatspin-peach/70 bg-white px-3 py-1.5 text-xs font-semibold text-eatspin-gray-1 hover:border-brand-orange hover:text-brand-orange"
-      >
-        {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-        {soundEnabled ? 'Sound on' : 'Sound off'}
-        {prefersReducedMotion && <span className="text-[10px] text-eatspin-gray-2">(reduced motion)</span>}
-      </button>
+      {prefersReducedMotion && (
+        <p className="text-[11px] text-eatspin-gray-2">Reduced motion is on — animations are minimized.</p>
+      )}
 
       {helperText && (
         <p className="text-sm text-eatspin-gray-1 text-center">{helperText}</p>
@@ -772,7 +895,7 @@ export function RouletteWheel({
                     <span className="flex items-center gap-2 min-w-0">
                       <span
                         className="flex-shrink-0 w-3 h-3 rounded-full"
-                        style={{ backgroundColor: getSegmentColor(restaurants.indexOf(r)) }}
+                        style={{ backgroundColor: segmentColors[restaurants.indexOf(r)] }}
                       />
                       <span className="truncate text-brand-black">
                         {r.name}

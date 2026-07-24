@@ -45,6 +45,10 @@ export interface AnalyticsEventMap {
   spin_wrapped_share_success: void;
   spin_wrapped_share_cancelled: void;
   spin_wrapped_share_copied: void;
+  share_wheel_open: { count: number };
+  share_wheel_success: { method: string; count: number };
+  share_wheel_cancelled: { count: number };
+  shared_wheel_opened: { count: number; deduped: boolean };
 
   // PWA
   pwa_install_prompt_open: { spin_count: number };

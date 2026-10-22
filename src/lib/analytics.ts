@@ -28,6 +28,8 @@ export interface AnalyticsEventMap {
   tab_switched: { tab: string };
   mood_selected: { mood: string };
   serves_filter_toggle: { filter: string };
+  filters_sheet_open: void;
+  filters_reset: void;
 
   // Spin lifecycle
   spin_start: { mode: string; restaurant_count: number };

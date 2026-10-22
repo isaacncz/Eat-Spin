@@ -105,7 +105,7 @@ export function Features() {
 
         <div
           ref={gridRef}
-          className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6"
+          className="grid gap-6"
         >
           {features.map((feature, index) => (
             <div
@@ -126,7 +126,7 @@ export function Features() {
           ))}
         </div>
 
-        <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="mt-16 grid grid-cols-2 gap-6">
           {[
             { value: '10,000+', label: 'Happy Users' },
             { value: '500+', label: 'Restaurants' },

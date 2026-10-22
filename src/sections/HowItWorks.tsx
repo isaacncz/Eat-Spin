@@ -29,7 +29,12 @@ const steps = [
   },
 ];
 
-export function HowItWorks() {
+interface HowItWorksProps {
+  /** Opens the Spin screen. Without it the button scrolls to the main app section. */
+  onStartSpinning?: () => void;
+}
+
+export function HowItWorks({ onStartSpinning }: HowItWorksProps) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
 
@@ -78,7 +83,7 @@ export function HowItWorks() {
 
         <div
           ref={cardsRef}
-          className="grid md:grid-cols-3 gap-8"
+          className="grid gap-8"
         >
           {steps.map((step, index) => (
             <div
@@ -104,12 +109,6 @@ export function HowItWorks() {
                   {step.description}
                 </p>
               </div>
-
-              {index < steps.length - 1 && (
-                <div className="hidden md:block absolute top-1/2 -right-4 w-8 h-1 bg-brand-ink">
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[8px] border-l-brand-ink" />
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -120,6 +119,10 @@ export function HowItWorks() {
           </p>
           <button
             onClick={() => {
+              if (onStartSpinning) {
+                onStartSpinning();
+                return;
+              }
               const appSection = document.getElementById('app-main-section');
               appSection?.scrollIntoView({ behavior: 'smooth' });
             }}

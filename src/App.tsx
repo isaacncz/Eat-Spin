@@ -11,6 +11,8 @@ import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
 import { usePlacesBudget } from '@/hooks/usePlacesBudget';
 import { useGame } from '@/hooks/useGame';
 import { GameHud } from '@/components/GameHud';
+import { RarityBadge } from '@/components/RarityBadge';
+import { getRarity, getRarityMultiplier, RARITY_LABEL, type Rarity } from '@/lib/rarity';
 import { getMealTimeEmoji, getSuggestedManualListName, useManualLists } from '@/hooks/useManualLists';
 import { useSpinChallenge } from '@/hooks/useSpinChallenge';
 import { useDiscoverFeed } from '@/hooks/useDiscoverFeed';
@@ -288,6 +290,7 @@ function App() {
   const {
     favourites,
     isFavourite: isFavouriteCheck,
+    getLastVisitedAt,
     save: saveFavourite,
     remove: removeFavouriteEntry,
     restore: restoreFavouriteEntry,
@@ -797,13 +800,20 @@ function App() {
     void leaveChallenge();
   }, [leaveChallenge]);
 
-  const handleLetsGo = useCallback((restaurant: Restaurant) => {
+  const handleLetsGo = useCallback((restaurant: Restaurant, shownRarity?: Rarity) => {
     trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
+
+    // Rarity must be read before the visit is recorded below, which resets it to common.
+    // The result card passes the tier it showed; other entry points derive it from the favourite.
+    const rarity = shownRarity ?? getRarity(getLastVisitedAt(restaurant));
     void recordVisitAndSave(restaurant);
 
-    const reward = game.awardForLetsGo(restaurant.id);
+    const reward = game.awardForLetsGo(restaurant.id, getRarityMultiplier(rarity));
     if (reward.awarded) {
-      toast.success(`+${reward.xp} XP, +${reward.coins} coins`, {
+      const xpText = reward.multiplier > 1
+        ? `+${reward.xp} XP (${RARITY_LABEL[rarity]} ${reward.multiplier}x)`
+        : `+${reward.xp} XP`;
+      toast.success(`${xpText}, +${reward.coins} coins`, {
         description: reward.leveledUp ? `Level up! You are now level ${game.level + 1}.` : undefined,
       });
     }
@@ -828,7 +838,7 @@ function App() {
     toast.success(`Navigating to ${restaurant.name}!`, {
       description: 'We\'ll ask how it was next time you open the app.',
     });
-  }, [game, recordVisitAndSave]);
+  }, [game, getLastVisitedAt, recordVisitAndSave]);
 
   const handleRemoveFavourite = useCallback((id: string, name: string) => {
     trackEvent('favourite_removed', { favourite_id: id });
@@ -2015,6 +2025,7 @@ function App() {
                 onLetsGo={handleLetsGo}
                 onShareResult={handleShareResult}
                 isFavourite={isFavouriteCheck}
+                getLastVisitedAt={getLastVisitedAt}
               />
 
                 {/* Nearby Favourites Section */}
@@ -2040,7 +2051,10 @@ function App() {
                             <li key={nf.favouriteId} className="flex items-center justify-between gap-2 rounded-lg bg-green-50 px-3 py-2">
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium text-brand-black truncate">{nf.restaurantName}</p>
-                                <p className="text-xs text-eatspin-gray-1">{estimateTravelTime(nf.distanceKm)}</p>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="text-xs text-eatspin-gray-1">{estimateTravelTime(nf.distanceKm)}</span>
+                                  <RarityBadge rarity={getRarity(favourites.find((f) => f.id === nf.favouriteId)?.lastVisitedAt)} />
+                                </div>
                               </div>
                               <div className="flex items-center gap-1.5 flex-shrink-0">
                                 {!alreadyInList && !isManualListReadOnly && (
@@ -2089,7 +2103,8 @@ function App() {
                               <li key={fav.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-linen px-3 py-2">
                                 <div className="min-w-0 flex-1">
                                   <p className="text-sm font-medium text-brand-black truncate">{fav.restaurant.name}</p>
-                                  <div className="flex flex-wrap gap-1.5 mt-1">
+                                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                    <RarityBadge rarity={getRarity(fav.lastVisitedAt)} />
                                     {fav.restaurant.rating > 0 && (
                                       <span className="text-xs text-eatspin-gray-1">⭐ {fav.restaurant.rating}</span>
                                     )}
@@ -2250,6 +2265,7 @@ function App() {
               onSpinAgain={handleAutoSpinAgain}
               canSpinAgain={wheelRestaurants.length >= 2}
               isFavourite={isFavouriteCheck}
+              getLastVisitedAt={getLastVisitedAt}
               helperText={autoAvailabilityHelperText || undefined}
               emptyStateTitle="No open restaurants ready to spin"
               emptyStateSubtitle={autoEmptyStateSubtitle}

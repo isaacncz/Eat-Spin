@@ -18,6 +18,8 @@ interface UseFavouritesReturn {
   isLoading: boolean;
   /** Check if a restaurant is already in the favourites list. */
   isFavourite: (restaurant: Restaurant) => boolean;
+  /** Epoch ms of the last "Let's go!" for this restaurant, or undefined if it was never visited. */
+  getLastVisitedAt: (restaurant: Restaurant) => number | undefined;
   /** Save a restaurant as a favourite. */
   save: (restaurant: Restaurant, savedFrom: FavouriteEntry['savedFrom']) => Promise<void>;
   /** Remove a favourite by ID. Returns the deleted entry (for undo). */
@@ -57,6 +59,14 @@ export const useFavourites = (): UseFavouritesReturn => {
     (restaurant: Restaurant): boolean => {
       const id = deriveFavouriteId(restaurant);
       return favourites.some((f) => f.id === id);
+    },
+    [favourites],
+  );
+
+  const getLastVisitedAt = useCallback(
+    (restaurant: Restaurant): number | undefined => {
+      const id = deriveFavouriteId(restaurant);
+      return favourites.find((f) => f.id === id)?.lastVisitedAt;
     },
     [favourites],
   );
@@ -114,6 +124,7 @@ export const useFavourites = (): UseFavouritesReturn => {
     favourites,
     isLoading,
     isFavourite: isFavouriteCheck,
+    getLastVisitedAt,
     save,
     remove,
     restore,

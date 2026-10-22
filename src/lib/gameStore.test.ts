@@ -153,6 +153,74 @@ describe('awardLetsGo', () => {
   });
 });
 
+describe('awardLetsGo XP multiplier', () => {
+  const DAY_1 = '2026-10-22';
+  const DAY_2 = '2026-10-23';
+
+  it('defaults to 1x, so existing callers are unchanged', () => {
+    const result = awardLetsGo(defaultGameState(), 'place-a', DAY_1);
+    expect(result.multiplier).toBe(1);
+    expect(result.xp).toBe(XP_LETS_GO);
+  });
+
+  it.each([
+    [1, 50],
+    [2, 100],
+    [3, 150],
+  ])('%ix multiplier awards %i XP', (multiplier, xp) => {
+    const result = awardLetsGo(defaultGameState(), 'place-a', DAY_1, multiplier);
+
+    expect(result.awarded).toBe(true);
+    expect(result.multiplier).toBe(multiplier);
+    expect(result.xp).toBe(xp);
+    expect(result.state.xp).toBe(xp);
+  });
+
+  it('does not multiply coins', () => {
+    const result = awardLetsGo(defaultGameState(), 'place-a', DAY_1, 3);
+    expect(result.coins).toBe(COINS_LETS_GO);
+    expect(result.state.coins).toBe(COINS_LETS_GO);
+  });
+
+  it('stays a no-op on the same day even if a higher multiplier is passed the second time', () => {
+    const first = awardLetsGo(defaultGameState(), 'place-a', DAY_1, 1);
+    const second = awardLetsGo(first.state, 'place-a', DAY_1, 3);
+
+    expect(second.awarded).toBe(false);
+    expect(second.xp).toBe(0);
+    expect(second.coins).toBe(0);
+    expect(second.state).toBe(first.state);
+    expect(second.state.xp).toBe(XP_LETS_GO);
+  });
+
+  it('applies the multiplier again on a new day', () => {
+    const first = awardLetsGo(defaultGameState(), 'place-a', DAY_1, 1);
+    const next = awardLetsGo(first.state, 'place-a', DAY_2, 3);
+
+    expect(next.state.xp).toBe(XP_LETS_GO + XP_LETS_GO * 3);
+  });
+
+  it('reports a level up using the multiplied XP', () => {
+    // 400 + 50 = 450 stays in level 1, 400 + 150 = 550 crosses into level 2.
+    const state: GameState = { ...defaultGameState(), xp: 400 };
+    expect(awardLetsGo(state, 'place-a', DAY_1, 1).leveledUp).toBe(false);
+    expect(awardLetsGo(state, 'place-a', DAY_1, 3).leveledUp).toBe(true);
+  });
+
+  it.each([
+    ['zero', 0, 1],
+    ['negative', -2, 1],
+    ['NaN', Number.NaN, 1],
+    ['Infinity', Number.POSITIVE_INFINITY, 1],
+    ['fractional below one', 0.5, 1],
+    ['fractional above one', 2.7, 2],
+  ])('treats a %s multiplier as %ix', (_label, multiplier, applied) => {
+    const result = awardLetsGo(defaultGameState(), 'place-a', DAY_1, multiplier);
+    expect(result.multiplier).toBe(applied);
+    expect(result.xp).toBe(XP_LETS_GO * applied);
+  });
+});
+
 describe('loadGameState / saveGameState', () => {
   beforeEach(() => {
     stubWindowStorage(createMemoryStorage());

@@ -30,8 +30,8 @@ const steps = [
 ];
 
 interface HowItWorksProps {
-  /** Opens the Spin screen. Without it the button scrolls to the main app section. */
-  onStartSpinning?: () => void;
+  /** Opens the Spin screen. */
+  onStartSpinning: () => void;
 }
 
 export function HowItWorks({ onStartSpinning }: HowItWorksProps) {
@@ -118,14 +118,7 @@ export function HowItWorks({ onStartSpinning }: HowItWorksProps) {
             Ready to end your food decision fatigue?
           </p>
           <button
-            onClick={() => {
-              if (onStartSpinning) {
-                onStartSpinning();
-                return;
-              }
-              const appSection = document.getElementById('app-main-section');
-              appSection?.scrollIntoView({ behavior: 'smooth' });
-            }}
+            onClick={onStartSpinning}
             className="inline-flex items-center gap-2 px-6 py-3 min-h-11 bg-brand-orange text-white font-heading font-bold rounded-full border-2 border-brand-ink shadow-pop active:translate-y-[3px] active:shadow-none transition-all duration-300 hover:scale-105"
           >
             Try It Now

@@ -8,6 +8,8 @@ import { useTextSearch } from '@/hooks/useTextSearch';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
+import { useGame } from '@/hooks/useGame';
+import { GameHud } from '@/components/GameHud';
 import { getMealTimeEmoji, getSuggestedManualListName, useManualLists } from '@/hooks/useManualLists';
 import { useSpinChallenge } from '@/hooks/useSpinChallenge';
 import { useDiscoverFeed } from '@/hooks/useDiscoverFeed';
@@ -280,6 +282,7 @@ function App() {
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
   const { spins, canSpin, recordSpin } = useSpinTracker();
+  const game = useGame();
   const {
     favourites,
     isFavourite: isFavouriteCheck,
@@ -796,6 +799,13 @@ function App() {
     trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
     void recordVisitAndSave(restaurant);
 
+    const reward = game.awardForLetsGo(restaurant.id);
+    if (reward.awarded) {
+      toast.success(`+${reward.xp} XP, +${reward.coins} coins`, {
+        description: reward.leveledUp ? `Level up! You are now level ${game.level + 1}.` : undefined,
+      });
+    }
+
     // Enqueue feedback for next app open
     const favId = deriveFavouriteId(restaurant);
     enqueueFeedback({ favouriteId: favId, restaurantName: restaurant.name });
@@ -816,7 +826,7 @@ function App() {
     toast.success(`Navigating to ${restaurant.name}!`, {
       description: 'We\'ll ask how it was next time you open the app.',
     });
-  }, [recordVisitAndSave]);
+  }, [game, recordVisitAndSave]);
 
   const handleRemoveFavourite = useCallback((id: string, name: string) => {
     trackEvent('favourite_removed', { favourite_id: id });
@@ -1459,6 +1469,14 @@ function App() {
         onGroupSpin={() => scrollToSection('group-spin')}
         onAbout={() => setShowAboutSections(prev => !prev)}
         onLeaveRoom={isGroupRoomActive ? handleLeaveGroupRoom : undefined}
+      />
+
+      <GameHud
+        level={game.level}
+        xpIntoLevel={game.xpIntoLevel}
+        xpPerLevel={game.xpPerLevel}
+        coins={game.coins}
+        streak={spinHistorySummary.currentStreak}
       />
 
       {/* QuickSpinHero - only in auto (discovery) mode */}

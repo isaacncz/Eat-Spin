@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Heart, Navigation, Share2, Volume2, VolumeX } from 'lucide-react';
+import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Heart, Navigation, Share2, Volume2, VolumeX, RefreshCw } from 'lucide-react';
 import gsap from 'gsap';
 import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
 import { playSpinTick, playSpinWin, startSpinDrumroll, stopSpinDrumroll, triggerSpinHaptic } from '@/lib/spinAudio';
 import { PhotoCarousel } from '@/components/PhotoCarousel';
 import { RarityRibbon } from '@/components/RarityBadge';
+import { RewardTiles } from '@/components/RewardReveal';
+import { LevelUpDialog } from '@/components/LevelUpDialog';
 import { getRarity, type Rarity } from '@/lib/rarity';
+import type { LetsGoReward } from '@/lib/letsGoReward';
+import { getMapsUrl } from '@/lib/maps';
 
 
 interface RouletteWheelProps {
@@ -33,10 +37,11 @@ interface RouletteWheelProps {
   /** Called when user taps the "★ Save" button on the spin result. */
   onSaveFavourite?: (restaurant: Restaurant) => void;
   /**
-   * Called when user taps "Let's go!" on the spin result. `rarity` is the tier the
-   * result card showed, so the reward matches what the player saw.
+   * Called once per result when the user taps "Let's go! Claim reward". `rarity` is the
+   * tier the result card showed, so the reward matches what the player saw. Return the
+   * reward to show reward tiles (and a level-up modal); return nothing to skip them.
    */
-  onLetsGo?: (restaurant: Restaurant, rarity?: Rarity) => void;
+  onLetsGo?: (restaurant: Restaurant, rarity?: Rarity) => LetsGoReward | void;
   /** Called when user taps "Share" on the spin result. */
   onShareResult?: (restaurant: Restaurant, cardElement: HTMLElement) => void | Promise<void>;
   /** Called before the one-tap spin-again action starts a new spin. */
@@ -181,6 +186,7 @@ export function RouletteWheel({
   const ANTICIPATION_DEG = 50;
   const SPIN_DURATION_S = 5.8;
   const WINNER_PULSE_DURATION_MS = 900;
+  const LEVEL_UP_DELAY_MS = 900;
 
   const wheelRef = useRef<HTMLDivElement>(null);
   const wheelScrollRef = useRef<HTMLDivElement>(null);
@@ -191,6 +197,11 @@ export function RouletteWheel({
   // Frozen when the wheel stops, so the tier cannot change after "Let's go!" records the visit.
   const [resultRarity, setResultRarity] = useState<Rarity | null>(null);
   const getLastVisitedAtRef = useRef(getLastVisitedAt);
+  // Reward reveal for the current result. Reset on every spin, so it happens once per result.
+  const [claim, setClaim] = useState<{ reward: LetsGoReward | null } | null>(null);
+  const claimedResultRef = useRef<Restaurant | null>(null);
+  const [levelUp, setLevelUp] = useState<{ level: number; open: boolean } | null>(null);
+  const levelUpTimeoutRef = useRef<number | null>(null);
   const currentRotationRef = useRef(0);
   const [wheelSize, setWheelSize] = useState(320);
   const celebrationTimeoutsRef = useRef<number[]>([]);
@@ -380,6 +391,13 @@ export function RouletteWheel({
     setIsSpinning(true);
     setSpinResult(null);
     setResultRarity(null);
+    setClaim(null);
+    setLevelUp(null);
+    claimedResultRef.current = null;
+    if (levelUpTimeoutRef.current !== null) {
+      window.clearTimeout(levelUpTimeoutRef.current);
+      levelUpTimeoutRef.current = null;
+    }
     setWinnerSliceIndex(null);
     setIsWinnerSliceHighlighted(false);
     lastTickSegmentRef.current = null;
@@ -450,6 +468,29 @@ export function RouletteWheel({
     animateSpinToIndex(randomIndex, spinRestaurants);
   };
 
+  // "Let's go! Claim reward": runs once per result. The ref also blocks a double tap that
+  // lands before React re-renders. After the claim the primary action becomes a plain Maps link.
+  const handleClaim = () => {
+    if (!spinResult || !onLetsGo || claimedResultRef.current === spinResult) return;
+    claimedResultRef.current = spinResult;
+
+    const reward = onLetsGo(spinResult, resultRarity ?? undefined) ?? null;
+    setClaim({ reward });
+
+    if (reward && reward.awarded && reward.leveledUp) {
+      const level = reward.level;
+      if (prefersReducedMotion) {
+        setLevelUp({ level, open: true });
+      } else {
+        // Let the tiles and confetti land before the modal covers them.
+        levelUpTimeoutRef.current = window.setTimeout(() => {
+          setLevelUp({ level, open: true });
+          levelUpTimeoutRef.current = null;
+        }, LEVEL_UP_DELAY_MS);
+      }
+    }
+  };
+
   const handleSpinClick = () => {
     if (onRequestSpin) {
       if (isSpinning || !canSpin || !canRequestSpin) return;
@@ -503,6 +544,10 @@ export function RouletteWheel({
   useEffect(() => {
     if (!spinResult) return;
 
+    // People who prefer reduced motion get the card and rewards with no animation at all.
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (reduceMotion) return;
+
     const resultCard = document.getElementById('spin-result-card');
     if (resultCard) {
       gsap.fromTo(
@@ -527,6 +572,9 @@ export function RouletteWheel({
       }
       if (winnerPulseTimeoutRef.current !== null) {
         window.clearTimeout(winnerPulseTimeoutRef.current);
+      }
+      if (levelUpTimeoutRef.current !== null) {
+        window.clearTimeout(levelUpTimeoutRef.current);
       }
     };
   }, [clearCelebrationEffects]);
@@ -997,21 +1045,40 @@ export function RouletteWheel({
 
             {/* Action buttons */}
             <div className="px-6 pb-6 space-y-2">
-              {/* Navigate + Share row */}
-              <div className="flex gap-2">
-                {onLetsGo && (
-                  <Button
-                    className="flex-1 h-12 bg-brand-orange hover:bg-brand-orange/90 text-white font-heading font-bold text-base rounded-xl transition-all"
-                    onClick={() => onLetsGo(spinResult, resultRarity ?? undefined)}
-                  >
+              {/* Persistent live region so screen readers announce the reward when it appears. */}
+              <div role="status" aria-live="polite">
+                {claim?.reward && <RewardTiles reward={claim.reward} animate={!prefersReducedMotion} />}
+              </div>
+
+              {/* Primary action: claim once, then it turns into a plain Maps link. */}
+              {onLetsGo && !claim && (
+                <Button
+                  className="h-12 w-full bg-brand-orange hover:bg-brand-orange/90 text-white font-heading font-bold text-base rounded-xl transition-all"
+                  onClick={handleClaim}
+                >
+                  <Navigation size={18} className="mr-1.5" />
+                  Let's go! Claim reward
+                </Button>
+              )}
+              {onLetsGo && claim && (
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-12 w-full rounded-xl border-brand-ink text-brand-ink hover:bg-arcade-yellow font-heading font-bold text-base"
+                >
+                  <a href={getMapsUrl(spinResult)} target="_blank" rel="noopener noreferrer">
                     <Navigation size={18} className="mr-1.5" />
-                    Let's go!
-                  </Button>
-                )}
+                    Open in Maps
+                  </a>
+                </Button>
+              )}
+
+              {/* Share + Save + Spin Again */}
+              <div className="flex flex-wrap gap-2">
                 {onShareResult && (
                   <Button
                     variant="outline"
-                    className="flex-1 h-12 rounded-xl border-brand-orange text-brand-orange hover:bg-brand-orange/10 font-heading font-bold text-base"
+                    className="h-11 min-w-[7rem] flex-1 rounded-xl border-brand-orange text-brand-orange hover:bg-brand-orange/10 font-heading font-bold text-base"
                     onClick={() => {
                       const cardElement = resultCardRef.current;
                       if (!cardElement) return;
@@ -1022,14 +1089,10 @@ export function RouletteWheel({
                     Share
                   </Button>
                 )}
-              </div>
-
-              {/* Save + Spin Again row */}
-              <div className="flex gap-2">
                 {onSaveFavourite && (
                   <Button
                     variant={isFavourite?.(spinResult) ? 'default' : 'outline'}
-                    className={`flex-1 h-11 rounded-xl ${isFavourite?.(spinResult)
+                    className={`h-11 min-w-[7rem] flex-1 rounded-xl ${isFavourite?.(spinResult)
                       ? 'bg-arcade-pink hover:bg-arcade-pink/90 text-brand-ink font-heading font-bold'
                       : 'text-brand-ink hover:bg-arcade-pink/20 font-heading font-bold'
                     }`}
@@ -1043,18 +1106,19 @@ export function RouletteWheel({
                 {onSpinAgain && (
                   <Button
                     variant="outline"
-                    className="flex-1 h-10 rounded-xl border-brand-ink text-brand-black hover:bg-brand-linen font-heading font-bold"
+                    className="h-11 min-w-[7rem] flex-1 rounded-xl border-brand-ink text-brand-black hover:bg-brand-linen font-heading font-bold"
                     onClick={() => {
                       onSpinAgain(spinResult);
                       handleLocalSpin();
                     }}
                     disabled={!canSpinAgain || isSpinning}
                   >
-                    🎰 Spin Again
+                    <RefreshCw size={15} className="mr-1" aria-hidden="true" />
+                    Spin Again
                   </Button>
                 )}
                 {onEditList && (
-                  <Button variant="outline" className="flex-1 h-10 rounded-xl" onClick={onEditList}>
+                  <Button variant="outline" className="h-11 min-w-[7rem] flex-1 rounded-xl" onClick={onEditList}>
                     Edit list
                   </Button>
                 )}
@@ -1063,6 +1127,14 @@ export function RouletteWheel({
             </div>
           </div>
         </div>
+      )}
+
+      {levelUp && (
+        <LevelUpDialog
+          open={levelUp.open}
+          level={levelUp.level}
+          onOpenChange={(open) => setLevelUp((prev) => (prev ? { ...prev, open } : prev))}
+        />
       )}
     </div>
   );

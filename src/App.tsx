@@ -32,7 +32,6 @@ import { LocationPermission } from '@/components/LocationPermission';
 import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { SpinLimitWarning } from '@/components/SpinLimitWarning';
 import { BottomNav } from '@/components/BottomNav';
-import { AboutEatSpin } from '@/sections/AboutEatSpin';
 import { getInitialAppTab, getSpinMode, getTabAnalyticsName, type AppTab } from '@/lib/appTabs';
 import { QuickSpinHero, type FoodMood } from '@/sections/QuickSpinHero';
 import { applyServesFilters, SERVES_FILTERS, type ServesFilterId } from '@/lib/servesFilters';
@@ -40,6 +39,8 @@ import { getTimeOfDayFilters } from '@/lib/timeOfDayDefaults';
 import { FilterPanel } from '@/components/FilterPanel';
 import { GroupScreen } from '@/screens/GroupScreen';
 import { ListScreen } from '@/screens/ListScreen';
+import { MeScreen } from '@/screens/MeScreen';
+import { rankMostVisited } from '@/lib/placeVisits';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
@@ -51,7 +52,6 @@ import { deriveFavouriteId } from '@/types/favourites';
 import { shareCard } from '@/lib/shareCard';
 import { FeedbackPrompt } from '@/components/FeedbackPrompt';
 import { FirstRunOnboarding } from '@/components/FirstRunOnboarding';
-import SpinStatsPanel from '@/components/SpinStatsPanel';
 import { toast } from 'sonner';
 import './App.css';
 
@@ -1470,15 +1470,8 @@ function App() {
       style={{ paddingBottom: 'var(--bottom-nav-height)' }}
     >
       <main>
-        {/* Me screen heading */}
-        {appTab === 'me' && (
-          <div className="px-4 pt-6 sm:px-6">
-            <h1 className="font-heading text-3xl font-bold leading-[1.1] text-brand-ink">Me</h1>
-          </div>
-        )}
-
-        {/* Level, streak, coins and today's quest - Spin and Me screens */}
-        {(appTab === 'spin' || appTab === 'me') && (
+        {/* Level, streak, coins and today's quest - Spin screen (the Me screen has its own level card) */}
+        {appTab === 'spin' && (
           <>
             <GameHud
               level={game.level}
@@ -2089,25 +2082,34 @@ function App() {
           </section>
         )}
 
-        {/* Spin Stats - Me screen, only when user has history */}
-        {appTab === 'me' && spinHistorySummary.totalSpins > 0 && (
-          <section className="py-6 px-4 sm:px-6 lg:px-8 bg-white">
-          <div className="max-w-4xl mx-auto">
-            <SpinStatsPanel
-              totalSpins={spinHistorySummary.totalSpins}
-              uniqueRestaurants={spinHistorySummary.uniqueRestaurants}
-              currentStreak={spinHistorySummary.currentStreak}
-              topCategory={spinHistorySummary.topCategory}
-              spinsThisMonth={spinHistorySummary.spinsThisMonth}
-              recentSpins={spinHistorySummary.recentSpins}
-              onShareWrapped={() => { void handleShareSpinWrapped(); }}
-            />
-          </div>
-        </section>
+        {/* Me screen: level, stats, quest, most visited, food journey, About EatSpin */}
+        {appTab === 'me' && (
+          <MeScreen
+            level={game.level}
+            xpIntoLevel={game.xpIntoLevel}
+            xpPerLevel={game.xpPerLevel}
+            coins={game.coins}
+            streak={spinHistorySummary.currentStreak}
+            quest={{
+              title: game.quest.quest.title,
+              rewardXp: game.quest.quest.rewardXp,
+              progress: game.quest.progress,
+              target: game.quest.quest.target,
+              completed: game.quest.completed,
+            }}
+            mostVisited={rankMostVisited(favourites)}
+            history={{
+              totalSpins: spinHistorySummary.totalSpins,
+              uniqueRestaurants: spinHistorySummary.uniqueRestaurants,
+              currentStreak: spinHistorySummary.currentStreak,
+              topCategory: spinHistorySummary.topCategory,
+              spinsThisMonth: spinHistorySummary.spinsThisMonth,
+              recentSpins: spinHistorySummary.recentSpins,
+            }}
+            onShareWrapped={() => { void handleShareSpinWrapped(); }}
+            onStartSpinning={() => handleTabChange('spin')}
+          />
         )}
-
-        {/* About EatSpin - the landing sections, collapsed by default (Me screen) */}
-        {appTab === 'me' && <AboutEatSpin onStartSpinning={() => handleTabChange('spin')} />}
       </main>
 
       <BottomNav

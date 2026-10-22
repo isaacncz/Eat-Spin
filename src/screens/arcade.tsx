@@ -9,8 +9,12 @@ import { cn } from '@/lib/utils';
  * only ever used on brand-orange (none of these blocks use it).
  */
 
-/** Page gutter, 16px with a floor at the device safe-area inset for notched landscape phones. */
-export const SCREEN_GUTTER = 'pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]';
+/**
+ * Page gutter: 16px (24px from the sm breakpoint, like the HUD and quest card), with a
+ * floor at the device safe-area inset for notched landscape phones.
+ */
+export const SCREEN_GUTTER =
+  'pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]';
 
 export const FOCUS_RING =
   'outline-none focus-visible:ring-[3px] focus-visible:ring-brand-ink focus-visible:ring-offset-2';

@@ -322,7 +322,23 @@ export function useManualLists() {
     return nextList;
   }, [manualLists, selectedManualList?.id]);
 
+  const importManualList = useCallback((input: { name: string; mealTime: ManualListMealTime; restaurants: Restaurant[] }) => {
+    let name = input.name;
+    let suffix = 2;
+    while (manualLists.some((list) => list.name.toLowerCase() === name.toLowerCase())) {
+      name = `${input.name} (${suffix++})`;
+    }
+    const list = createManualList({ ...input, name });
+    const next = [list, ...manualLists];
+    // Commit before reporting success; do not replace the sender or another saved list.
+    window.localStorage.setItem(MANUAL_LISTS_STORAGE_KEY, JSON.stringify(next));
+    setManualLists(next);
+    setSelectedManualListId(list.id);
+    return list;
+  }, [manualLists]);
+
   return {
+    importManualList,
     manualLists,
     selectedManualList,
     selectedManualListId: selectedManualList?.id ?? '',

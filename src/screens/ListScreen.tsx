@@ -1,5 +1,5 @@
-import { useId, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { Check, ChevronDown, ChevronLeft, Heart, LoaderPinwheel, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { Check, ChevronDown, ChevronLeft, Heart, LoaderPinwheel, MapPin, Pencil, Plus, Share2, Trash2, X } from 'lucide-react';
 
 import { RarityBadge } from '@/components/RarityBadge';
 import { getMealTimeEmoji } from '@/hooks/useManualLists';
@@ -74,6 +74,8 @@ export interface ListScreenProps {
   isReadOnly: boolean;
   onSelectList: (listId: string) => void;
   onCreateList: () => void;
+  onShareList?: () => void;
+  openWheelRequested?: boolean;
   onStartEditing: () => void;
   onDeleteSelectedList: () => void;
   canDeleteList: boolean;
@@ -116,6 +118,8 @@ export function ListScreen({
   isReadOnly,
   onSelectList,
   onCreateList,
+  onShareList,
+  openWheelRequested = false,
   onStartEditing,
   onDeleteSelectedList,
   canDeleteList,
@@ -136,6 +140,7 @@ export function ListScreen({
   externalSpinId,
 }: ListScreenProps) {
   const [view, setView] = useState<ListView>(externalSpinId ? 'wheel' : 'list');
+  useEffect(() => { if (openWheelRequested) setView('wheel'); }, [openWheelRequested]);
   const [source, setSource] = useState<ListSource>('list');
 
   // A room spin that arrives while this tab is open brings the wheel up so it can play.
@@ -219,6 +224,8 @@ export function ListScreen({
 
   const headerAction = !details && !showingFavourites && selectedList && (
     <div className="flex shrink-0 gap-1">
+      {onShareList && !room && <ArcadeIconButton aria-label="Share this list" onClick={onShareList}
+        className="border-[3px] border-brand-ink bg-white"><Share2 size={20} aria-hidden="true" /></ArcadeIconButton>}
       <ArcadeIconButton
         aria-label="Edit list name and meal time"
         disabled={isReadOnly}

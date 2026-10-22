@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import { trackEvent } from '@/lib/analytics';
 import { APP_FEATURES } from '@/lib/featureFlags';
@@ -32,12 +32,13 @@ import { RouletteWheel } from '@/components/RouletteWheel';
 import { LocationPermission } from '@/components/LocationPermission';
 import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { SpinLimitWarning } from '@/components/SpinLimitWarning';
-import { AppNavbar } from '@/sections/AppNavbar';
+import { BottomNav } from '@/components/BottomNav';
+import { AboutEatSpin } from '@/sections/AboutEatSpin';
+import { getInitialAppTab, getSpinMode, getTabAnalyticsName, type AppTab } from '@/lib/appTabs';
 import { QuickSpinHero, type FoodMood } from '@/sections/QuickSpinHero';
 import { applyServesFilters, SERVES_FILTERS, type ServesFilterId } from '@/lib/servesFilters';
 import { getTimeOfDayFilters } from '@/lib/timeOfDayDefaults';
 import { FilterPanel } from '@/components/FilterPanel';
-import { Footer } from '@/sections/Footer';
 import { GroupSpin } from '@/sections/GroupSpin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,12 +54,6 @@ import { FirstRunOnboarding } from '@/components/FirstRunOnboarding';
 import SpinStatsPanel from '@/components/SpinStatsPanel';
 import { toast } from 'sonner';
 import './App.css';
-
-// Lazy-load marketing sections (only shown behind "Learn more" toggle)
-const HowItWorks = lazy(() => import('@/sections/HowItWorks').then(m => ({ default: m.HowItWorks })));
-const Features = lazy(() => import('@/sections/Features').then(m => ({ default: m.Features })));
-const Testimonials = lazy(() => import('@/sections/Testimonials').then(m => ({ default: m.Testimonials })));
-const CTA = lazy(() => import('@/sections/CTA').then(m => ({ default: m.CTA })));
 
 type SpinTab = 'auto' | 'manual';
 type AutoRangeMode = 'walk' | 'drive10' | 'drive20';
@@ -91,6 +86,13 @@ const estimateTravelTime = (straightLineKm: number): string => {
   }
   const minutes = Math.round((roadKm / 30) * 60);
   return `~${Math.max(1, minutes)} min drive`;
+};
+
+/** Switching tabs opens a new screen, so jump to its top. Re-tapping the active tab scrolls up smoothly. */
+const scrollPageToTop = (smooth: boolean) => {
+  if (typeof window === 'undefined') return;
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top: 0, behavior: smooth && !prefersReducedMotion ? 'smooth' : 'instant' });
 };
 
 const loadAutoRangeMode = (): AutoRangeMode => {
@@ -199,10 +201,11 @@ function App() {
   const [wheelRestaurants, setWheelRestaurants] = useState<Restaurant[]>([]);
   const [roundRemovedRestaurantIds, setRoundRemovedRestaurantIds] = useState<string[]>([]);
   const [pendingAutoRemovalId, setPendingAutoRemovalId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<SpinTab>(() => {
-    if (typeof window === 'undefined') return 'auto';
-    return new URLSearchParams(window.location.search).get('room') ? 'manual' : 'auto';
-  });
+  const [appTab, setAppTab] = useState<AppTab>(() => (
+    getInitialAppTab(typeof window === 'undefined' ? '' : window.location.search)
+  ));
+  // Spin runs on nearby places ('auto'); My list, Group and Me work from the manual or room list.
+  const activeTab: SpinTab = getSpinMode(appTab);
   const [autoWheelKey, setAutoWheelKey] = useState(0);
   const [isReviewExpanded, setIsReviewExpanded] = useState(false);
   const [showAllRoundRestaurants, setShowAllRoundRestaurants] = useState(false);
@@ -214,7 +217,6 @@ function App() {
   const [uiNowMs, setUiNowMs] = useState(() => Date.now());
   const [, setSelectedMood] = useState<FoodMood | null>(null);
   const [activeServesFilters, setActiveServesFilters] = useState<ServesFilterId[]>(getTimeOfDayFilters);
-  const [showAboutSections, setShowAboutSections] = useState(false);
 
   const [manualInput, setManualInput] = useState('');
   const {
@@ -244,20 +246,6 @@ function App() {
   const hasUserSelectedManualListRef = useRef(false);
   const seededRoomSyncIdRef = useRef('');
   const pendingRoomListSyncRef = useRef<{ roomId: string; signature: string; startedAt: number } | null>(null);
-
-  const scrollToSection = useCallback((sectionId: string) => {
-    if (typeof window === 'undefined') return;
-    const section = document.getElementById(sectionId);
-    if (!section) return;
-
-    const navbarHeight = Number.parseInt(
-      window.getComputedStyle(document.documentElement).getPropertyValue('--navbar-height'),
-      10,
-    );
-    const offset = Number.isFinite(navbarHeight) ? navbarHeight : 72;
-    const targetTop = window.scrollY + section.getBoundingClientRect().top - offset - 8;
-    window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
-  }, []);
 
   const handleMoodSelect = useCallback((mood: FoodMood) => {
     setSelectedMood(mood);
@@ -791,10 +779,10 @@ function App() {
   }, []);
 
   const handleOnboardingOpenAutoMode = useCallback(() => {
-    setActiveTab('auto');
-    scrollToSection('app-main-section');
+    setAppTab('spin');
+    scrollPageToTop(false);
     trackEvent('first_run_onboarding_auto_mode_opened');
-  }, [scrollToSection]);
+  }, []);
 
   const handleCreateChallenge = useCallback(() => {
     trackEvent('challenge_create_requested');
@@ -1005,7 +993,7 @@ function App() {
       return;
     }
 
-    setActiveTab('auto');
+    setAppTab('spin');
 
     if (roundRestaurants.length > 0 && handleSpinAttempt()) {
       shuffleWheel();
@@ -1018,20 +1006,25 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location, requestLocation, roundRestaurants.length]);
 
-  const switchTab = (tab: SpinTab) => {
-    trackEvent('tab_switched', { tab });
-    setActiveTab(tab);
-    if (tab === 'auto') {
+  const handleTabChange = (tab: AppTab) => {
+    if (tab === appTab) {
+      scrollPageToTop(true);
+      return;
+    }
+
+    trackEvent('tab_switched', { tab: getTabAnalyticsName(tab) });
+    setAppTab(tab);
+    if (tab === 'spin') {
       setWheelRestaurants([]);
       setShowWheelSection(false);
       setRoundRemovedRestaurantIds([]);
       setPendingAutoRemovalId(null);
       setAutoWheelKey((prev) => prev + 1);
-    } else {
+    } else if (tab === 'list') {
       setManualSpinResult(null);
       setManualWheelKey((prev) => prev + 1);
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollPageToTop(false);
   };
 
   const addManualRestaurant = () => {
@@ -1361,7 +1354,6 @@ function App() {
 
   const handleCreateGroupRoom = useCallback(async () => {
     trackEvent('group_room_created');
-    setActiveTab('manual');
     setIsManualRoomLeavePending(false);
     setRoomManualRestaurants([]);
     await createGroupRoom();
@@ -1369,7 +1361,6 @@ function App() {
 
   const handleJoinGroupRoom = useCallback(async (value: string) => {
     trackEvent('group_room_joined', { room_id: value });
-    setActiveTab('manual');
     setIsManualRoomLeavePending(false);
     setRoomManualRestaurants([]);
     await joinGroupRoom(value);
@@ -1474,1046 +1465,1020 @@ function App() {
     };
   }, [currentMealTime, isGroupRoomActive, selectDeterministicManualList]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const roomFromUrl = new URLSearchParams(window.location.search).get('room');
-    if (!roomFromUrl) return;
-
-    const timeoutId = window.setTimeout(() => {
-      scrollToSection('group-spin');
-      window.requestAnimationFrame(() => {
-        scrollToSection('group-spin');
-      });
-    }, 180);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [scrollToSection]);
-
-
   return (
-    <div className="min-h-screen overflow-x-clip bg-arcade-yellow">
-      {/* App-style navbar with built-in tab toggle */}
-      <AppNavbar
-        activeTab={activeTab}
-        onTabChange={switchTab}
-        activeRoomId={groupRoomId}
-        onGroupSpin={() => scrollToSection('group-spin')}
-        onAbout={() => setShowAboutSections(prev => !prev)}
-        onLeaveRoom={isGroupRoomActive ? handleLeaveGroupRoom : undefined}
-      />
+    <div
+      className="mx-auto min-h-dvh w-full max-w-[480px] overflow-x-clip bg-arcade-yellow"
+      style={{ paddingBottom: 'var(--bottom-nav-height)' }}
+    >
+      <main>
+        {/* Me screen heading */}
+        {appTab === 'me' && (
+          <div className="px-4 pt-6 sm:px-6">
+            <h1 className="font-heading text-3xl font-bold leading-[1.1] text-brand-ink">Me</h1>
+          </div>
+        )}
 
-      <GameHud
-        level={game.level}
-        xpIntoLevel={game.xpIntoLevel}
-        xpPerLevel={game.xpPerLevel}
-        coins={game.coins}
-        streak={spinHistorySummary.currentStreak}
-      />
-      <QuestCard
-        title={game.quest.quest.title}
-        rewardXp={game.quest.quest.rewardXp}
-        progress={game.quest.progress}
-        target={game.quest.quest.target}
-        completed={game.quest.completed}
-      />
+        {/* Level, streak, coins and today's quest - Spin and Me screens */}
+        {(appTab === 'spin' || appTab === 'me') && (
+          <>
+            <GameHud
+              level={game.level}
+              xpIntoLevel={game.xpIntoLevel}
+              xpPerLevel={game.xpPerLevel}
+              coins={game.coins}
+              streak={spinHistorySummary.currentStreak}
+            />
+            <QuestCard
+              title={game.quest.quest.title}
+              rewardXp={game.quest.quest.rewardXp}
+              progress={game.quest.progress}
+              target={game.quest.quest.target}
+              completed={game.quest.completed}
+            />
+          </>
+        )}
 
-      {/* QuickSpinHero - only in auto (discovery) mode */}
-      {activeTab === 'auto' && (
-        <QuickSpinHero
-          currentMealTime={currentMealTime}
-          onQuickSpin={handleQuickSpin}
-          onMoodSelect={handleMoodSelect}
-          isSpinning={isSpinning}
-          hasLocation={Boolean(location)}
-          onRequestLocation={requestLocation}
-          isLocationLoading={locationLoading}
-          locationError={locationError}
-          restaurantCount={roundRestaurants.length}
-          onGroupSpin={() => scrollToSection('group-spin')}
-          isLoadingRestaurants={nearbyRestaurantsLoading}
-          totalNearbyCount={autoSourceRestaurants.length}
-          closedNowCount={closedNowExcludedCount}
-          searchQuery={textSearch.query}
-          onSearch={textSearch.search}
-          searchResults={textSearch.results}
-          isSearching={textSearch.isLoading}
-          searchError={textSearch.error}
-          recentSearches={textSearch.recentSearches}
-          onLetsGo={handleLetsGo}
-          onClearSearch={textSearch.clearResults}
-        />
-      )}
+        {/* QuickSpinHero - Spin screen only */}
+        {activeTab === 'auto' && (
+          <QuickSpinHero
+            currentMealTime={currentMealTime}
+            onQuickSpin={handleQuickSpin}
+            onMoodSelect={handleMoodSelect}
+            isSpinning={isSpinning}
+            hasLocation={Boolean(location)}
+            onRequestLocation={requestLocation}
+            isLocationLoading={locationLoading}
+            locationError={locationError}
+            restaurantCount={roundRestaurants.length}
+            onGroupSpin={() => handleTabChange('group')}
+            isLoadingRestaurants={nearbyRestaurantsLoading}
+            totalNearbyCount={autoSourceRestaurants.length}
+            closedNowCount={closedNowExcludedCount}
+            searchQuery={textSearch.query}
+            onSearch={textSearch.search}
+            searchResults={textSearch.results}
+            isSearching={textSearch.isLoading}
+            searchError={textSearch.error}
+            recentSearches={textSearch.recentSearches}
+            onLetsGo={handleLetsGo}
+            onClearSearch={textSearch.clearResults}
+          />
+        )}
 
-      {/* Main app section */}
-      <section id="app-main-section" className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-4xl mx-auto">
+        {/* Main app section - Spin (nearby places) and My list (manual list) */}
+        {(appTab === 'spin' || appTab === 'list') && (
+          <section id="app-main-section" className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 bg-white">
+            <div className="max-w-4xl mx-auto">
 
-          {/* PWA Install Banner */}
-          {showPwaInstallBanner && isPwaPromptReady && (
-            <div className="mb-4 rounded-2xl border-2 border-brand-ink bg-white px-4 py-3 shadow-pop">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="font-heading text-base font-bold text-brand-black">Install EatSpin for faster lunch decisions</p>
-                  <p className="text-sm text-eatspin-gray-1">
-                    You have spun {spins.length} times. Add EatSpin to your home screen for one-tap access.
-                  </p>
+              {/* PWA Install Banner */}
+              {showPwaInstallBanner && isPwaPromptReady && (
+                <div className="mb-4 rounded-2xl border-2 border-brand-ink bg-white px-4 py-3 shadow-pop">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-heading text-base font-bold text-brand-black">Install EatSpin for faster lunch decisions</p>
+                      <p className="text-sm text-eatspin-gray-1">
+                        You have spun {spins.length} times. Add EatSpin to your home screen for one-tap access.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        className="bg-brand-orange text-white hover:bg-brand-orange/90"
+                        onClick={() => { void handlePwaInstall(); }}
+                      >
+                        Install App
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="border-brand-ink text-brand-black hover:bg-brand-linen"
+                        onClick={handleDismissPwaBanner}
+                      >
+                        Later
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+              )}
+
+              {/* AUTO MODE */}
+              {activeTab === 'auto' && (
+                <>
+                  {placesBudget.nearbyBlocked && (
+                    <div role="alert" className="mb-4 rounded-2xl border-2 border-brand-ink bg-brand-yellow px-4 py-3 text-sm font-semibold text-brand-ink">
+                      Nearby spins are paused: the monthly search budget is used up ({placesBudget.nearbyUsed}/{placesBudget.cap}). Your own list still works, and nearby spins return next month.
+                    </div>
+                  )}
+                  {!location && (
+                    <div className="mb-6">
+                      <LocationPermission
+                        isLoading={locationLoading}
+                        error={locationError}
+                        onRequestLocation={requestLocation}
+                        location={location}
+                      />
+                    </div>
+                  )}
+
+                  {location && (
+                    <FilterPanel
+                      rangeMode={rangeMode}
+                      onRangeModeChange={handleAutoRangeModeChange}
+                      selectedPriceRanges={selectedPriceRanges}
+                      onTogglePriceRange={togglePriceRange}
+                      selectedCategories={selectedCategories}
+                      onCategoryChange={handleCategoryChange}
+                      restaurantCount={roundRestaurants.length}
+                      isLoading={nearbyRestaurantsLoading}
+                      dataSourceLabel={autoDataSourceLabel}
+                      nearbyError={nearbyRestaurantsError}
+                      closingSoonCount={closingSoonExcludedCount}
+                      closedNowCount={closedNowExcludedCount}
+                      favouriteCategoryCounts={favouriteCategoryCounts}
+                      activeServesFilters={activeServesFilters}
+                      onToggleServesFilter={handleToggleServesFilter}
+                    />
+                  )}
+
+                  {/* Empty state */}
+                  {location && filteredRestaurants.length === 0 && !nearbyRestaurantsLoading && autoSourceRestaurants.length > 0 && (
+                    <div className="mb-5 mt-4 rounded-2xl border-2 border-brand-ink bg-white p-5 text-center">
+                      <p className="text-2xl">
+                        {activeServesFilters.length > 0 ? '🔍' : '😕'}
+                      </p>
+                      <p className="mt-2 text-sm font-medium text-brand-black">
+                        {closingSoonExcludedCount > 0 || closedNowExcludedCount > 0
+                          ? 'No open spots left for the wheel right now.'
+                          : 'No matches — try clearing a filter.'}
+                      </p>
+                      <p className="mt-1 text-xs text-eatspin-gray-1">
+                        {autoEmptyStateSubtitle}
+                      </p>
+                      {selectedPriceRanges.length > 0 && (
+                        <p className="mt-1 text-xs text-eatspin-gray-1">
+                          Price filter is active.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Spin + Reset (compact - hero has the primary CTA) */}
+                  {location && roundRestaurants.length > 0 && (
+                    <div className="mb-4 mt-3 flex items-center gap-2 justify-center">
+                      <Button
+                        onClick={() => {
+                          if (handleSpinAttempt()) {
+                            shuffleWheel();
+                            setShowWheelSection(true);
+                            setTimeout(() => {
+                              const wheelSection = document.getElementById('wheel');
+                              wheelSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 100);
+                          }
+                        }}
+                        disabled={isSpinning || roundRestaurants.length === 0}
+                        className="bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-sm sm:text-base font-bold px-5 sm:px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-70"
+                      >
+                        <Utensils size={16} className="mr-1.5" />
+                        Spin for {currentMealTime !== 'none' ? currentMealTime : 'Food'}
+                      </Button>
+
+                      <Button
+                        onClick={resetAutoWheel}
+                        variant="outline"
+                        size="sm"
+                        className="border-eatspin-orange/50 text-eatspin-orange hover:bg-eatspin-orange/10 font-medium px-3 py-3 rounded-xl"
+                      >
+                        <RotateCcw size={14} className="mr-1" />
+                        Reset
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Review section */}
+                  {location && roundRestaurants.length > 0 && (
+                    <div className="mb-8 rounded-2xl border-2 border-brand-ink bg-white p-4 sm:p-5">
+                      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsReviewExpanded(!isReviewExpanded)}
+                            className="flex items-center gap-2"
+                          >
+                            <ChevronDown
+                              size={20}
+                              className={`text-eatspin-gray-1 transition-transform duration-200 ${
+                                isReviewExpanded ? 'rotate-180' : ''
+                              }`}
+                            />
+                            <h3 className="font-heading text-lg font-semibold text-brand-black">Review this round</h3>
+                          </button>
+                        </div>
+                        <p className="text-sm font-medium text-brand-black">
+                          {roundRestaurants.length} restaurants remaining
+                        </p>
+                      </div>
+
+                      <div
+                        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                          isReviewExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                        }`}
+                      >
+                          <ul className="max-h-72 overflow-y-auto overscroll-contain space-y-2 pr-1">
+                          {displayedRoundRestaurants.map((restaurant) => (
+                            <li key={restaurant.id} className="flex items-center justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
+                              <div>
+                                <p className="font-medium text-brand-black">
+                                  {restaurant.name}
+                                  {isFavouriteCheck(restaurant) && (
+                                    <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full border-2 border-brand-ink bg-arcade-pink px-1.5 py-0.5 text-[10px] font-semibold text-brand-ink align-middle">
+                                      <Heart size={10} className="fill-arcade-pink text-brand-ink" /> Fave
+                                    </span>
+                                  )}
+                                </p>
+                                <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-eatspin-gray-1">
+                                  {restaurant.category.slice(0, 2).map((tag) => (
+                                    <span key={`${restaurant.id}-${tag}`} className="rounded-full bg-white px-2 py-0.5 capitalize">
+                                      {tag}
+                                    </span>
+                                  ))}
+                                  <span className="rounded-full bg-white px-2 py-0.5">{restaurant.priceRange}</span>
+                                  {restaurant.distance !== undefined && (
+                                    <span className="rounded-full bg-white px-2 py-0.5">{estimateTravelTime(restaurant.distance)}</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                {isFavouriteCheck(restaurant) ? (
+                                  <span
+                                    className="inline-flex items-center gap-1 rounded-full bg-arcade-pink/30 border-2 border-brand-ink px-2.5 py-1 text-xs font-semibold text-brand-ink"
+                                    title="Already in My Favourites"
+                                  >
+                                    <Heart size={12} className="fill-arcade-pink text-brand-ink" /> Saved
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveFavourite(restaurant, 'auto')}
+                                    className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-white px-2.5 py-1 text-xs font-semibold text-brand-ink hover:bg-arcade-pink/20"
+                                    aria-label={`Save ${restaurant.name} to favourites`}
+                                  >
+                                    <Heart size={12} /> Save
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => removeRestaurantForRound(restaurant.id)}
+                                  className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
+                                  aria-label={`Remove ${restaurant.name} for this round`}
+                                >
+                                  <X size={14} /> Remove
+                                </button>
+                              </div>
+                            </li>
+                          ))}
+
+                          </ul>
+                          {roundRestaurants.length > REVIEW_PREVIEW_COUNT && (
+                            <div className="mt-3 flex justify-center">
+                              <button
+                                type="button"
+                                onClick={() => setShowAllRoundRestaurants((prev) => !prev)}
+                                className="rounded-full border-2 border-brand-ink bg-white px-3 py-1.5 text-xs font-medium text-eatspin-gray-1 hover:bg-brand-linen"
+                              >
+                                {showAllRoundRestaurants
+                                  ? `Show first ${REVIEW_PREVIEW_COUNT}`
+                                  : `Show all ${roundRestaurants.length}`}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* Spin limit warning */}
+                  {showSpinLimitWarning && currentMealTime !== 'none' && (
+                    <div className="mb-6">
+                      <SpinLimitWarning
+                        mealTime={currentMealTime}
+                        onUpgrade={() => setShowSubscription(true)}
+                        onClose={() => setShowSpinLimitWarning(false)}
+                      />
+                    </div>
+                  )}
+
+                  {/* Premium badge */}
+                  {isPremium && (
+                    <div className="text-center">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-arcade-yellow text-brand-ink border-2 border-brand-ink shadow-pop rounded-full text-sm font-semibold">
+                        <Crown size={16} />
+                        Premium Member - Unlimited Spins
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* MANUAL MODE */}
+              {activeTab === 'manual' && (
+                <div id="wheel" className="py-4 pb-14 sm:pb-8">
+                  {isGroupRoomActive && (
+                    <div className="mb-4 rounded-xl border-2 border-brand-ink bg-brand-linen px-4 py-3 text-sm text-eatspin-gray-1">
+                      <p className="font-semibold text-brand-black">
+                        Room {groupRoomId} {isGroupHost ? '(Host)' : isGroupCohost ? '(Co-host)' : '(Participant)'}
+                      </p>
+                      <p>
+                        {isGroupHost
+                          ? 'Your list edits sync to everyone in this room.'
+                          : isGroupCohost
+                            ? 'You can edit the shared list as co-host and start spins for everyone.'
+                            : "You are viewing the room's shared list. Leave the room anytime to return to your saved personal list."}
+                      </p>
+                      <p className="mt-1 text-xs text-brand-black/80">
+                        {groupSpinDisplay
+                          ? `Last spin: ${groupSpinDisplay.relativeText} (${groupSpinDisplay.absoluteText})`
+                          : 'No spin yet.'}
+                      </p>
+                      {groupSpinDisplay && groupSpinDisplay.ageMs >= LATE_JOIN_NOTICE_MS && (
+                        <p className="mt-1 text-xs font-medium text-brand-black/80">Result was decided earlier.</p>
+                      )}
+
+                      {!canEditGroupList && (
+                        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-xs font-medium text-brand-black/80">Like this list? Save it to your own manual lists and spin it later.</p>
+                            <p className="text-[11px] text-eatspin-gray-1">We'll save a copy without changing the host's room list.</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={handleSaveRoomListToManualLists}
+                              disabled={displayedManualRestaurantNames.length === 0}
+                              className="h-9 border-brand-ink bg-white px-3 text-xs font-semibold text-brand-black hover:bg-brand-linen"
+                            >
+                              Add to my list
+                            </Button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void handleLeaveGroupRoom();
+                              }}
+                              className="inline-flex items-center rounded-full border-2 border-brand-ink bg-white px-3 py-1.5 text-xs font-semibold text-brand-black hover:bg-brand-linen"
+                            >
+                              Leave room to spin on your own
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* ── Saved Lists: chip-based selector ── */}
+                  <div className="mb-6 max-w-2xl mx-auto rounded-2xl border-2 border-brand-ink bg-white p-4 shadow-pop">
+                    <div className="flex flex-col gap-3">
+                      {/* Header */}
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-eatspin-gray-1">Saved lists</p>
+
+                      {/* Horizontal chip bar with overflow fade hint */}
+                      <div className="relative">
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide" role="listbox" aria-label="Saved lists">
+                          {manualLists.map((list) => {
+                            const isSelected = list.id === selectedManualListId;
+                            const emoji = getMealTimeEmoji(list.mealTime);
+                            return (
+                              <button
+                                key={list.id}
+                                type="button"
+                                role="option"
+                                aria-selected={isSelected}
+                                title={`${list.name} — ${list.restaurants.length} picks`}
+                                onClick={() => {
+                                  if (!isSelected) handleSelectSavedManualList(list.id);
+                                }}
+                                disabled={isManualListReadOnly}
+                                className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                                  isSelected
+                                    ? 'bg-brand-orange text-white shadow-sm'
+                                    : 'border-2 border-brand-ink bg-white text-brand-black hover:border-brand-ink hover:bg-brand-linen'
+                                } disabled:opacity-40`}
+                              >
+                                {emoji && <span>{emoji}</span>}
+                                <span className="truncate max-w-[140px]">{list.name}</span>
+                                <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-xs tabular-nums ${
+                                  isSelected
+                                    ? list.restaurants.length === 0 ? 'bg-white/20 text-white/90' : 'bg-white/25 text-white'
+                                    : list.restaurants.length === 0 ? 'bg-arcade-yellow/30 text-eatspin-gray-1' : 'bg-arcade-yellow/30 text-brand-black'
+                                }`}>
+                                  {list.restaurants.length}
+                                </span>
+                              </button>
+                            );
+                          })}
+                          {/* New list chip */}
+                          <button
+                            type="button"
+                            onClick={handleCreateManualList}
+                            disabled={isManualListReadOnly}
+                            className="flex shrink-0 items-center gap-1 rounded-full border-2 border-dashed border-brand-ink/40 px-3 py-2 text-sm font-medium text-eatspin-gray-1 transition hover:border-brand-ink hover:text-brand-orange disabled:opacity-40"
+                            aria-label="Create new list"
+                          >
+                            <Plus size={14} />
+                            <span>New</span>
+                          </button>
+                        </div>
+                        {/* Right fade hint when many lists */}
+                        {manualLists.length > 3 && (
+                          <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-white to-transparent" aria-hidden="true" />
+                        )}
+                      </div>
+
+                      {/* Inline actions for selected list (view mode) */}
+                      {!isEditingListDetails && selectedManualList && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingListDetails(true)}
+                            disabled={isManualListReadOnly}
+                            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-eatspin-gray-1 transition hover:bg-arcade-yellow/60 hover:text-brand-black disabled:opacity-40"
+                            aria-label="Edit list name and meal time"
+                          >
+                            <PencilLine size={13} />
+                            <span>Rename</span>
+                          </button>
+                          {manualLists.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={handleDeleteManualList}
+                              disabled={isManualListReadOnly}
+                              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                              aria-label={`Delete ${selectedManualList.name}`}
+                            >
+                              <Trash2 size={13} />
+                              <span>Delete</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Edit mode (inline expansion) */}
+                      {isEditingListDetails && (
+                        <div className="space-y-3 rounded-lg border-2 border-brand-ink bg-brand-linen/50 p-3">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-name">List name</label>
+                              <Input
+                                id="saved-manual-name"
+                                value={listNameInput}
+                                onChange={(e) => setListNameInput(e.target.value)}
+                                placeholder="Isaac lunch list"
+                                className="h-10"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-mealtime">Meal time</label>
+                              <div className="relative">
+                                <select
+                                  id="saved-manual-mealtime"
+                                  value={listMealTimeInput ?? ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (value === 'breakfast' || value === 'lunch' || value === 'dinner') {
+                                      setListMealTimeInput(value);
+                                      return;
+                                    }
+                                    setListMealTimeInput(null);
+                                  }}
+                                  className="preset-select h-10 w-full rounded-md border-2 border-brand-ink bg-white px-3 pr-10 text-sm text-brand-black"
+                                >
+                                  <option value="">🕒 No meal time</option>
+                                  <option value="breakfast">🌅 Breakfast</option>
+                                  <option value="lunch">☀️ Lunch</option>
+                                  <option value="dinner">🌙 Dinner</option>
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
+                              </div>
+                            </div>
+                          </div>
+                          {duplicateManualListForSave ? (
+                            <p className="text-xs text-red-600">{manualListNameHelperText}</p>
+                          ) : listNameSuggestion.trim() !== listNameInput.trim() ? (
+                            <button
+                              type="button"
+                              onClick={() => setListNameInput(listNameSuggestion)}
+                              className="text-left text-xs text-brand-orange hover:underline"
+                            >
+                              {manualListNameHelperText}
+                            </button>
+                          ) : null}
+                          <div className="flex items-center justify-between gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={handleDeleteManualList}
+                              disabled={isManualListReadOnly || !selectedManualList}
+                              className="h-9 border-red-200 px-3 text-xs font-semibold text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 size={14} className="mr-1" /> Delete
+                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleCancelEditListDetails}
+                                className="h-9 px-3 text-xs font-semibold"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                onClick={handleSaveManualListDetails}
+                                disabled={isManualListReadOnly || (!isCreatingNewList && (!selectedManualList || !hasManualListDetailsChanged)) || Boolean(duplicateManualListForSave)}
+                                className="h-9 bg-brand-orange px-3 text-xs font-semibold text-white hover:bg-brand-orange/90"
+                              >
+                                Save
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <RouletteWheel
+                    key={isGroupRoomActive ? `manual-room-${groupRoomId || 'none'}` : `manual-${manualWheelKey}-${displayedManualRestaurants.length}`}
+                    restaurants={displayedManualRestaurants}
+                    totalCount={displayedManualRestaurants.length}
+                    onSpinComplete={handleManualSpinComplete}
+                    isSpinning={isSpinning}
+                    setIsSpinning={setIsSpinning}
+                    onShuffle={() => {
+                      shuffleManualRestaurants();
+                    }}
+                    canSpin={displayedManualRestaurants.length >= 2 && (!isGroupRoomActive || isGroupHost || isGroupCohost)}
+                    helperText={manualHelperText}
+                    spinButtonLabel={isGroupRoomActive
+                      ? (isGroupHost || isGroupCohost ? 'Spin for everyone' : 'Waiting for host or co-host spin')
+                      : 'Spin the Wheel!'}
+                    externalSpin={manualExternalSpin}
+                    onRequestSpin={isGroupRoomActive ? handleRequestGroupSpin : undefined}
+                    canRequestSpin={!isGroupRoomActive || isGroupHost || isGroupCohost}
+                    emptyStateTitle="Add restaurants to start"
+                    emptyStateSubtitle="Type any restaurant you like…"
+                    onSaveFavourite={(r) => handleSaveFavourite(r, 'manual')}
+                    onLetsGo={handleLetsGo}
+                    onShareResult={handleShareResult}
+                    isFavourite={isFavouriteCheck}
+                    getLastVisitedAt={getLastVisitedAt}
+                  />
+
+                    {/* Nearby Favourites Section */}
+                    {nearbyFavourites.length > 0 && (
+                      <div className="mt-6 max-w-xl mx-auto">
+                        <div className="bg-white rounded-xl border border-green-200/60 p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="h-2 w-2 rounded-full bg-eatspin-success animate-pulse" />
+                            <h4 className="font-heading font-semibold text-brand-black flex items-center gap-2">
+                              <MapPin size={16} className="text-eatspin-success" />
+                              Nearby Favourites
+                            </h4>
+                          </div>
+                          <p className="text-xs text-eatspin-gray-1 mb-3">
+                            You're close to places you've saved before!
+                          </p>
+                          <ul className="space-y-2">
+                            {nearbyFavourites.map((nf) => {
+                              const alreadyInList = displayedManualRestaurants.some(
+                                (r) => r.name.toLowerCase() === nf.restaurantName.toLowerCase()
+                              );
+                              return (
+                                <li key={nf.favouriteId} className="flex items-center justify-between gap-2 rounded-lg bg-green-50 px-3 py-2">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-medium text-brand-black truncate">{nf.restaurantName}</p>
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <span className="text-xs text-eatspin-gray-1">{estimateTravelTime(nf.distanceKm)}</span>
+                                      <RarityBadge rarity={getRarity(favourites.find((f) => f.id === nf.favouriteId)?.lastVisitedAt)} />
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                    {!alreadyInList && !isManualListReadOnly && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAddFavouriteToManualList(nf.restaurantName)}
+                                        className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
+                                        aria-label={`Add ${nf.restaurantName} to spin list`}
+                                      >
+                                        <Plus size={12} /> Add
+                                      </button>
+                                    )}
+                                    {alreadyInList && (
+                                      <span className="text-xs text-eatspin-success font-medium">In list ✓</span>
+                                    )}
+                                  </div>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* My Favourites Section */}
+                    {favourites.length > 0 && (
+                      <div className="mt-6 max-w-xl mx-auto">
+                        <div className="bg-white rounded-xl border-2 border-brand-ink shadow-pop p-4">
+                          <div className="flex justify-between items-center mb-3">
+                            <h4 className="font-heading font-semibold text-brand-black flex items-center gap-2">
+                              <Heart size={16} className="text-brand-ink fill-arcade-pink" />
+                              My Favourites ({favourites.length})
+                            </h4>
+                          </div>
+                          <p className="text-xs text-eatspin-gray-1 mb-3">
+                            Places you saved from spinning. Tap <Plus size={12} className="inline" /> to add to your current spin list.
+                          </p>
+                          <ul className="space-y-2 max-h-64 overflow-y-auto overscroll-contain pr-1">
+                            {favourites
+                              .filter((f) => f.userRating !== 'avoid')
+                              .map((fav) => {
+                                const alreadyInList = displayedManualRestaurants.some(
+                                  (r) => r.name.toLowerCase() === fav.restaurant.name.toLowerCase()
+                                );
+                                return (
+                                  <li key={fav.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-linen px-3 py-2">
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-medium text-brand-black truncate">{fav.restaurant.name}</p>
+                                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                        <RarityBadge rarity={getRarity(fav.lastVisitedAt)} />
+                                        {fav.restaurant.rating > 0 && (
+                                          <span className="text-xs text-eatspin-gray-1">⭐ {fav.restaurant.rating}</span>
+                                        )}
+                                        {fav.visitCount > 0 && (
+                                          <span className="text-xs text-eatspin-gray-1">
+                                            · Visited {fav.visitCount}×
+                                          </span>
+                                        )}
+                                        {fav.userRating === 'neutral' && (
+                                          <span className="text-xs text-eatspin-gray-2">· Neutral</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                                      {!alreadyInList && !isManualListReadOnly && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleAddFavouriteToManualList(fav.restaurant.name)}
+                                          className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
+                                          aria-label={`Add ${fav.restaurant.name} to spin list`}
+                                        >
+                                          <Plus size={12} /> Add
+                                        </button>
+                                      )}
+                                      {alreadyInList && (
+                                        <span className="text-xs text-eatspin-success font-medium">In list ✓</span>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveFavourite(fav.id, fav.restaurant.name)}
+                                        className="text-eatspin-gray-2 hover:text-red-500"
+                                        aria-label={`Remove ${fav.restaurant.name} from favourites`}
+                                      >
+                                        <X size={14} />
+                                      </button>
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                          </ul>
+                          {favourites.some((f) => f.userRating === 'avoid') && (
+                            <p className="mt-2 text-xs text-eatspin-gray-2">
+                              {favourites.filter((f) => f.userRating === 'avoid').length} hidden (marked "don't suggest")
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div id="manual-input" className="mt-8 max-w-xl mx-auto">
+                      <div className="sticky bottom-[calc(var(--bottom-nav-height)_+_0.75rem)] z-30 rounded-2xl border-2 border-brand-ink bg-white/95 p-3 shadow-pop backdrop-blur supports-[backdrop-filter]:bg-white/85">
+                      <div className="flex flex-col sm:flex-row gap-2">
+                      <Input
+                          value={manualInput}
+                          onChange={(e) => setManualInput(e.target.value)}
+                          onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addManualRestaurant();
+                          }
+                        }}
+                          placeholder="Type any restaurant you like…"
+                          className="h-12 text-base"
+                          disabled={isManualListReadOnly}
+                        />
+                        <Button onClick={addManualRestaurant} disabled={isManualListReadOnly} className="h-12 px-6 text-base font-heading font-bold bg-brand-orange hover:bg-brand-orange/90">
+                          <Plus size={18} className="mr-1" /> Add
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 bg-white rounded-xl border-2 border-brand-ink p-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="font-heading font-semibold text-brand-black">Restaurant list ({displayedManualRestaurants.length})</h4>
+                        {displayedManualRestaurants.length > 0 && (
+                          <button
+                            type="button"
+                            className="text-xs font-medium text-eatspin-orange hover:underline"
+                            onClick={clearManualRestaurants}
+                            disabled={isManualListReadOnly}
+                          >
+                            Clear all
+                          </button>
+                        )}
+                      </div>
+
+                      {displayedManualRestaurants.length === 0 ? (
+                        <div className="space-y-3">
+                          <p className="text-sm font-medium text-eatspin-gray-1">Add at least 2 places to spin.</p>
+                          {!isManualListReadOnly && (
+                            <div className="flex flex-wrap gap-2">
+                              {MANUAL_SUGGESTED_RESTAURANTS.map((suggestion) => (
+                                <button
+                                  key={suggestion}
+                                  type="button"
+                                  onClick={() => {
+                                    addManualRestaurantByName(suggestion);
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-brand-linen px-3 py-1.5 text-xs font-medium text-brand-black hover:border-brand-ink hover:text-brand-orange"
+                                >
+                                  <CheckCircle2 size={12} /> {suggestion}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <ul className="space-y-2">
+                          {displayedManualRestaurants.map((restaurant) => (
+                            <li key={restaurant.id} className="flex justify-between items-center bg-brand-linen rounded-lg px-3 py-2">
+                              <span className="text-sm text-brand-black">{restaurant.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeManualRestaurant(restaurant.id)}
+                                className="text-eatspin-gray-1 hover:text-red-500"
+                                aria-label={`Remove ${restaurant.name}`}
+                                disabled={isManualListReadOnly}
+                              >
+                                <X size={16} />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Wheel section for auto mode */}
+        {activeTab === 'auto' && showWheelSection && location && roundRestaurants.length > 0 && (
+          <section id="wheel" className="py-10 sm:py-12 px-4 sm:px-6 lg:px-8 bg-arcade-yellow">
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center mb-5 sm:mb-6">
+                <h2 className="font-heading text-xl sm:text-2xl font-bold text-brand-black mb-1.5">
+                  Spin the Wheel!
+                </h2>
+                <p className="text-sm sm:text-base text-eatspin-gray-1">
+                  {roundRestaurants.length} restaurants ready for this round
+                </p>
+              </div>
+
+              <RouletteWheel
+                key={`auto-${autoWheelKey}`}
+                restaurants={wheelRestaurants}
+                totalCount={roundRestaurants.length}
+                onSpinComplete={handleSpinComplete}
+                isSpinning={isSpinning}
+                setIsSpinning={setIsSpinning}
+                onShuffle={shuffleWheel}
+                onSpinStart={handleAutoSpinStart}
+                onSaveFavourite={(r) => handleSaveFavourite(r, 'auto')}
+                onLetsGo={handleLetsGo}
+                onShareResult={handleShareResult}
+                onSpinAgain={handleAutoSpinAgain}
+                canSpinAgain={wheelRestaurants.length >= 2}
+                isFavourite={isFavouriteCheck}
+                getLastVisitedAt={getLastVisitedAt}
+                helperText={autoAvailabilityHelperText || undefined}
+                emptyStateTitle="No open restaurants ready to spin"
+                emptyStateSubtitle={autoEmptyStateSubtitle}
+              />
+            </div>
+          </section>
+        )}
+
+        {/* Group screen */}
+        {appTab === 'group' && (
+          <GroupSpin
+            isFirebaseConfigured={isFirebaseConfigured}
+            firebaseConfigError={firebaseConfigError}
+            authLoading={groupAuthLoading}
+            authError={groupAuthError}
+            authUid={groupAuthUid}
+            displayName={groupDisplayName}
+            resolvedDisplayName={groupResolvedDisplayName}
+            setDisplayName={setGroupDisplayName}
+            roomId={groupRoomId}
+            hostUid={groupHostUid}
+            roomLink={groupRoomLink}
+            isHost={isGroupHost}
+            isCohost={isGroupCohost}
+            cohostUids={groupCohostUids}
+            isBusy={groupRoomBusy}
+            roomError={groupRoomError}
+            participants={groupParticipants}
+            reactions={groupReactions}
+            votes={groupVotes}
+            canStartRoomSpin={isGroupRoomActive && (isGroupHost || isGroupCohost) && displayedManualRestaurantNames.length >= 2}
+            onCreateRoom={handleCreateGroupRoom}
+            onJoinRoom={handleJoinGroupRoom}
+            onLeaveRoom={handleLeaveGroupRoom}
+            onStartRoomSpin={handleRequestGroupSpin}
+            onSetParticipantCohost={setParticipantCohost}
+            onSendReaction={sendGroupReaction}
+            onSetGoingVote={setGroupGoingVote}
+            onClearRoomError={clearGroupRoomError}
+            showCompletedListReminder={isGroupRoomActive && !isGroupHost && !isGroupCohost && groupRoomStatus === 'completed' && Boolean(groupCurrentSpin)}
+          />
+        )}
+
+        {/* Challenge + Discover Feed (feature-flagged) - Group screen */}
+        {APP_FEATURES.spinChallenge && appTab === 'group' && (
+          <section className="py-6 px-4 sm:px-6 lg:px-8 bg-arcade-yellow">
+            <div className="max-w-4xl mx-auto">
+              <div className="rounded-2xl border-2 border-brand-ink bg-white p-4 sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-heading text-lg font-bold text-brand-black">7-Day Challenge a Friend</h3>
+                  <p className="text-sm text-eatspin-gray-1">Challenge friends to spin daily and compare streak progress.</p>
+                </div>
+                {challengeId && (
+                  <span className="rounded-full bg-brand-orange/10 px-3 py-1 text-xs font-semibold text-brand-orange">
+                    Challenge {challengeId}
+                  </span>
+                )}
+              </div>
+
+              {challengeError && (
+                <p className="mt-2 text-sm text-eatspin-error">{challengeError}</p>
+              )}
+
+              {!challengeId ? (
+                <div className="mt-4 grid gap-2 sm:grid-cols-[auto_1fr_auto]">
                   <Button
                     type="button"
                     className="bg-brand-orange text-white hover:bg-brand-orange/90"
-                    onClick={() => { void handlePwaInstall(); }}
+                    disabled={challengeBusy}
+                    onClick={handleCreateChallenge}
                   >
-                    Install App
+                    {challengeBusy ? 'Working...' : 'Create 7-day challenge'}
                   </Button>
+                  <Input
+                    value={challengeJoinInput}
+                    onChange={(event) => setChallengeJoinInput(event.target.value)}
+                    placeholder="Paste challenge link or code"
+                    className="h-11"
+                  />
                   <Button
                     type="button"
                     variant="outline"
                     className="border-brand-ink text-brand-black hover:bg-brand-linen"
-                    onClick={handleDismissPwaBanner}
+                    disabled={challengeBusy || !challengeJoinInput.trim()}
+                    onClick={handleJoinChallenge}
                   >
-                    Later
+                    Join
                   </Button>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* AUTO MODE */}
-          {activeTab === 'auto' && (
-            <>
-              {placesBudget.nearbyBlocked && (
-                <div role="alert" className="mb-4 rounded-2xl border-2 border-brand-ink bg-brand-yellow px-4 py-3 text-sm font-semibold text-brand-ink">
-                  Nearby spins are paused: the monthly search budget is used up ({placesBudget.nearbyUsed}/{placesBudget.cap}). Your own list still works, and nearby spins return next month.
-                </div>
-              )}
-              {!location && (
-                <div className="mb-6">
-                  <LocationPermission
-                    isLoading={locationLoading}
-                    error={locationError}
-                    onRequestLocation={requestLocation}
-                    location={location}
-                  />
-                </div>
-              )}
-
-              {location && (
-                <FilterPanel
-                  rangeMode={rangeMode}
-                  onRangeModeChange={handleAutoRangeModeChange}
-                  selectedPriceRanges={selectedPriceRanges}
-                  onTogglePriceRange={togglePriceRange}
-                  selectedCategories={selectedCategories}
-                  onCategoryChange={handleCategoryChange}
-                  restaurantCount={roundRestaurants.length}
-                  isLoading={nearbyRestaurantsLoading}
-                  dataSourceLabel={autoDataSourceLabel}
-                  nearbyError={nearbyRestaurantsError}
-                  closingSoonCount={closingSoonExcludedCount}
-                  closedNowCount={closedNowExcludedCount}
-                  favouriteCategoryCounts={favouriteCategoryCounts}
-                  activeServesFilters={activeServesFilters}
-                  onToggleServesFilter={handleToggleServesFilter}
-                />
-              )}
-
-              {/* Empty state */}
-              {location && filteredRestaurants.length === 0 && !nearbyRestaurantsLoading && autoSourceRestaurants.length > 0 && (
-                <div className="mb-5 mt-4 rounded-2xl border-2 border-brand-ink bg-white p-5 text-center">
-                  <p className="text-2xl">
-                    {activeServesFilters.length > 0 ? '🔍' : '😕'}
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-brand-black">
-                    {closingSoonExcludedCount > 0 || closedNowExcludedCount > 0
-                      ? 'No open spots left for the wheel right now.'
-                      : 'No matches — try clearing a filter.'}
-                  </p>
-                  <p className="mt-1 text-xs text-eatspin-gray-1">
-                    {autoEmptyStateSubtitle}
-                  </p>
-                  {selectedPriceRanges.length > 0 && (
-                    <p className="mt-1 text-xs text-eatspin-gray-1">
-                      Price filter is active.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Spin + Reset (compact - hero has the primary CTA) */}
-              {location && roundRestaurants.length > 0 && (
-                <div className="mb-4 mt-3 flex items-center gap-2 justify-center">
-                  <Button
-                    onClick={() => {
-                      if (handleSpinAttempt()) {
-                        shuffleWheel();
-                        setShowWheelSection(true);
-                        setTimeout(() => {
-                          const wheelSection = document.getElementById('wheel');
-                          wheelSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, 100);
-                      }
-                    }}
-                    disabled={isSpinning || roundRestaurants.length === 0}
-                    className="bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-sm sm:text-base font-bold px-5 sm:px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-70"
-                  >
-                    <Utensils size={16} className="mr-1.5" />
-                    Spin for {currentMealTime !== 'none' ? currentMealTime : 'Food'}
-                  </Button>
-
-                  <Button
-                    onClick={resetAutoWheel}
-                    variant="outline"
-                    size="sm"
-                    className="border-eatspin-orange/50 text-eatspin-orange hover:bg-eatspin-orange/10 font-medium px-3 py-3 rounded-xl"
-                  >
-                    <RotateCcw size={14} className="mr-1" />
-                    Reset
-                  </Button>
-                </div>
-              )}
-
-              {/* Review section */}
-              {location && roundRestaurants.length > 0 && (
-                <div className="mb-8 rounded-2xl border-2 border-brand-ink bg-white p-4 sm:p-5">
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsReviewExpanded(!isReviewExpanded)}
-                        className="flex items-center gap-2"
-                      >
-                        <ChevronDown
-                          size={20}
-                          className={`text-eatspin-gray-1 transition-transform duration-200 ${
-                            isReviewExpanded ? 'rotate-180' : ''
-                          }`}
-                        />
-                        <h3 className="font-heading text-lg font-semibold text-brand-black">Review this round</h3>
-                      </button>
-                    </div>
-                    <p className="text-sm font-medium text-brand-black">
-                      {roundRestaurants.length} restaurants remaining
-                    </p>
-                  </div>
-
-                  <div
-                    className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
-                      isReviewExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                    }`}
-                  >
-                      <ul className="max-h-72 overflow-y-auto overscroll-contain space-y-2 pr-1">
-                      {displayedRoundRestaurants.map((restaurant) => (
-                        <li key={restaurant.id} className="flex items-center justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
-                          <div>
-                            <p className="font-medium text-brand-black">
-                              {restaurant.name}
-                              {isFavouriteCheck(restaurant) && (
-                                <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full border-2 border-brand-ink bg-arcade-pink px-1.5 py-0.5 text-[10px] font-semibold text-brand-ink align-middle">
-                                  <Heart size={10} className="fill-arcade-pink text-brand-ink" /> Fave
-                                </span>
-                              )}
-                            </p>
-                            <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-eatspin-gray-1">
-                              {restaurant.category.slice(0, 2).map((tag) => (
-                                <span key={`${restaurant.id}-${tag}`} className="rounded-full bg-white px-2 py-0.5 capitalize">
-                                  {tag}
-                                </span>
-                              ))}
-                              <span className="rounded-full bg-white px-2 py-0.5">{restaurant.priceRange}</span>
-                              {restaurant.distance !== undefined && (
-                                <span className="rounded-full bg-white px-2 py-0.5">{estimateTravelTime(restaurant.distance)}</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            {isFavouriteCheck(restaurant) ? (
-                              <span
-                                className="inline-flex items-center gap-1 rounded-full bg-arcade-pink/30 border-2 border-brand-ink px-2.5 py-1 text-xs font-semibold text-brand-ink"
-                                title="Already in My Favourites"
-                              >
-                                <Heart size={12} className="fill-arcade-pink text-brand-ink" /> Saved
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleSaveFavourite(restaurant, 'auto')}
-                                className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-white px-2.5 py-1 text-xs font-semibold text-brand-ink hover:bg-arcade-pink/20"
-                                aria-label={`Save ${restaurant.name} to favourites`}
-                              >
-                                <Heart size={12} /> Save
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => removeRestaurantForRound(restaurant.id)}
-                              className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-                              aria-label={`Remove ${restaurant.name} for this round`}
-                            >
-                              <X size={14} /> Remove
-                            </button>
-                          </div>
-                        </li>
-                      ))}
-
-                      </ul>
-                      {roundRestaurants.length > REVIEW_PREVIEW_COUNT && (
-                        <div className="mt-3 flex justify-center">
-                          <button
-                            type="button"
-                            onClick={() => setShowAllRoundRestaurants((prev) => !prev)}
-                            className="rounded-full border-2 border-brand-ink bg-white px-3 py-1.5 text-xs font-medium text-eatspin-gray-1 hover:bg-brand-linen"
-                          >
-                            {showAllRoundRestaurants
-                              ? `Show first ${REVIEW_PREVIEW_COUNT}`
-                              : `Show all ${roundRestaurants.length}`}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-              {/* Spin limit warning */}
-              {showSpinLimitWarning && currentMealTime !== 'none' && (
-                <div className="mb-6">
-                  <SpinLimitWarning
-                    mealTime={currentMealTime}
-                    onUpgrade={() => setShowSubscription(true)}
-                    onClose={() => setShowSpinLimitWarning(false)}
-                  />
-                </div>
-              )}
-
-              {/* Premium badge */}
-              {isPremium && (
-                <div className="text-center">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-arcade-yellow text-brand-ink border-2 border-brand-ink shadow-pop rounded-full text-sm font-semibold">
-                    <Crown size={16} />
-                    Premium Member - Unlimited Spins
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* MANUAL MODE */}
-          {activeTab === 'manual' && (
-            <div id="wheel" className="py-4 pb-14 sm:pb-8">
-              {isGroupRoomActive && (
-                <div className="mb-4 rounded-xl border-2 border-brand-ink bg-brand-linen px-4 py-3 text-sm text-eatspin-gray-1">
-                  <p className="font-semibold text-brand-black">
-                    Room {groupRoomId} {isGroupHost ? '(Host)' : isGroupCohost ? '(Co-host)' : '(Participant)'}
-                  </p>
-                  <p>
-                    {isGroupHost
-                      ? 'Your list edits sync to everyone in this room.'
-                      : isGroupCohost
-                        ? 'You can edit the shared list as co-host and start spins for everyone.'
-                        : "You are viewing the room's shared list. Leave the room anytime to return to your saved personal list."}
-                  </p>
-                  <p className="mt-1 text-xs text-brand-black/80">
-                    {groupSpinDisplay
-                      ? `Last spin: ${groupSpinDisplay.relativeText} (${groupSpinDisplay.absoluteText})`
-                      : 'No spin yet.'}
-                  </p>
-                  {groupSpinDisplay && groupSpinDisplay.ageMs >= LATE_JOIN_NOTICE_MS && (
-                    <p className="mt-1 text-xs font-medium text-brand-black/80">Result was decided earlier.</p>
-                  )}
-
-                  {!canEditGroupList && (
-                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-xs font-medium text-brand-black/80">Like this list? Save it to your own manual lists and spin it later.</p>
-                        <p className="text-[11px] text-eatspin-gray-1">We'll save a copy without changing the host's room list.</p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleSaveRoomListToManualLists}
-                          disabled={displayedManualRestaurantNames.length === 0}
-                          className="h-9 border-brand-ink bg-white px-3 text-xs font-semibold text-brand-black hover:bg-brand-linen"
-                        >
-                          Add to my list
-                        </Button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            void handleLeaveGroupRoom();
-                          }}
-                          className="inline-flex items-center rounded-full border-2 border-brand-ink bg-white px-3 py-1.5 text-xs font-semibold text-brand-black hover:bg-brand-linen"
-                        >
-                          Leave room to spin on your own
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              {/* ── Saved Lists: chip-based selector ── */}
-              <div className="mb-6 max-w-2xl mx-auto rounded-2xl border-2 border-brand-ink bg-white p-4 shadow-pop">
-                <div className="flex flex-col gap-3">
-                  {/* Header */}
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-eatspin-gray-1">Saved lists</p>
-
-                  {/* Horizontal chip bar with overflow fade hint */}
-                  <div className="relative">
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide" role="listbox" aria-label="Saved lists">
-                      {manualLists.map((list) => {
-                        const isSelected = list.id === selectedManualListId;
-                        const emoji = getMealTimeEmoji(list.mealTime);
-                        return (
-                          <button
-                            key={list.id}
-                            type="button"
-                            role="option"
-                            aria-selected={isSelected}
-                            title={`${list.name} — ${list.restaurants.length} picks`}
-                            onClick={() => {
-                              if (!isSelected) handleSelectSavedManualList(list.id);
-                            }}
-                            disabled={isManualListReadOnly}
-                            className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                              isSelected
-                                ? 'bg-brand-orange text-white shadow-sm'
-                                : 'border-2 border-brand-ink bg-white text-brand-black hover:border-brand-ink hover:bg-brand-linen'
-                            } disabled:opacity-40`}
-                          >
-                            {emoji && <span>{emoji}</span>}
-                            <span className="truncate max-w-[140px]">{list.name}</span>
-                            <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-xs tabular-nums ${
-                              isSelected
-                                ? list.restaurants.length === 0 ? 'bg-white/20 text-white/90' : 'bg-white/25 text-white'
-                                : list.restaurants.length === 0 ? 'bg-arcade-yellow/30 text-eatspin-gray-1' : 'bg-arcade-yellow/30 text-brand-black'
-                            }`}>
-                              {list.restaurants.length}
-                            </span>
-                          </button>
-                        );
-                      })}
-                      {/* New list chip */}
-                      <button
-                        type="button"
-                        onClick={handleCreateManualList}
-                        disabled={isManualListReadOnly}
-                        className="flex shrink-0 items-center gap-1 rounded-full border-2 border-dashed border-brand-ink/40 px-3 py-2 text-sm font-medium text-eatspin-gray-1 transition hover:border-brand-ink hover:text-brand-orange disabled:opacity-40"
-                        aria-label="Create new list"
-                      >
-                        <Plus size={14} />
-                        <span>New</span>
-                      </button>
-                    </div>
-                    {/* Right fade hint when many lists */}
-                    {manualLists.length > 3 && (
-                      <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-white to-transparent" aria-hidden="true" />
-                    )}
-                  </div>
-
-                  {/* Inline actions for selected list (view mode) */}
-                  {!isEditingListDetails && selectedManualList && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingListDetails(true)}
-                        disabled={isManualListReadOnly}
-                        className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-eatspin-gray-1 transition hover:bg-arcade-yellow/60 hover:text-brand-black disabled:opacity-40"
-                        aria-label="Edit list name and meal time"
-                      >
-                        <PencilLine size={13} />
-                        <span>Rename</span>
-                      </button>
-                      {manualLists.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={handleDeleteManualList}
-                          disabled={isManualListReadOnly}
-                          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
-                          aria-label={`Delete ${selectedManualList.name}`}
-                        >
-                          <Trash2 size={13} />
-                          <span>Delete</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Edit mode (inline expansion) */}
-                  {isEditingListDetails && (
-                    <div className="space-y-3 rounded-lg border-2 border-brand-ink bg-brand-linen/50 p-3">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-name">List name</label>
-                          <Input
-                            id="saved-manual-name"
-                            value={listNameInput}
-                            onChange={(e) => setListNameInput(e.target.value)}
-                            placeholder="Isaac lunch list"
-                            className="h-10"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-mealtime">Meal time</label>
-                          <div className="relative">
-                            <select
-                              id="saved-manual-mealtime"
-                              value={listMealTimeInput ?? ''}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === 'breakfast' || value === 'lunch' || value === 'dinner') {
-                                  setListMealTimeInput(value);
-                                  return;
-                                }
-                                setListMealTimeInput(null);
-                              }}
-                              className="preset-select h-10 w-full rounded-md border-2 border-brand-ink bg-white px-3 pr-10 text-sm text-brand-black"
-                            >
-                              <option value="">🕒 No meal time</option>
-                              <option value="breakfast">🌅 Breakfast</option>
-                              <option value="lunch">☀️ Lunch</option>
-                              <option value="dinner">🌙 Dinner</option>
-                            </select>
-                            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
-                          </div>
-                        </div>
-                      </div>
-                      {duplicateManualListForSave ? (
-                        <p className="text-xs text-red-600">{manualListNameHelperText}</p>
-                      ) : listNameSuggestion.trim() !== listNameInput.trim() ? (
-                        <button
-                          type="button"
-                          onClick={() => setListNameInput(listNameSuggestion)}
-                          className="text-left text-xs text-brand-orange hover:underline"
-                        >
-                          {manualListNameHelperText}
-                        </button>
-                      ) : null}
-                      <div className="flex items-center justify-between gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleDeleteManualList}
-                          disabled={isManualListReadOnly || !selectedManualList}
-                          className="h-9 border-red-200 px-3 text-xs font-semibold text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 size={14} className="mr-1" /> Delete
-                        </Button>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleCancelEditListDetails}
-                            className="h-9 px-3 text-xs font-semibold"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={handleSaveManualListDetails}
-                            disabled={isManualListReadOnly || (!isCreatingNewList && (!selectedManualList || !hasManualListDetailsChanged)) || Boolean(duplicateManualListForSave)}
-                            className="h-9 bg-brand-orange px-3 text-xs font-semibold text-white hover:bg-brand-orange/90"
-                          >
-                            Save
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <RouletteWheel
-                key={isGroupRoomActive ? `manual-room-${groupRoomId || 'none'}` : `manual-${manualWheelKey}-${displayedManualRestaurants.length}`}
-                restaurants={displayedManualRestaurants}
-                totalCount={displayedManualRestaurants.length}
-                onSpinComplete={handleManualSpinComplete}
-                isSpinning={isSpinning}
-                setIsSpinning={setIsSpinning}
-                onShuffle={() => {
-                  shuffleManualRestaurants();
-                }}
-                canSpin={displayedManualRestaurants.length >= 2 && (!isGroupRoomActive || isGroupHost || isGroupCohost)}
-                helperText={manualHelperText}
-                spinButtonLabel={isGroupRoomActive
-                  ? (isGroupHost || isGroupCohost ? 'Spin for everyone' : 'Waiting for host or co-host spin')
-                  : 'Spin the Wheel!'}
-                externalSpin={manualExternalSpin}
-                onRequestSpin={isGroupRoomActive ? handleRequestGroupSpin : undefined}
-                canRequestSpin={!isGroupRoomActive || isGroupHost || isGroupCohost}
-                emptyStateTitle="Add restaurants to start"
-                emptyStateSubtitle="Type any restaurant you like…"
-                onSaveFavourite={(r) => handleSaveFavourite(r, 'manual')}
-                onLetsGo={handleLetsGo}
-                onShareResult={handleShareResult}
-                isFavourite={isFavouriteCheck}
-                getLastVisitedAt={getLastVisitedAt}
-              />
-
-                {/* Nearby Favourites Section */}
-                {nearbyFavourites.length > 0 && (
-                  <div className="mt-6 max-w-xl mx-auto">
-                    <div className="bg-white rounded-xl border border-green-200/60 p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="h-2 w-2 rounded-full bg-eatspin-success animate-pulse" />
-                        <h4 className="font-heading font-semibold text-brand-black flex items-center gap-2">
-                          <MapPin size={16} className="text-eatspin-success" />
-                          Nearby Favourites
-                        </h4>
-                      </div>
-                      <p className="text-xs text-eatspin-gray-1 mb-3">
-                        You're close to places you've saved before!
-                      </p>
-                      <ul className="space-y-2">
-                        {nearbyFavourites.map((nf) => {
-                          const alreadyInList = displayedManualRestaurants.some(
-                            (r) => r.name.toLowerCase() === nf.restaurantName.toLowerCase()
-                          );
-                          return (
-                            <li key={nf.favouriteId} className="flex items-center justify-between gap-2 rounded-lg bg-green-50 px-3 py-2">
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium text-brand-black truncate">{nf.restaurantName}</p>
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="text-xs text-eatspin-gray-1">{estimateTravelTime(nf.distanceKm)}</span>
-                                  <RarityBadge rarity={getRarity(favourites.find((f) => f.id === nf.favouriteId)?.lastVisitedAt)} />
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1.5 flex-shrink-0">
-                                {!alreadyInList && !isManualListReadOnly && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAddFavouriteToManualList(nf.restaurantName)}
-                                    className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
-                                    aria-label={`Add ${nf.restaurantName} to spin list`}
-                                  >
-                                    <Plus size={12} /> Add
-                                  </button>
-                                )}
-                                {alreadyInList && (
-                                  <span className="text-xs text-eatspin-success font-medium">In list ✓</span>
-                                )}
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-
-                {/* My Favourites Section */}
-                {favourites.length > 0 && (
-                  <div className="mt-6 max-w-xl mx-auto">
-                    <div className="bg-white rounded-xl border-2 border-brand-ink shadow-pop p-4">
-                      <div className="flex justify-between items-center mb-3">
-                        <h4 className="font-heading font-semibold text-brand-black flex items-center gap-2">
-                          <Heart size={16} className="text-brand-ink fill-arcade-pink" />
-                          My Favourites ({favourites.length})
-                        </h4>
-                      </div>
-                      <p className="text-xs text-eatspin-gray-1 mb-3">
-                        Places you saved from spinning. Tap <Plus size={12} className="inline" /> to add to your current spin list.
-                      </p>
-                      <ul className="space-y-2 max-h-64 overflow-y-auto overscroll-contain pr-1">
-                        {favourites
-                          .filter((f) => f.userRating !== 'avoid')
-                          .map((fav) => {
-                            const alreadyInList = displayedManualRestaurants.some(
-                              (r) => r.name.toLowerCase() === fav.restaurant.name.toLowerCase()
-                            );
-                            return (
-                              <li key={fav.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-linen px-3 py-2">
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium text-brand-black truncate">{fav.restaurant.name}</p>
-                                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                    <RarityBadge rarity={getRarity(fav.lastVisitedAt)} />
-                                    {fav.restaurant.rating > 0 && (
-                                      <span className="text-xs text-eatspin-gray-1">⭐ {fav.restaurant.rating}</span>
-                                    )}
-                                    {fav.visitCount > 0 && (
-                                      <span className="text-xs text-eatspin-gray-1">
-                                        · Visited {fav.visitCount}×
-                                      </span>
-                                    )}
-                                    {fav.userRating === 'neutral' && (
-                                      <span className="text-xs text-eatspin-gray-2">· Neutral</span>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1.5 flex-shrink-0">
-                                  {!alreadyInList && !isManualListReadOnly && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleAddFavouriteToManualList(fav.restaurant.name)}
-                                      className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
-                                      aria-label={`Add ${fav.restaurant.name} to spin list`}
-                                    >
-                                      <Plus size={12} /> Add
-                                    </button>
-                                  )}
-                                  {alreadyInList && (
-                                    <span className="text-xs text-eatspin-success font-medium">In list ✓</span>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveFavourite(fav.id, fav.restaurant.name)}
-                                    className="text-eatspin-gray-2 hover:text-red-500"
-                                    aria-label={`Remove ${fav.restaurant.name} from favourites`}
-                                  >
-                                    <X size={14} />
-                                  </button>
-                                </div>
-                              </li>
-                            );
-                          })}
-                      </ul>
-                      {favourites.some((f) => f.userRating === 'avoid') && (
-                        <p className="mt-2 text-xs text-eatspin-gray-2">
-                          {favourites.filter((f) => f.userRating === 'avoid').length} hidden (marked "don't suggest")
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div id="manual-input" className="mt-8 max-w-xl mx-auto">
-                  <div className="sticky bottom-3 z-30 rounded-2xl border-2 border-brand-ink bg-white/95 p-3 shadow-pop backdrop-blur supports-[backdrop-filter]:bg-white/85">
-                  <div className="flex flex-col sm:flex-row gap-2">
-                  <Input
-                      value={manualInput}
-                      onChange={(e) => setManualInput(e.target.value)}
-                      onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addManualRestaurant();
-                      }
-                    }}
-                      placeholder="Type any restaurant you like…"
-                      className="h-12 text-base"
-                      disabled={isManualListReadOnly}
-                    />
-                    <Button onClick={addManualRestaurant} disabled={isManualListReadOnly} className="h-12 px-6 text-base font-heading font-bold bg-brand-orange hover:bg-brand-orange/90">
-                      <Plus size={18} className="mr-1" /> Add
+              ) : (
+                <div className="mt-4 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-brand-ink text-brand-orange hover:bg-brand-orange/10"
+                      onClick={() => { void handleCopyChallengeLink(); }}
+                    >
+                      Copy invite link
                     </Button>
-                  </div>
-                </div>
-
-                <div className="mt-4 bg-white rounded-xl border-2 border-brand-ink p-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="font-heading font-semibold text-brand-black">Restaurant list ({displayedManualRestaurants.length})</h4>
-                    {displayedManualRestaurants.length > 0 && (
-                      <button
-                        type="button"
-                        className="text-xs font-medium text-eatspin-orange hover:underline"
-                        onClick={clearManualRestaurants}
-                        disabled={isManualListReadOnly}
-                      >
-                        Clear all
-                      </button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                      onClick={handleLeaveChallenge}
+                    >
+                      Leave challenge
+                    </Button>
+                    {challengeMeta && (
+                      <span className="text-xs text-eatspin-gray-1">
+                        Ends in {Math.max(0, Math.ceil((challengeMeta.endsAt - uiNowMs) / (24 * 60 * 60 * 1000)))} day(s)
+                      </span>
                     )}
                   </div>
 
-                  {displayedManualRestaurants.length === 0 ? (
-                    <div className="space-y-3">
-                      <p className="text-sm font-medium text-eatspin-gray-1">Add at least 2 places to spin.</p>
-                      {!isManualListReadOnly && (
-                        <div className="flex flex-wrap gap-2">
-                          {MANUAL_SUGGESTED_RESTAURANTS.map((suggestion) => (
-                            <button
-                              key={suggestion}
-                              type="button"
-                              onClick={() => {
-                                addManualRestaurantByName(suggestion);
-                              }}
-                              className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-brand-linen px-3 py-1.5 text-xs font-medium text-brand-black hover:border-brand-ink hover:text-brand-orange"
-                            >
-                              <CheckCircle2 size={12} /> {suggestion}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <ul className="space-y-2">
-                      {displayedManualRestaurants.map((restaurant) => (
-                        <li key={restaurant.id} className="flex justify-between items-center bg-brand-linen rounded-lg px-3 py-2">
-                          <span className="text-sm text-brand-black">{restaurant.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeManualRestaurant(restaurant.id)}
-                            className="text-eatspin-gray-1 hover:text-red-500"
-                            aria-label={`Remove ${restaurant.name}`}
-                            disabled={isManualListReadOnly}
-                          >
-                            <X size={16} />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+                  <div className="rounded-xl border-2 border-brand-ink bg-brand-linen/60 px-3 py-2">
+                    <p className="text-xs text-eatspin-gray-1">
+                      Your completed days: <strong className="text-brand-black">{myChallengeParticipant?.completedDayKeys.length ?? 0}</strong>/7
+                    </p>
+                  </div>
 
+                  <ul className="space-y-2">
+                    {challengeLeaderboard.map((participant) => (
+                      <li
+                        key={participant.uid}
+                        className="flex items-center justify-between rounded-lg border-2 border-brand-ink bg-brand-linen px-3 py-2 text-sm"
+                      >
+                        <span className="font-medium text-brand-black">
+                          {participant.name} {participant.uid === groupAuthUid ? '(You)' : ''}
+                        </span>
+                        <span className="text-eatspin-gray-1">{participant.completedDayKeys.length}/7 days</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
+              )}
+              </div>
             </div>
-          )}
-        </div>
-      </section>
+          </section>
+        )}
 
-      {/* Wheel section for auto mode */}
-      {activeTab === 'auto' && showWheelSection && location && roundRestaurants.length > 0 && (
-        <section id="wheel" className="py-10 sm:py-12 px-4 sm:px-6 lg:px-8 bg-arcade-yellow">
+        {APP_FEATURES.discoverFeed && appTab === 'group' && (
+          <section className="py-6 px-4 sm:px-6 lg:px-8 bg-white">
+            <div className="max-w-4xl mx-auto">
+              <div className="rounded-2xl border-2 border-brand-ink bg-brand-linen/70 p-4 sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="font-heading text-lg font-bold text-brand-black">Discover Feed</h3>
+                  <p className="text-sm text-eatspin-gray-1">See what others nearby are spinning right now.</p>
+                </div>
+                {discoverGeoKey && (
+                  <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-eatspin-gray-1">
+                    Area: {discoverGeoKey}
+                  </span>
+                )}
+              </div>
+
+              {discoverFeedError && (
+                <p className="mt-2 text-xs text-eatspin-error">{discoverFeedError}</p>
+              )}
+
+              <ul className="mt-3 space-y-2">
+                {discoverEvents.length === 0 && (
+                  <li className="rounded-lg bg-white px-3 py-2 text-sm text-eatspin-gray-1">
+                    No nearby spins yet. Your next spin can kick off the feed.
+                  </li>
+                )}
+                {discoverEvents.map((event) => (
+                  <li key={event.id} className="rounded-lg bg-white px-3 py-2 text-sm">
+                    <p className="font-medium text-brand-black">
+                      Someone nearby spun {event.restaurantName}
+                      {event.mealTime !== 'none' ? ` • ${event.mealTime}` : ''}
+                    </p>
+                    <p className="text-xs text-eatspin-gray-1">{formatSpinTimestamp(event.createdAt)}</p>
+                  </li>
+                ))}
+              </ul>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Spin Stats - Me screen, only when user has history */}
+        {appTab === 'me' && spinHistorySummary.totalSpins > 0 && (
+          <section className="py-6 px-4 sm:px-6 lg:px-8 bg-white">
           <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-5 sm:mb-6">
-              <h2 className="font-heading text-xl sm:text-2xl font-bold text-brand-black mb-1.5">
-                Spin the Wheel!
-              </h2>
-              <p className="text-sm sm:text-base text-eatspin-gray-1">
-                {roundRestaurants.length} restaurants ready for this round
-              </p>
-            </div>
-
-            <RouletteWheel
-              key={`auto-${autoWheelKey}`}
-              restaurants={wheelRestaurants}
-              totalCount={roundRestaurants.length}
-              onSpinComplete={handleSpinComplete}
-              isSpinning={isSpinning}
-              setIsSpinning={setIsSpinning}
-              onShuffle={shuffleWheel}
-              onSpinStart={handleAutoSpinStart}
-              onSaveFavourite={(r) => handleSaveFavourite(r, 'auto')}
-              onLetsGo={handleLetsGo}
-              onShareResult={handleShareResult}
-              onSpinAgain={handleAutoSpinAgain}
-              canSpinAgain={wheelRestaurants.length >= 2}
-              isFavourite={isFavouriteCheck}
-              getLastVisitedAt={getLastVisitedAt}
-              helperText={autoAvailabilityHelperText || undefined}
-              emptyStateTitle="No open restaurants ready to spin"
-              emptyStateSubtitle={autoEmptyStateSubtitle}
+            <SpinStatsPanel
+              totalSpins={spinHistorySummary.totalSpins}
+              uniqueRestaurants={spinHistorySummary.uniqueRestaurants}
+              currentStreak={spinHistorySummary.currentStreak}
+              topCategory={spinHistorySummary.topCategory}
+              spinsThisMonth={spinHistorySummary.spinsThisMonth}
+              recentSpins={spinHistorySummary.recentSpins}
+              onShareWrapped={() => { void handleShareSpinWrapped(); }}
             />
           </div>
         </section>
-      )}
-
-      {/* Group Spin section */}
-      <GroupSpin
-        isFirebaseConfigured={isFirebaseConfigured}
-        firebaseConfigError={firebaseConfigError}
-        authLoading={groupAuthLoading}
-        authError={groupAuthError}
-        authUid={groupAuthUid}
-        displayName={groupDisplayName}
-        resolvedDisplayName={groupResolvedDisplayName}
-        setDisplayName={setGroupDisplayName}
-        roomId={groupRoomId}
-        hostUid={groupHostUid}
-        roomLink={groupRoomLink}
-        isHost={isGroupHost}
-        isCohost={isGroupCohost}
-        cohostUids={groupCohostUids}
-        isBusy={groupRoomBusy}
-        roomError={groupRoomError}
-        participants={groupParticipants}
-        reactions={groupReactions}
-        votes={groupVotes}
-        canStartRoomSpin={isGroupRoomActive && (isGroupHost || isGroupCohost) && displayedManualRestaurantNames.length >= 2}
-        onCreateRoom={handleCreateGroupRoom}
-        onJoinRoom={handleJoinGroupRoom}
-        onLeaveRoom={handleLeaveGroupRoom}
-        onStartRoomSpin={handleRequestGroupSpin}
-        onSetParticipantCohost={setParticipantCohost}
-        onSendReaction={sendGroupReaction}
-        onSetGoingVote={setGroupGoingVote}
-        onClearRoomError={clearGroupRoomError}
-        showCompletedListReminder={isGroupRoomActive && !isGroupHost && !isGroupCohost && groupRoomStatus === 'completed' && Boolean(groupCurrentSpin)}
-      />
-
-      {/* Spin Stats - show only when user has history */}
-      {spinHistorySummary.totalSpins > 0 && (
-        <section className="py-6 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-4xl mx-auto">
-          <SpinStatsPanel
-            totalSpins={spinHistorySummary.totalSpins}
-            uniqueRestaurants={spinHistorySummary.uniqueRestaurants}
-            currentStreak={spinHistorySummary.currentStreak}
-            topCategory={spinHistorySummary.topCategory}
-            spinsThisMonth={spinHistorySummary.spinsThisMonth}
-            recentSpins={spinHistorySummary.recentSpins}
-            onShareWrapped={() => { void handleShareSpinWrapped(); }}
-          />
-        </div>
-      </section>
-      )}
-
-      {/* Challenge + Discover Feed (feature-flagged) */}
-      {APP_FEATURES.spinChallenge && (
-        <section className="py-6 px-4 sm:px-6 lg:px-8 bg-arcade-yellow">
-          <div className="max-w-4xl mx-auto">
-            <div className="rounded-2xl border-2 border-brand-ink bg-white p-4 sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="font-heading text-lg font-bold text-brand-black">7-Day Challenge a Friend</h3>
-                <p className="text-sm text-eatspin-gray-1">Challenge friends to spin daily and compare streak progress.</p>
-              </div>
-              {challengeId && (
-                <span className="rounded-full bg-brand-orange/10 px-3 py-1 text-xs font-semibold text-brand-orange">
-                  Challenge {challengeId}
-                </span>
-              )}
-            </div>
-
-            {challengeError && (
-              <p className="mt-2 text-sm text-eatspin-error">{challengeError}</p>
-            )}
-
-            {!challengeId ? (
-              <div className="mt-4 grid gap-2 sm:grid-cols-[auto_1fr_auto]">
-                <Button
-                  type="button"
-                  className="bg-brand-orange text-white hover:bg-brand-orange/90"
-                  disabled={challengeBusy}
-                  onClick={handleCreateChallenge}
-                >
-                  {challengeBusy ? 'Working...' : 'Create 7-day challenge'}
-                </Button>
-                <Input
-                  value={challengeJoinInput}
-                  onChange={(event) => setChallengeJoinInput(event.target.value)}
-                  placeholder="Paste challenge link or code"
-                  className="h-11"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-brand-ink text-brand-black hover:bg-brand-linen"
-                  disabled={challengeBusy || !challengeJoinInput.trim()}
-                  onClick={handleJoinChallenge}
-                >
-                  Join
-                </Button>
-              </div>
-            ) : (
-              <div className="mt-4 space-y-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-brand-ink text-brand-orange hover:bg-brand-orange/10"
-                    onClick={() => { void handleCopyChallengeLink(); }}
-                  >
-                    Copy invite link
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                    onClick={handleLeaveChallenge}
-                  >
-                    Leave challenge
-                  </Button>
-                  {challengeMeta && (
-                    <span className="text-xs text-eatspin-gray-1">
-                      Ends in {Math.max(0, Math.ceil((challengeMeta.endsAt - uiNowMs) / (24 * 60 * 60 * 1000)))} day(s)
-                    </span>
-                  )}
-                </div>
-
-                <div className="rounded-xl border-2 border-brand-ink bg-brand-linen/60 px-3 py-2">
-                  <p className="text-xs text-eatspin-gray-1">
-                    Your completed days: <strong className="text-brand-black">{myChallengeParticipant?.completedDayKeys.length ?? 0}</strong>/7
-                  </p>
-                </div>
-
-                <ul className="space-y-2">
-                  {challengeLeaderboard.map((participant) => (
-                    <li
-                      key={participant.uid}
-                      className="flex items-center justify-between rounded-lg border-2 border-brand-ink bg-brand-linen px-3 py-2 text-sm"
-                    >
-                      <span className="font-medium text-brand-black">
-                        {participant.name} {participant.uid === groupAuthUid ? '(You)' : ''}
-                      </span>
-                      <span className="text-eatspin-gray-1">{participant.completedDayKeys.length}/7 days</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {APP_FEATURES.discoverFeed && (
-        <section className="py-6 px-4 sm:px-6 lg:px-8 bg-white">
-          <div className="max-w-4xl mx-auto">
-            <div className="rounded-2xl border-2 border-brand-ink bg-brand-linen/70 p-4 sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h3 className="font-heading text-lg font-bold text-brand-black">Discover Feed</h3>
-                <p className="text-sm text-eatspin-gray-1">See what others nearby are spinning right now.</p>
-              </div>
-              {discoverGeoKey && (
-                <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-eatspin-gray-1">
-                  Area: {discoverGeoKey}
-                </span>
-              )}
-            </div>
-
-            {discoverFeedError && (
-              <p className="mt-2 text-xs text-eatspin-error">{discoverFeedError}</p>
-            )}
-
-            <ul className="mt-3 space-y-2">
-              {discoverEvents.length === 0 && (
-                <li className="rounded-lg bg-white px-3 py-2 text-sm text-eatspin-gray-1">
-                  No nearby spins yet. Your next spin can kick off the feed.
-                </li>
-              )}
-              {discoverEvents.map((event) => (
-                <li key={event.id} className="rounded-lg bg-white px-3 py-2 text-sm">
-                  <p className="font-medium text-brand-black">
-                    Someone nearby spun {event.restaurantName}
-                    {event.mealTime !== 'none' ? ` • ${event.mealTime}` : ''}
-                  </p>
-                  <p className="text-xs text-eatspin-gray-1">{formatSpinTimestamp(event.createdAt)}</p>
-                </li>
-              ))}
-            </ul>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* About Sections (collapsible) */}
-      <div className="border-t-2 border-brand-ink/20">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <button
-            type="button"
-            onClick={() => setShowAboutSections(prev => !prev)}
-            className="flex items-center gap-2 text-sm font-medium text-eatspin-gray-1 hover:text-brand-orange transition-colors mx-auto"
-          >
-            <ChevronDown size={16} className={`transition-transform duration-200 ${showAboutSections ? 'rotate-180' : ''}`} />
-            {showAboutSections ? 'Hide' : 'Learn more about EatSpin'}
-          </button>
-        </div>
-        {showAboutSections && (
-          <Suspense fallback={
-            <div className="flex justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-3 border-brand-orange border-t-transparent" />
-            </div>
-          }>
-            <HowItWorks />
-            <Features />
-            <Testimonials />
-            <CTA />
-          </Suspense>
         )}
-      </div>
 
-      <Footer />
+        {/* About EatSpin - the landing sections, collapsed by default (Me screen) */}
+        {appTab === 'me' && <AboutEatSpin onStartSpinning={() => handleTabChange('spin')} />}
+      </main>
+
+      <BottomNav
+        activeTab={appTab}
+        onTabChange={handleTabChange}
+        hasActiveRoom={isGroupRoomActive}
+      />
 
       {/* Modals */}
       <SubscriptionModal
@@ -2538,7 +2503,11 @@ function App() {
         onOpenAutoMode={handleOnboardingOpenAutoMode}
       />
 
-      <Toaster />
+      {/* Toasts sit above the fixed bottom tab bar */}
+      <Toaster
+        offset={{ bottom: 'calc(var(--bottom-nav-height) + 16px)' }}
+        mobileOffset={{ bottom: 'calc(var(--bottom-nav-height) + 12px)' }}
+      />
     </div>
   );
 }

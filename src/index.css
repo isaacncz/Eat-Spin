@@ -5,13 +5,13 @@
 @tailwind utilities;
 
 :root {
-  --navbar-height: 56px;
-}
-
-@media (min-width: 768px) {
-  :root {
-    --navbar-height: 48px;
-  }
+  /* There is no top navbar any more. Kept at 0 (not removed) because the wheel and
+     hero scroll offsets read it and fall back to 72px when it is missing. */
+  --navbar-height: 0px;
+  /* Fixed bottom tab bar: 3px border + 8px top padding + 52px tab + bottom padding
+     (at least 8px, or the device safe-area inset). BottomNav overwrites this with its
+     measured height; this value covers the first paint. */
+  --bottom-nav-height: calc(63px + max(0.5rem, env(safe-area-inset-bottom, 0px)));
 }
 
 @layer base {
@@ -57,7 +57,8 @@
   
   html {
     scroll-behavior: smooth;
-    scroll-padding-top: var(--navbar-height, 80px);
+    scroll-padding-top: var(--navbar-height, 0px);
+    scroll-padding-bottom: var(--bottom-nav-height, 0px);
   }
   
   body {

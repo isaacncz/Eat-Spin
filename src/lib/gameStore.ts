@@ -1,6 +1,6 @@
 /** Local progression: XP, level, coins. Stored in localStorage, never sent to a server. */
 
-const STORAGE_KEY = 'eatspin:game-v1';
+export const GAME_STORAGE_KEY = 'eatspin:game-v1';
 
 export const XP_PER_LEVEL = 500;
 export const XP_LETS_GO = 50;
@@ -31,7 +31,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 export const loadGameState = (): GameState => {
   if (typeof window === 'undefined') return defaultGameState();
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(GAME_STORAGE_KEY);
     if (!raw) return defaultGameState();
     const parsed: unknown = JSON.parse(raw);
     if (!isRecord(parsed) || parsed.v !== 1) return defaultGameState();
@@ -55,7 +55,7 @@ export const loadGameState = (): GameState => {
 export const saveGameState = (state: GameState): void => {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    window.localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify(state));
   } catch {
     // Storage unavailable or full: progress stays in memory for this session.
   }

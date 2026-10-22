@@ -39,6 +39,8 @@ interface RouletteWheelProps {
   externalSpin?: {
     spinId: string;
     winnerIndex: number;
+    restaurant?: Restaurant;
+    animate?: boolean;
   } | null;
   onRequestSpin?: () => void | Promise<void>;
   canRequestSpin?: boolean;
@@ -522,6 +524,21 @@ export function RouletteWheel({
     if (!externalSpin || restaurants.length === 0) return;
     if (externalSpin.spinId === lastExternalSpinIdRef.current) return;
     lastExternalSpinIdRef.current = externalSpin.spinId;
+    if (externalSpin.animate === false) {
+      const result = externalSpin.restaurant ?? restaurants[externalSpin.winnerIndex];
+      if (!result) return;
+      const lastVisitedAt = getLastVisitedAtRef.current?.(result);
+      setSpinResult(result);
+      setResultRarity(getLastVisitedAtRef.current ? getRarity(lastVisitedAt) : null);
+      setResultVisit(getLastVisitedAtRef.current ? { lastVisitedAt, visitCount: getVisitCountRef.current?.(result) } : null);
+      setClaim(null);
+      claimedResultRef.current = null;
+      setLevelUp(null);
+      if (levelUpTimeoutRef.current !== null) window.clearTimeout(levelUpTimeoutRef.current);
+      setResultOpen(true);
+      // Restoring an old result is not a fresh spin completion or quest event.
+      return;
+    }
     animateSpinToIndex(externalSpin.winnerIndex);
   }, [animateSpinToIndex, externalSpin, restaurants.length]);
 

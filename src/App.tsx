@@ -1,3 +1,5 @@
+import { ListSharingDialog } from '@/components/ListSharingDialog';
+import { sharedRestaurants } from '@/lib/sharedLists';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import { trackEvent } from '@/lib/analytics';
@@ -217,12 +219,16 @@ function App() {
   const [activeServesFilters, setActiveServesFilters] = useState<ServesFilterId[]>(getTimeOfDayFilters);
 
   const [manualInput, setManualInput] = useState('');
+  const [shareListOpen, setShareListOpen] = useState(false);
+  const [incomingShareId, setIncomingShareId] = useState<string | null>(() => { const id = new URLSearchParams(window.location.search).get('list'); return id === '' ? 'invalid' : id; });
+  const [importedListToSpin, setImportedListToSpin] = useState<string | null>(null);
   const {
     manualLists,
     selectedManualList,
     selectedManualListId,
     selectManualList,
     createNewManualList,
+    importManualList,
     updateSelectedManualList,
     deleteManualList,
     selectDeterministicManualList,
@@ -1651,6 +1657,8 @@ function App() {
             isReadOnly={isManualListReadOnly}
             onSelectList={handleSelectSavedManualList}
             onCreateList={handleCreateManualList}
+            onShareList={() => setShareListOpen(true)}
+            openWheelRequested={importedListToSpin === selectedManualListId}
             onStartEditing={() => setIsEditingListDetails(true)}
             onDeleteSelectedList={handleDeleteManualList}
             canDeleteList={manualLists.length > 1}
@@ -1952,6 +1960,27 @@ function App() {
         hasActiveRoom={isGroupRoomActive}
       />
 
+      <ListSharingDialog
+        open={shareListOpen || incomingShareId !== null}
+        incomingId={incomingShareId}
+        list={selectedManualList}
+        onClose={() => {
+          setShareListOpen(false);
+          setIncomingShareId(null);
+          const url = new URL(window.location.href);
+          url.searchParams.delete('list');
+          window.history.replaceState(window.history.state, '', url);
+        }}
+        onImport={(snapshot, openWheel) => {
+          if (isGroupRoomActive) throw new Error('Leave your Group room before importing a personal list.');
+          const saved = importManualList({ name: snapshot.name, mealTime: snapshot.mealTime,
+            restaurants: sharedRestaurants(snapshot, () => crypto.randomUUID()) });
+          hasUserSelectedManualListRef.current = true;
+          setImportedListToSpin(openWheel ? saved.id : null);
+          handleTabChange('list');
+          toast.success('Personal copy saved.');
+        }}
+      />
       {/* Modals */}
       <SubscriptionModal
         isOpen={showSubscription}

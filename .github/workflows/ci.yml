@@ -120,6 +120,28 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  sharing-rules:
+    name: Shared list Firebase rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Install isolated emulator test tools
+        run: npm install --no-save --package-lock=false firebase-tools@14 @firebase/rules-unit-testing@5
+      - name: Verify shared-list access rules
+        run: npx firebase emulators:exec --only database --project demo-eat-spin-sharing --config firebase.sharing-test.json "node scripts/shared-list-rules.test.mjs"
+
   # Single stable check name for branch protection. Require "CI gate" and the
   # set of jobs behind it can change without editing the ruleset.
   #
@@ -129,7 +151,7 @@ jobs:
   gate:
     name: CI gate
     if: ${{ always() }}
-    needs: [static, smoke]
+    needs: [static, smoke, sharing-rules]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -137,8 +159,9 @@ jobs:
         env:
           STATIC_RESULT: ${{ needs.static.result }}
           BROWSER_RESULT: ${{ needs.smoke.result }}
+          RULES_RESULT: ${{ needs.sharing-rules.result }}
         run: |
-          if [ "$STATIC_RESULT" != "success" ] || [ "$BROWSER_RESULT" != "success" ]; then
+          if [ "$STATIC_RESULT" != "success" ] || [ "$BROWSER_RESULT" != "success" ] || [ "$RULES_RESULT" != "success" ]; then
             echo "Required jobs did not succeed: static=$STATIC_RESULT browser=$BROWSER_RESULT"
             exit 1
           fi

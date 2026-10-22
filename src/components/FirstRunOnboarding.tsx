@@ -16,8 +16,8 @@ const steps = [
   },
   {
     title: 'Step 2: Load auto wheel',
-    description: 'We will switch to Spin for me so your wheel is ready right away.',
-    actionLabel: 'Open Auto Mode',
+    description: 'We will open the Spin tab so your wheel is ready right away.',
+    actionLabel: 'Open Spin tab',
   },
   {
     title: 'Step 3: Tap spin',

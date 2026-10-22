@@ -772,7 +772,7 @@ export function RouletteWheel({
       <button
         onClick={handleSpinClick}
         disabled={isSpinning || !canSpin || (Boolean(onRequestSpin) && !canRequestSpin)}
-        className="sticky bottom-3 sm:static z-30 relative overflow-hidden w-full max-w-sm px-8 sm:px-12 py-6 sm:py-7 bg-brand-orange text-white font-heading text-2xl sm:text-[1.7rem] font-bold rounded-2xl border-4 border-brand-ink shadow-pop-lg active:translate-y-[3px] animate-cta-pulse transition-all duration-300 hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+        className="sticky bottom-[calc(var(--bottom-nav-height)_+_0.75rem)] sm:static z-30 relative overflow-hidden w-full max-w-sm px-8 sm:px-12 py-6 sm:py-7 bg-brand-orange text-white font-heading text-2xl sm:text-[1.7rem] font-bold rounded-2xl border-4 border-brand-ink shadow-pop-lg active:translate-y-[3px] animate-cta-pulse transition-all duration-300 hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
         {isSpinning ? (
           <span className="inline-flex flex-col items-center justify-center gap-1" aria-live="polite">

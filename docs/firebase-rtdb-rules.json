@@ -98,7 +98,7 @@
           ".validate": "newData.isString() && newData.val().matches(/^(any|breakfast|lunch|dinner)$/)"
         },
         "places": {
-          ".validate": "newData.numChildren() > 0 && newData.numChildren() <= 100",
+          ".validate": "newData.hasChildren() && newData.hasChild('0')",
           "$index": {
             ".validate": "$index.matches(/^(0|[1-9][0-9]?)$/) && newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
           }

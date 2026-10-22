@@ -6,6 +6,7 @@ import {
   getXpIntoLevel,
   loadGameState,
   saveGameState,
+  toLocalDayKey,
   XP_PER_LEVEL,
   type AwardResult,
 } from '@/lib/gameStore';
@@ -15,8 +16,8 @@ export function useGame() {
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  const awardForLetsGo = useCallback((restaurantId: string): AwardResult => {
-    const result = awardLetsGo(stateRef.current, restaurantId);
+  const awardForLetsGo = useCallback((restaurantId: string, multiplier = 1): AwardResult => {
+    const result = awardLetsGo(stateRef.current, restaurantId, toLocalDayKey(), multiplier);
     if (result.awarded) {
       stateRef.current = result.state;
       setState(result.state);

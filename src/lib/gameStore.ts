@@ -65,14 +65,32 @@ export interface AwardResult {
   state: GameState;
   awarded: boolean;
   leveledUp: boolean;
+  /** XP granted by this call (base XP times the multiplier), 0 when nothing was awarded. */
   xp: number;
   coins: number;
+  /** XP multiplier that was applied (always a whole number >= 1). */
+  multiplier: number;
 }
 
-/** Award "Let's go" rewards once per restaurant per local day. Pure: returns the next state. */
-export const awardLetsGo = (state: GameState, restaurantId: string, today = toLocalDayKey()): AwardResult => {
+/** Whole number >= 1; anything else (NaN, 0, negatives) falls back to 1x. */
+const normaliseMultiplier = (multiplier: number): number =>
+  Number.isFinite(multiplier) && multiplier >= 1 ? Math.floor(multiplier) : 1;
+
+/**
+ * Award "Let's go" rewards once per restaurant per local day. Pure: returns the next state.
+ *
+ * `multiplier` scales the XP only (coins stay flat). It is applied on the single
+ * awarding call, so repeating the call on the same day is still a no-op.
+ */
+export const awardLetsGo = (
+  state: GameState,
+  restaurantId: string,
+  today = toLocalDayKey(),
+  multiplier = 1,
+): AwardResult => {
+  const appliedMultiplier = normaliseMultiplier(multiplier);
   if (state.awardedOn[restaurantId] === today) {
-    return { state, awarded: false, leveledUp: false, xp: 0, coins: 0 };
+    return { state, awarded: false, leveledUp: false, xp: 0, coins: 0, multiplier: appliedMultiplier };
   }
   // Keep only today's entries so the map cannot grow without bound.
   const awardedOn: Record<string, string> = {};
@@ -81,9 +99,10 @@ export const awardLetsGo = (state: GameState, restaurantId: string, today = toLo
   }
   awardedOn[restaurantId] = today;
 
+  const xp = XP_LETS_GO * appliedMultiplier;
   const next: GameState = {
     v: 1,
-    xp: state.xp + XP_LETS_GO,
+    xp: state.xp + xp,
     coins: state.coins + COINS_LETS_GO,
     awardedOn,
   };
@@ -91,7 +110,8 @@ export const awardLetsGo = (state: GameState, restaurantId: string, today = toLo
     state: next,
     awarded: true,
     leveledUp: getLevel(next.xp) > getLevel(state.xp),
-    xp: XP_LETS_GO,
+    xp,
     coins: COINS_LETS_GO,
+    multiplier: appliedMultiplier,
   };
 };

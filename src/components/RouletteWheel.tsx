@@ -6,6 +6,8 @@ import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
 import { playSpinTick, playSpinWin, startSpinDrumroll, stopSpinDrumroll, triggerSpinHaptic } from '@/lib/spinAudio';
 import { PhotoCarousel } from '@/components/PhotoCarousel';
+import { RarityRibbon } from '@/components/RarityBadge';
+import { getRarity, type Rarity } from '@/lib/rarity';
 
 
 interface RouletteWheelProps {
@@ -30,8 +32,11 @@ interface RouletteWheelProps {
   onSpinStart?: () => Restaurant[] | null;
   /** Called when user taps the "★ Save" button on the spin result. */
   onSaveFavourite?: (restaurant: Restaurant) => void;
-  /** Called when user taps "Let's go!" on the spin result. */
-  onLetsGo?: (restaurant: Restaurant) => void;
+  /**
+   * Called when user taps "Let's go!" on the spin result. `rarity` is the tier the
+   * result card showed, so the reward matches what the player saw.
+   */
+  onLetsGo?: (restaurant: Restaurant, rarity?: Rarity) => void;
   /** Called when user taps "Share" on the spin result. */
   onShareResult?: (restaurant: Restaurant, cardElement: HTMLElement) => void | Promise<void>;
   /** Called before the one-tap spin-again action starts a new spin. */
@@ -40,6 +45,11 @@ interface RouletteWheelProps {
   canSpinAgain?: boolean;
   /** Returns true if the restaurant is already saved as a favourite. */
   isFavourite?: (restaurant: Restaurant) => boolean;
+  /**
+   * Epoch ms of the last visit to a restaurant (undefined = never visited). When set,
+   * the result card shows a rarity ribbon. Rarity is computed from this, never stored.
+   */
+  getLastVisitedAt?: (restaurant: Restaurant) => number | undefined;
 }
 
 // Vibrant appetizing color palette
@@ -165,6 +175,7 @@ export function RouletteWheel({
   onSpinAgain,
   canSpinAgain = false,
   isFavourite,
+  getLastVisitedAt,
 }: RouletteWheelProps) {
   const ANTICIPATION_DURATION_S = 0.5;
   const ANTICIPATION_DEG = 50;
@@ -177,6 +188,9 @@ export function RouletteWheel({
   const previousRestaurantsRef = useRef(restaurants);
   const winnerPulseTimeoutRef = useRef<number | null>(null);
   const [spinResult, setSpinResult] = useState<Restaurant | null>(null);
+  // Frozen when the wheel stops, so the tier cannot change after "Let's go!" records the visit.
+  const [resultRarity, setResultRarity] = useState<Rarity | null>(null);
+  const getLastVisitedAtRef = useRef(getLastVisitedAt);
   const currentRotationRef = useRef(0);
   const [wheelSize, setWheelSize] = useState(320);
   const celebrationTimeoutsRef = useRef<number[]>([]);
@@ -192,6 +206,10 @@ export function RouletteWheel({
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   // No separate drawer state needed — "Let's Go!" opens Google Maps directly
   const canPlayEffects = soundEnabled && !prefersReducedMotion;
+
+  useEffect(() => {
+    getLastVisitedAtRef.current = getLastVisitedAt;
+  }, [getLastVisitedAt]);
 
   const syncWheelRotationVar = useCallback((rotation: number) => {
     if (!wheelRef.current) return;
@@ -361,6 +379,7 @@ export function RouletteWheel({
     recenterWheel();
     setIsSpinning(true);
     setSpinResult(null);
+    setResultRarity(null);
     setWinnerSliceIndex(null);
     setIsWinnerSliceHighlighted(false);
     lastTickSegmentRef.current = null;
@@ -392,6 +411,7 @@ export function RouletteWheel({
         stopSpinDrumroll();
         setIsSpinning(false);
         setSpinResult(result);
+        setResultRarity(getLastVisitedAtRef.current ? getRarity(getLastVisitedAtRef.current(result)) : null);
         setWinnerSliceIndex(selectedIndex);
         setIsWinnerSliceHighlighted(true);
         winnerPulseTimeoutRef.current = window.setTimeout(() => {
@@ -807,6 +827,8 @@ export function RouletteWheel({
               </div>
             </div>
 
+            {resultRarity && <RarityRibbon rarity={resultRarity} />}
+
             <div className="p-6">
               <h3 className="font-heading text-2xl sm:text-3xl font-bold text-brand-black mb-3 flex items-center justify-center gap-2">
                 <Trophy size={22} className="celebration-floating-icon text-brand-ink" />
@@ -980,7 +1002,7 @@ export function RouletteWheel({
                 {onLetsGo && (
                   <Button
                     className="flex-1 h-12 bg-brand-orange hover:bg-brand-orange/90 text-white font-heading font-bold text-base rounded-xl transition-all"
-                    onClick={() => onLetsGo(spinResult)}
+                    onClick={() => onLetsGo(spinResult, resultRarity ?? undefined)}
                   >
                     <Navigation size={18} className="mr-1.5" />
                     Let's go!

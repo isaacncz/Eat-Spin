@@ -1,5 +1,7 @@
 /** Local progression: XP, level, coins. Stored in localStorage, never sent to a server. */
 
+import { stepQuest, sanitizeQuestProgress, type QuestDef, type QuestEvent, type QuestProgress } from '@/lib/quests';
+
 export const GAME_STORAGE_KEY = 'eatspin:game-v1';
 
 export const XP_PER_LEVEL = 500;
@@ -12,6 +14,12 @@ export interface GameState {
   coins: number;
   /** restaurantId -> local day key of the last award (prevents farming one place). */
   awardedOn: Record<string, string>;
+  /**
+   * Progress of today's daily quest. Optional on purpose: data saved before daily quests
+   * existed has no such field and stays valid at `v: 1`, and an older build that reads
+   * newer data simply ignores it.
+   */
+  quest?: QuestProgress;
 }
 
 export const defaultGameState = (): GameState => ({ v: 1, xp: 0, coins: 0, awardedOn: {} });
@@ -41,12 +49,15 @@ export const loadGameState = (): GameState => {
         if (typeof day === 'string') awardedOn[id] = day;
       }
     }
-    return {
+    const state: GameState = {
       v: 1,
       xp: typeof parsed.xp === 'number' && parsed.xp >= 0 ? Math.floor(parsed.xp) : 0,
       coins: typeof parsed.coins === 'number' && parsed.coins >= 0 ? Math.floor(parsed.coins) : 0,
       awardedOn,
     };
+    const quest = sanitizeQuestProgress(parsed.quest);
+    if (quest) state.quest = quest;
+    return state;
   } catch {
     return defaultGameState();
   }
@@ -101,7 +112,7 @@ export const awardLetsGo = (
 
   const xp = XP_LETS_GO * appliedMultiplier;
   const next: GameState = {
-    v: 1,
+    ...state,
     xp: state.xp + xp,
     coins: state.coins + COINS_LETS_GO,
     awardedOn,
@@ -113,5 +124,42 @@ export const awardLetsGo = (
     xp,
     coins: COINS_LETS_GO,
     multiplier: appliedMultiplier,
+  };
+};
+
+export interface QuestEventResult {
+  state: GameState;
+  /** True when this event completed the quest and its reward was granted. */
+  completed: boolean;
+  /** The quest that was completed, if any. */
+  quest: QuestDef | null;
+  /** Flat XP granted (0 unless completed). */
+  xp: number;
+  leveledUp: boolean;
+  /** Level after this event. */
+  level: number;
+}
+
+/**
+ * Report an event to the daily quest. Pure: returns the next state.
+ *
+ * The reward is granted once per day: after a quest is completed, further events for that
+ * day change nothing. A new local day starts a fresh quest.
+ */
+export const applyQuestEvent = (state: GameState, event: QuestEvent, today = toLocalDayKey()): QuestEventResult => {
+  const step = stepQuest(state.quest, event, today);
+  if (!step.changed) {
+    return { state, completed: false, quest: null, xp: 0, leveledUp: false, level: getLevel(state.xp) };
+  }
+
+  const xp = step.completedQuest ? step.completedQuest.rewardXp : 0;
+  const next: GameState = { ...state, xp: state.xp + xp, quest: step.progress };
+  return {
+    state: next,
+    completed: step.completedQuest !== null,
+    quest: step.completedQuest,
+    xp,
+    leveledUp: getLevel(next.xp) > getLevel(state.xp),
+    level: getLevel(next.xp),
   };
 };

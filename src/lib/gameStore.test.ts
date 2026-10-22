@@ -4,6 +4,7 @@ import {
   COINS_LETS_GO,
   GAME_STORAGE_KEY,
   XP_LETS_GO,
+  applyQuestEvent,
   awardLetsGo,
   defaultGameState,
   getLevel,
@@ -13,6 +14,7 @@ import {
   toLocalDayKey,
   type GameState,
 } from '@/lib/gameStore';
+import { QUESTS, getQuestForDay, type QuestEvent, type QuestId } from '@/lib/quests';
 import { createBrokenStorage, createMemoryStorage, stubWindowStorage } from '@/test/memoryStorage';
 
 afterEach(() => {
@@ -218,6 +220,164 @@ describe('awardLetsGo XP multiplier', () => {
     const result = awardLetsGo(defaultGameState(), 'place-a', DAY_1, multiplier);
     expect(result.multiplier).toBe(applied);
     expect(result.xp).toBe(XP_LETS_GO * applied);
+  });
+});
+
+describe('daily quest', () => {
+  const addDays = (dayKey: string, days: number): string => {
+    const [y, m, d] = dayKey.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+  };
+  const dayWithQuest = (id: QuestId, from = '2026-10-20'): string => {
+    for (let i = 0; i < QUESTS.length; i += 1) {
+      if (getQuestForDay(addDays(from, i)).id === id) return addDays(from, i);
+    }
+    throw new Error(`quest ${id} never comes up`);
+  };
+  const rewardOf = (id: QuestId): number => QUESTS.find((q) => q.id === id)!.rewardXp;
+  const SPIN: QuestEvent = { type: 'spin' };
+  const SAVED: QuestEvent = { type: 'favourite-saved' };
+
+  it('starts with no quest progress, so data from before quests existed is valid', () => {
+    const state = defaultGameState();
+    expect(state.quest).toBeUndefined();
+    const next = applyQuestEvent(state, SPIN, dayWithQuest('spin-3')).state;
+    expect(next.quest).toMatchObject({ questId: 'spin-3', progress: 1, completed: false });
+  });
+
+  it('awards the quest XP exactly once when the quest is completed', () => {
+    const today = dayWithQuest('save-favourite');
+
+    const result = applyQuestEvent(defaultGameState(), SAVED, today);
+    expect(result.completed).toBe(true);
+    expect(result.quest?.id).toBe('save-favourite');
+    expect(result.xp).toBe(rewardOf('save-favourite'));
+    expect(result.state.xp).toBe(rewardOf('save-favourite'));
+    expect(result.state.coins).toBe(0);
+    expect(result.state.quest).toEqual({ day: today, questId: 'save-favourite', progress: 1, completed: true });
+  });
+
+  it('does not award again for more matching events on the same day', () => {
+    const today = dayWithQuest('save-favourite');
+    const first = applyQuestEvent(defaultGameState(), SAVED, today);
+    const second = applyQuestEvent(first.state, SAVED, today);
+    const third = applyQuestEvent(second.state, SAVED, today);
+
+    expect(second.completed).toBe(false);
+    expect(second.xp).toBe(0);
+    expect(second.state).toBe(first.state);
+    expect(third.state).toBe(first.state);
+    expect(third.state.xp).toBe(first.state.xp);
+  });
+
+  it('does not award for events that do not match today\'s quest', () => {
+    const today = dayWithQuest('save-favourite');
+    const result = applyQuestEvent(defaultGameState(), SPIN, today);
+    expect(result.completed).toBe(false);
+    expect(result.state.xp).toBe(0);
+  });
+
+  it('tracks multi-step progress and awards only on the final step', () => {
+    const today = dayWithQuest('spin-3');
+    const reward = rewardOf('spin-3');
+
+    let state = defaultGameState();
+    const xpAfter: number[] = [];
+    for (let i = 0; i < 5; i += 1) {
+      state = applyQuestEvent(state, SPIN, today).state;
+      xpAfter.push(state.xp);
+    }
+    expect(xpAfter).toEqual([0, 0, reward, reward, reward]);
+    expect(state.quest).toMatchObject({ progress: 3, completed: true });
+  });
+
+  it('can be earned again the next day (a fresh quest)', () => {
+    const day1 = dayWithQuest('spin-3');
+    let state = defaultGameState();
+    for (let i = 0; i < 3; i += 1) state = applyQuestEvent(state, SPIN, day1).state;
+    const xpDay1 = state.xp;
+    expect(xpDay1).toBe(rewardOf('spin-3'));
+
+    const day2 = addDays(day1, 1);
+    const quest2 = getQuestForDay(day2);
+    expect(quest2.id).not.toBe('spin-3');
+
+    const matchingEvent: Record<QuestId, QuestEvent> = {
+      'rare-or-epic': { type: 'lets-go', rarity: 'rare', neverVisited: false },
+      'never-visited': { type: 'lets-go', rarity: 'epic', neverVisited: true },
+      'save-favourite': SAVED,
+      'spin-3': SPIN,
+    };
+    const result = applyQuestEvent(state, matchingEvent[quest2.id], day2);
+    expect(result.completed).toBe(true);
+    expect(result.state.xp).toBe(xpDay1 + quest2.rewardXp);
+    expect(result.state.quest?.day).toBe(day2);
+  });
+
+  it('flags a level up caused by the quest reward', () => {
+    const today = dayWithQuest('save-favourite');
+    const state: GameState = { ...defaultGameState(), xp: 500 - rewardOf('save-favourite') };
+
+    const result = applyQuestEvent(state, SAVED, today);
+    expect(result.leveledUp).toBe(true);
+    expect(result.level).toBe(2);
+  });
+
+  it('keeps quest progress when a Let\'s go award is applied', () => {
+    const today = dayWithQuest('spin-3');
+    const withProgress = applyQuestEvent(defaultGameState(), SPIN, today).state;
+
+    const award = awardLetsGo(withProgress, 'place-a', today, 3);
+    expect(award.state.quest).toEqual(withProgress.quest);
+    expect(award.state.xp).toBe(XP_LETS_GO * 3);
+  });
+
+  it('persists quest progress through save and load', () => {
+    stubWindowStorage(createMemoryStorage());
+    const today = dayWithQuest('spin-3');
+    const state = applyQuestEvent(defaultGameState(), SPIN, today).state;
+
+    saveGameState(state);
+    expect(loadGameState()).toEqual(state);
+    expect(loadGameState().quest).toMatchObject({ day: today, questId: 'spin-3', progress: 1, completed: false });
+  });
+
+  it('does not award twice across a reload', () => {
+    stubWindowStorage(createMemoryStorage());
+    const today = dayWithQuest('save-favourite');
+
+    saveGameState(applyQuestEvent(loadGameState(), SAVED, today).state);
+    const afterReload = applyQuestEvent(loadGameState(), SAVED, today);
+
+    expect(afterReload.completed).toBe(false);
+    expect(afterReload.state.xp).toBe(rewardOf('save-favourite'));
+  });
+
+  it('loads data saved before daily quests existed (no quest field)', () => {
+    stubWindowStorage(createMemoryStorage({
+      [GAME_STORAGE_KEY]: JSON.stringify({ v: 1, xp: 275, coins: 40, awardedOn: { 'place-a': '2026-10-21' } }),
+    }));
+
+    const state = loadGameState();
+    expect(state).toEqual({ v: 1, xp: 275, coins: 40, awardedOn: { 'place-a': '2026-10-21' } });
+    expect(state.quest).toBeUndefined();
+  });
+
+  it('drops a corrupt quest field but keeps the XP and coins', () => {
+    stubWindowStorage(createMemoryStorage({
+      [GAME_STORAGE_KEY]: JSON.stringify({ v: 1, xp: 275, coins: 40, awardedOn: {}, quest: { day: 'someday', questId: 'spin-3' } }),
+    }));
+
+    const state = loadGameState();
+    expect(state.xp).toBe(275);
+    expect(state.coins).toBe(40);
+    expect(state.quest).toBeUndefined();
+  });
+
+  it('keeps the stored schema version at 1', () => {
+    const storage = stubWindowStorage(createMemoryStorage());
+    saveGameState(applyQuestEvent(defaultGameState(), SPIN, '2026-10-22').state);
+    expect(JSON.parse(storage.getItem(GAME_STORAGE_KEY) ?? '{}').v).toBe(1);
   });
 });
 

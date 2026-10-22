@@ -11,8 +11,10 @@ import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
 import { usePlacesBudget } from '@/hooks/usePlacesBudget';
 import { useGame } from '@/hooks/useGame';
 import { GameHud } from '@/components/GameHud';
+import { QuestCard } from '@/components/QuestCard';
 import { RarityBadge } from '@/components/RarityBadge';
 import { getRarity, getRarityMultiplier, RARITY_LABEL, type Rarity } from '@/lib/rarity';
+import type { QuestEvent } from '@/lib/quests';
 import { getMealTimeEmoji, getSuggestedManualListName, useManualLists } from '@/hooks/useManualLists';
 import { useSpinChallenge } from '@/hooks/useSpinChallenge';
 import { useDiscoverFeed } from '@/hooks/useDiscoverFeed';
@@ -629,6 +631,18 @@ function App() {
     return wheelRestaurants.filter((restaurant) => restaurant.id !== pendingAutoRemovalId);
   }, [pendingAutoRemovalId, removeRestaurantForRound, wheelRestaurants]);
 
+  // Report an event to the daily quest and celebrate if it completes the quest.
+  const { recordQuestEvent } = game;
+  const reportQuestEvent = useCallback((event: QuestEvent) => {
+    const result = recordQuestEvent(event);
+    if (!result.completed || !result.quest) return;
+    toast.success(`Quest complete: ${result.quest.title}`, {
+      description: result.leveledUp
+        ? `+${result.xp} XP. Level up! You are now level ${result.level}.`
+        : `+${result.xp} XP`,
+    });
+  }, [recordQuestEvent]);
+
   // Handle spin complete
   const handleSpinComplete = useCallback((restaurant: Restaurant) => {
     trackEvent('spin_complete', { mode: 'auto', restaurant_name: restaurant.name, category: restaurant.category?.[0] ?? '' });
@@ -636,22 +650,26 @@ function App() {
     void recordDailySpin();
     void publishDiscoverSpin(restaurant.name, currentMealTime);
     setPendingAutoRemovalId(restaurant.id);
-  }, [currentMealTime, publishDiscoverSpin, recordDailySpin, recordSpin]);
+    reportQuestEvent({ type: 'spin' });
+  }, [currentMealTime, publishDiscoverSpin, recordDailySpin, recordSpin, reportQuestEvent]);
 
   const handleManualSpinComplete = useCallback((restaurant: Restaurant) => {
     trackEvent('spin_complete', { mode: 'manual', restaurant_name: restaurant.name });
     setManualSpinResult(restaurant);
     void recordDailySpin();
     void publishDiscoverSpin(restaurant.name, currentMealTime);
-  }, [currentMealTime, publishDiscoverSpin, recordDailySpin]);
+    reportQuestEvent({ type: 'spin' });
+  }, [currentMealTime, publishDiscoverSpin, recordDailySpin, reportQuestEvent]);
 
   const handleSaveFavourite = useCallback((restaurant: Restaurant, mode: 'auto' | 'manual') => {
     trackEvent('favourite_saved', { restaurant_name: restaurant.name, mode });
+    const isNewFavourite = !isFavouriteCheck(restaurant);
     void saveFavourite(restaurant, mode === 'auto' ? 'spin-auto' : 'spin-manual');
     toast.success(`${restaurant.name} saved to favourites!`, {
       description: 'Find it in the "I Know Where" tab under My Favourites.',
     });
-  }, [saveFavourite]);
+    if (isNewFavourite) reportQuestEvent({ type: 'favourite-saved' });
+  }, [isFavouriteCheck, reportQuestEvent, saveFavourite]);
 
   const handleShareResult = useCallback(async (restaurant: Restaurant, cardElement: HTMLElement) => {
     trackEvent('share_result_open', { restaurant_name: restaurant.name, tab: activeTab });
@@ -805,7 +823,8 @@ function App() {
 
     // Rarity must be read before the visit is recorded below, which resets it to common.
     // The result card passes the tier it showed; other entry points derive it from the favourite.
-    const rarity = shownRarity ?? getRarity(getLastVisitedAt(restaurant));
+    const lastVisitedAt = getLastVisitedAt(restaurant);
+    const rarity = shownRarity ?? getRarity(lastVisitedAt);
     void recordVisitAndSave(restaurant);
 
     const reward = game.awardForLetsGo(restaurant.id, getRarityMultiplier(rarity));
@@ -817,6 +836,7 @@ function App() {
         description: reward.leveledUp ? `Level up! You are now level ${game.level + 1}.` : undefined,
       });
     }
+    reportQuestEvent({ type: 'lets-go', rarity, neverVisited: lastVisitedAt === undefined });
 
     // Enqueue feedback for next app open
     const favId = deriveFavouriteId(restaurant);
@@ -838,7 +858,7 @@ function App() {
     toast.success(`Navigating to ${restaurant.name}!`, {
       description: 'We\'ll ask how it was next time you open the app.',
     });
-  }, [game, getLastVisitedAt, recordVisitAndSave]);
+  }, [game, getLastVisitedAt, recordVisitAndSave, reportQuestEvent]);
 
   const handleRemoveFavourite = useCallback((id: string, name: string) => {
     trackEvent('favourite_removed', { favourite_id: id });
@@ -1494,6 +1514,13 @@ function App() {
         xpPerLevel={game.xpPerLevel}
         coins={game.coins}
         streak={spinHistorySummary.currentStreak}
+      />
+      <QuestCard
+        title={game.quest.quest.title}
+        rewardXp={game.quest.quest.rewardXp}
+        progress={game.quest.progress}
+        target={game.quest.quest.target}
+        completed={game.quest.completed}
       />
 
       {/* QuickSpinHero - only in auto (discovery) mode */}

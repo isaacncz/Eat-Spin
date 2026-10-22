@@ -12,12 +12,11 @@ import { usePlacesBudget } from '@/hooks/usePlacesBudget';
 import { useGame } from '@/hooks/useGame';
 import { GameHud } from '@/components/GameHud';
 import { QuestCard } from '@/components/QuestCard';
-import { RarityBadge } from '@/components/RarityBadge';
 import { getRarity, getRarityMultiplier, RARITY_LABEL, type Rarity } from '@/lib/rarity';
 import { buildLetsGoReward, type LetsGoReward } from '@/lib/letsGoReward';
 import { getMapsUrl } from '@/lib/maps';
 import type { QuestEvent } from '@/lib/quests';
-import { getMealTimeEmoji, getSuggestedManualListName, useManualLists } from '@/hooks/useManualLists';
+import { getSuggestedManualListName, useManualLists } from '@/hooks/useManualLists';
 import { useSpinChallenge } from '@/hooks/useSpinChallenge';
 import { useDiscoverFeed } from '@/hooks/useDiscoverFeed';
 import type { FoodCategory, ManualListMealTime, MealTime, Restaurant } from '@/types';
@@ -40,10 +39,11 @@ import { applyServesFilters, SERVES_FILTERS, type ServesFilterId } from '@/lib/s
 import { getTimeOfDayFilters } from '@/lib/timeOfDayDefaults';
 import { FilterPanel } from '@/components/FilterPanel';
 import { GroupSpin } from '@/sections/GroupSpin';
+import { ListScreen } from '@/screens/ListScreen';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
-import { RotateCcw, Crown, MapPin, Utensils, PencilLine, Plus, X, Trash2, ChevronDown, CheckCircle2, Heart } from 'lucide-react';
+import { RotateCcw, Crown, Utensils, X, ChevronDown, Heart } from 'lucide-react';
 import { useFavourites } from '@/hooks/useFavourites';
 import { useFeedbackPrompt } from '@/hooks/useFeedbackPrompt';
 import { enqueueFeedback } from '@/lib/feedbackStore';
@@ -66,7 +66,6 @@ const GROUP_SPIN_REPLAY_WINDOW_MS = 30_000;
 const LATE_JOIN_NOTICE_MS = 5 * 60 * 1000;
 const REVIEW_PREVIEW_COUNT = 30;
 const SPIN_HISTORY_PREVIEW_COUNT = 8;
-const MANUAL_SUGGESTED_RESTAURANTS = ['Sushi Place', 'Burger Spot', 'Local Noodles', 'Pizza Corner'];
 const DEFAULT_AUTO_RANGE_MODE: AutoRangeMode = 'drive10';
 const AUTO_RANGE_RADIUS_KM: Record<AutoRangeMode, number> = {
   walk: 0.85,
@@ -1525,8 +1524,8 @@ function App() {
           />
         )}
 
-        {/* Main app section - Spin (nearby places) and My list (manual list) */}
-        {(appTab === 'spin' || appTab === 'list') && (
+        {/* Main app section - Spin screen (nearby places) */}
+        {appTab === 'spin' && (
           <section id="app-main-section" className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 bg-white">
             <div className="max-w-4xl mx-auto">
 
@@ -1778,467 +1777,99 @@ function App() {
                   )}
                 </>
               )}
-
-              {/* MANUAL MODE */}
-              {activeTab === 'manual' && (
-                <div id="wheel" className="py-4 pb-14 sm:pb-8">
-                  {isGroupRoomActive && (
-                    <div className="mb-4 rounded-xl border-2 border-brand-ink bg-brand-linen px-4 py-3 text-sm text-eatspin-gray-1">
-                      <p className="font-semibold text-brand-black">
-                        Room {groupRoomId} {isGroupHost ? '(Host)' : isGroupCohost ? '(Co-host)' : '(Participant)'}
-                      </p>
-                      <p>
-                        {isGroupHost
-                          ? 'Your list edits sync to everyone in this room.'
-                          : isGroupCohost
-                            ? 'You can edit the shared list as co-host and start spins for everyone.'
-                            : "You are viewing the room's shared list. Leave the room anytime to return to your saved personal list."}
-                      </p>
-                      <p className="mt-1 text-xs text-brand-black/80">
-                        {groupSpinDisplay
-                          ? `Last spin: ${groupSpinDisplay.relativeText} (${groupSpinDisplay.absoluteText})`
-                          : 'No spin yet.'}
-                      </p>
-                      {groupSpinDisplay && groupSpinDisplay.ageMs >= LATE_JOIN_NOTICE_MS && (
-                        <p className="mt-1 text-xs font-medium text-brand-black/80">Result was decided earlier.</p>
-                      )}
-
-                      {!canEditGroupList && (
-                        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <p className="text-xs font-medium text-brand-black/80">Like this list? Save it to your own manual lists and spin it later.</p>
-                            <p className="text-[11px] text-eatspin-gray-1">We'll save a copy without changing the host's room list.</p>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={handleSaveRoomListToManualLists}
-                              disabled={displayedManualRestaurantNames.length === 0}
-                              className="h-9 border-brand-ink bg-white px-3 text-xs font-semibold text-brand-black hover:bg-brand-linen"
-                            >
-                              Add to my list
-                            </Button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                void handleLeaveGroupRoom();
-                              }}
-                              className="inline-flex items-center rounded-full border-2 border-brand-ink bg-white px-3 py-1.5 text-xs font-semibold text-brand-black hover:bg-brand-linen"
-                            >
-                              Leave room to spin on your own
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {/* ── Saved Lists: chip-based selector ── */}
-                  <div className="mb-6 max-w-2xl mx-auto rounded-2xl border-2 border-brand-ink bg-white p-4 shadow-pop">
-                    <div className="flex flex-col gap-3">
-                      {/* Header */}
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-eatspin-gray-1">Saved lists</p>
-
-                      {/* Horizontal chip bar with overflow fade hint */}
-                      <div className="relative">
-                        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide" role="listbox" aria-label="Saved lists">
-                          {manualLists.map((list) => {
-                            const isSelected = list.id === selectedManualListId;
-                            const emoji = getMealTimeEmoji(list.mealTime);
-                            return (
-                              <button
-                                key={list.id}
-                                type="button"
-                                role="option"
-                                aria-selected={isSelected}
-                                title={`${list.name} — ${list.restaurants.length} picks`}
-                                onClick={() => {
-                                  if (!isSelected) handleSelectSavedManualList(list.id);
-                                }}
-                                disabled={isManualListReadOnly}
-                                className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                                  isSelected
-                                    ? 'bg-brand-orange text-white shadow-sm'
-                                    : 'border-2 border-brand-ink bg-white text-brand-black hover:border-brand-ink hover:bg-brand-linen'
-                                } disabled:opacity-40`}
-                              >
-                                {emoji && <span>{emoji}</span>}
-                                <span className="truncate max-w-[140px]">{list.name}</span>
-                                <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-xs tabular-nums ${
-                                  isSelected
-                                    ? list.restaurants.length === 0 ? 'bg-white/20 text-white/90' : 'bg-white/25 text-white'
-                                    : list.restaurants.length === 0 ? 'bg-arcade-yellow/30 text-eatspin-gray-1' : 'bg-arcade-yellow/30 text-brand-black'
-                                }`}>
-                                  {list.restaurants.length}
-                                </span>
-                              </button>
-                            );
-                          })}
-                          {/* New list chip */}
-                          <button
-                            type="button"
-                            onClick={handleCreateManualList}
-                            disabled={isManualListReadOnly}
-                            className="flex shrink-0 items-center gap-1 rounded-full border-2 border-dashed border-brand-ink/40 px-3 py-2 text-sm font-medium text-eatspin-gray-1 transition hover:border-brand-ink hover:text-brand-orange disabled:opacity-40"
-                            aria-label="Create new list"
-                          >
-                            <Plus size={14} />
-                            <span>New</span>
-                          </button>
-                        </div>
-                        {/* Right fade hint when many lists */}
-                        {manualLists.length > 3 && (
-                          <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-white to-transparent" aria-hidden="true" />
-                        )}
-                      </div>
-
-                      {/* Inline actions for selected list (view mode) */}
-                      {!isEditingListDetails && selectedManualList && (
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setIsEditingListDetails(true)}
-                            disabled={isManualListReadOnly}
-                            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-eatspin-gray-1 transition hover:bg-arcade-yellow/60 hover:text-brand-black disabled:opacity-40"
-                            aria-label="Edit list name and meal time"
-                          >
-                            <PencilLine size={13} />
-                            <span>Rename</span>
-                          </button>
-                          {manualLists.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={handleDeleteManualList}
-                              disabled={isManualListReadOnly}
-                              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
-                              aria-label={`Delete ${selectedManualList.name}`}
-                            >
-                              <Trash2 size={13} />
-                              <span>Delete</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Edit mode (inline expansion) */}
-                      {isEditingListDetails && (
-                        <div className="space-y-3 rounded-lg border-2 border-brand-ink bg-brand-linen/50 p-3">
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="space-y-1">
-                              <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-name">List name</label>
-                              <Input
-                                id="saved-manual-name"
-                                value={listNameInput}
-                                onChange={(e) => setListNameInput(e.target.value)}
-                                placeholder="Isaac lunch list"
-                                className="h-10"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-mealtime">Meal time</label>
-                              <div className="relative">
-                                <select
-                                  id="saved-manual-mealtime"
-                                  value={listMealTimeInput ?? ''}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    if (value === 'breakfast' || value === 'lunch' || value === 'dinner') {
-                                      setListMealTimeInput(value);
-                                      return;
-                                    }
-                                    setListMealTimeInput(null);
-                                  }}
-                                  className="preset-select h-10 w-full rounded-md border-2 border-brand-ink bg-white px-3 pr-10 text-sm text-brand-black"
-                                >
-                                  <option value="">🕒 No meal time</option>
-                                  <option value="breakfast">🌅 Breakfast</option>
-                                  <option value="lunch">☀️ Lunch</option>
-                                  <option value="dinner">🌙 Dinner</option>
-                                </select>
-                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-eatspin-gray-1" />
-                              </div>
-                            </div>
-                          </div>
-                          {duplicateManualListForSave ? (
-                            <p className="text-xs text-red-600">{manualListNameHelperText}</p>
-                          ) : listNameSuggestion.trim() !== listNameInput.trim() ? (
-                            <button
-                              type="button"
-                              onClick={() => setListNameInput(listNameSuggestion)}
-                              className="text-left text-xs text-brand-orange hover:underline"
-                            >
-                              {manualListNameHelperText}
-                            </button>
-                          ) : null}
-                          <div className="flex items-center justify-between gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={handleDeleteManualList}
-                              disabled={isManualListReadOnly || !selectedManualList}
-                              className="h-9 border-red-200 px-3 text-xs font-semibold text-red-600 hover:bg-red-50"
-                            >
-                              <Trash2 size={14} className="mr-1" /> Delete
-                            </Button>
-                            <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={handleCancelEditListDetails}
-                                className="h-9 px-3 text-xs font-semibold"
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                type="button"
-                                onClick={handleSaveManualListDetails}
-                                disabled={isManualListReadOnly || (!isCreatingNewList && (!selectedManualList || !hasManualListDetailsChanged)) || Boolean(duplicateManualListForSave)}
-                                className="h-9 bg-brand-orange px-3 text-xs font-semibold text-white hover:bg-brand-orange/90"
-                              >
-                                Save
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <RouletteWheel
-                    key={isGroupRoomActive ? `manual-room-${groupRoomId || 'none'}` : `manual-${manualWheelKey}-${displayedManualRestaurants.length}`}
-                    restaurants={displayedManualRestaurants}
-                    totalCount={displayedManualRestaurants.length}
-                    onSpinComplete={handleManualSpinComplete}
-                    isSpinning={isSpinning}
-                    setIsSpinning={setIsSpinning}
-                    onShuffle={() => {
-                      shuffleManualRestaurants();
-                    }}
-                    canSpin={displayedManualRestaurants.length >= 2 && (!isGroupRoomActive || isGroupHost || isGroupCohost)}
-                    helperText={manualHelperText}
-                    spinButtonLabel={isGroupRoomActive
-                      ? (isGroupHost || isGroupCohost ? 'Spin for everyone' : 'Waiting for host or co-host spin')
-                      : 'Spin the Wheel!'}
-                    externalSpin={manualExternalSpin}
-                    onRequestSpin={isGroupRoomActive ? handleRequestGroupSpin : undefined}
-                    canRequestSpin={!isGroupRoomActive || isGroupHost || isGroupCohost}
-                    emptyStateTitle="Add restaurants to start"
-                    emptyStateSubtitle="Type any restaurant you like…"
-                    onSaveFavourite={(r) => handleSaveFavourite(r, 'manual')}
-                    onLetsGo={handleLetsGo}
-                    onShareResult={handleShareResult}
-                    isFavourite={isFavouriteCheck}
-                    getLastVisitedAt={getLastVisitedAt}
-                  />
-
-                    {/* Nearby Favourites Section */}
-                    {nearbyFavourites.length > 0 && (
-                      <div className="mt-6 max-w-xl mx-auto">
-                        <div className="bg-white rounded-xl border border-green-200/60 p-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="h-2 w-2 rounded-full bg-eatspin-success animate-pulse" />
-                            <h4 className="font-heading font-semibold text-brand-black flex items-center gap-2">
-                              <MapPin size={16} className="text-eatspin-success" />
-                              Nearby Favourites
-                            </h4>
-                          </div>
-                          <p className="text-xs text-eatspin-gray-1 mb-3">
-                            You're close to places you've saved before!
-                          </p>
-                          <ul className="space-y-2">
-                            {nearbyFavourites.map((nf) => {
-                              const alreadyInList = displayedManualRestaurants.some(
-                                (r) => r.name.toLowerCase() === nf.restaurantName.toLowerCase()
-                              );
-                              return (
-                                <li key={nf.favouriteId} className="flex items-center justify-between gap-2 rounded-lg bg-green-50 px-3 py-2">
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-medium text-brand-black truncate">{nf.restaurantName}</p>
-                                    <div className="flex flex-wrap items-center gap-1.5">
-                                      <span className="text-xs text-eatspin-gray-1">{estimateTravelTime(nf.distanceKm)}</span>
-                                      <RarityBadge rarity={getRarity(favourites.find((f) => f.id === nf.favouriteId)?.lastVisitedAt)} />
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                                    {!alreadyInList && !isManualListReadOnly && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleAddFavouriteToManualList(nf.restaurantName)}
-                                        className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
-                                        aria-label={`Add ${nf.restaurantName} to spin list`}
-                                      >
-                                        <Plus size={12} /> Add
-                                      </button>
-                                    )}
-                                    {alreadyInList && (
-                                      <span className="text-xs text-eatspin-success font-medium">In list ✓</span>
-                                    )}
-                                  </div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* My Favourites Section */}
-                    {favourites.length > 0 && (
-                      <div className="mt-6 max-w-xl mx-auto">
-                        <div className="bg-white rounded-xl border-2 border-brand-ink shadow-pop p-4">
-                          <div className="flex justify-between items-center mb-3">
-                            <h4 className="font-heading font-semibold text-brand-black flex items-center gap-2">
-                              <Heart size={16} className="text-brand-ink fill-arcade-pink" />
-                              My Favourites ({favourites.length})
-                            </h4>
-                          </div>
-                          <p className="text-xs text-eatspin-gray-1 mb-3">
-                            Places you saved from spinning. Tap <Plus size={12} className="inline" /> to add to your current spin list.
-                          </p>
-                          <ul className="space-y-2 max-h-64 overflow-y-auto overscroll-contain pr-1">
-                            {favourites
-                              .filter((f) => f.userRating !== 'avoid')
-                              .map((fav) => {
-                                const alreadyInList = displayedManualRestaurants.some(
-                                  (r) => r.name.toLowerCase() === fav.restaurant.name.toLowerCase()
-                                );
-                                return (
-                                  <li key={fav.id} className="flex items-center justify-between gap-2 rounded-lg bg-brand-linen px-3 py-2">
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-sm font-medium text-brand-black truncate">{fav.restaurant.name}</p>
-                                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                        <RarityBadge rarity={getRarity(fav.lastVisitedAt)} />
-                                        {fav.restaurant.rating > 0 && (
-                                          <span className="text-xs text-eatspin-gray-1">⭐ {fav.restaurant.rating}</span>
-                                        )}
-                                        {fav.visitCount > 0 && (
-                                          <span className="text-xs text-eatspin-gray-1">
-                                            · Visited {fav.visitCount}×
-                                          </span>
-                                        )}
-                                        {fav.userRating === 'neutral' && (
-                                          <span className="text-xs text-eatspin-gray-2">· Neutral</span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                                      {!alreadyInList && !isManualListReadOnly && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleAddFavouriteToManualList(fav.restaurant.name)}
-                                          className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
-                                          aria-label={`Add ${fav.restaurant.name} to spin list`}
-                                        >
-                                          <Plus size={12} /> Add
-                                        </button>
-                                      )}
-                                      {alreadyInList && (
-                                        <span className="text-xs text-eatspin-success font-medium">In list ✓</span>
-                                      )}
-                                      <button
-                                        type="button"
-                                        onClick={() => handleRemoveFavourite(fav.id, fav.restaurant.name)}
-                                        className="text-eatspin-gray-2 hover:text-red-500"
-                                        aria-label={`Remove ${fav.restaurant.name} from favourites`}
-                                      >
-                                        <X size={14} />
-                                      </button>
-                                    </div>
-                                  </li>
-                                );
-                              })}
-                          </ul>
-                          {favourites.some((f) => f.userRating === 'avoid') && (
-                            <p className="mt-2 text-xs text-eatspin-gray-2">
-                              {favourites.filter((f) => f.userRating === 'avoid').length} hidden (marked "don't suggest")
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    <div id="manual-input" className="mt-8 max-w-xl mx-auto">
-                      <div className="sticky bottom-[calc(var(--bottom-nav-height)_+_0.75rem)] z-30 rounded-2xl border-2 border-brand-ink bg-white/95 p-3 shadow-pop backdrop-blur supports-[backdrop-filter]:bg-white/85">
-                      <div className="flex flex-col sm:flex-row gap-2">
-                      <Input
-                          value={manualInput}
-                          onChange={(e) => setManualInput(e.target.value)}
-                          onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addManualRestaurant();
-                          }
-                        }}
-                          placeholder="Type any restaurant you like…"
-                          className="h-12 text-base"
-                          disabled={isManualListReadOnly}
-                        />
-                        <Button onClick={addManualRestaurant} disabled={isManualListReadOnly} className="h-12 px-6 text-base font-heading font-bold bg-brand-orange hover:bg-brand-orange/90">
-                          <Plus size={18} className="mr-1" /> Add
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 bg-white rounded-xl border-2 border-brand-ink p-4">
-                      <div className="flex justify-between items-center mb-3">
-                        <h4 className="font-heading font-semibold text-brand-black">Restaurant list ({displayedManualRestaurants.length})</h4>
-                        {displayedManualRestaurants.length > 0 && (
-                          <button
-                            type="button"
-                            className="text-xs font-medium text-eatspin-orange hover:underline"
-                            onClick={clearManualRestaurants}
-                            disabled={isManualListReadOnly}
-                          >
-                            Clear all
-                          </button>
-                        )}
-                      </div>
-
-                      {displayedManualRestaurants.length === 0 ? (
-                        <div className="space-y-3">
-                          <p className="text-sm font-medium text-eatspin-gray-1">Add at least 2 places to spin.</p>
-                          {!isManualListReadOnly && (
-                            <div className="flex flex-wrap gap-2">
-                              {MANUAL_SUGGESTED_RESTAURANTS.map((suggestion) => (
-                                <button
-                                  key={suggestion}
-                                  type="button"
-                                  onClick={() => {
-                                    addManualRestaurantByName(suggestion);
-                                  }}
-                                  className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-brand-linen px-3 py-1.5 text-xs font-medium text-brand-black hover:border-brand-ink hover:text-brand-orange"
-                                >
-                                  <CheckCircle2 size={12} /> {suggestion}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <ul className="space-y-2">
-                          {displayedManualRestaurants.map((restaurant) => (
-                            <li key={restaurant.id} className="flex justify-between items-center bg-brand-linen rounded-lg px-3 py-2">
-                              <span className="text-sm text-brand-black">{restaurant.name}</span>
-                              <button
-                                type="button"
-                                onClick={() => removeManualRestaurant(restaurant.id)}
-                                className="text-eatspin-gray-1 hover:text-red-500"
-                                aria-label={`Remove ${restaurant.name}`}
-                                disabled={isManualListReadOnly}
-                              >
-                                <X size={16} />
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-
-                    </div>
-                </div>
-              )}
             </div>
           </section>
+        )}
+
+        {/* My list screen */}
+        {appTab === 'list' && (
+          <ListScreen
+            lists={manualLists}
+            selectedListId={selectedManualListId}
+            isReadOnly={isManualListReadOnly}
+            onSelectList={handleSelectSavedManualList}
+            onCreateList={handleCreateManualList}
+            onStartEditing={() => setIsEditingListDetails(true)}
+            onDeleteSelectedList={handleDeleteManualList}
+            canDeleteList={manualLists.length > 1}
+            details={isEditingListDetails ? {
+              isCreating: isCreatingNewList,
+              name: listNameInput,
+              mealTime: listMealTimeInput,
+              helperText: manualListNameHelperText,
+              hasDuplicate: Boolean(duplicateManualListForSave),
+              showSuggestion: !duplicateManualListForSave && listNameSuggestion.trim() !== listNameInput.trim(),
+              canSave: !(
+                isManualListReadOnly
+                || (!isCreatingNewList && (!selectedManualList || !hasManualListDetailsChanged))
+                || Boolean(duplicateManualListForSave)
+              ),
+              canDelete: !isManualListReadOnly && Boolean(selectedManualList),
+              onNameChange: setListNameInput,
+              onMealTimeChange: setListMealTimeInput,
+              onUseSuggestion: () => setListNameInput(listNameSuggestion),
+              onSave: handleSaveManualListDetails,
+              onCancel: handleCancelEditListDetails,
+              onDelete: handleDeleteManualList,
+            } : null}
+            places={displayedManualRestaurants}
+            addValue={manualInput}
+            onAddValueChange={setManualInput}
+            onAddPlace={addManualRestaurant}
+            onAddSuggestedPlace={addManualRestaurantByName}
+            onRemovePlace={removeManualRestaurant}
+            onClearPlaces={clearManualRestaurants}
+            favourites={favourites}
+            nearbyFavourites={nearbyFavourites.map((nearby) => ({
+              favouriteId: nearby.favouriteId,
+              name: nearby.restaurantName,
+              travelText: estimateTravelTime(nearby.distanceKm),
+              rarity: getRarity(favourites.find((favourite) => favourite.id === nearby.favouriteId)?.lastVisitedAt),
+            }))}
+            onAddFavouriteToList={handleAddFavouriteToManualList}
+            onRemoveFavourite={handleRemoveFavourite}
+            room={isGroupRoomActive ? {
+              roomId: groupRoomId,
+              role: isGroupHost ? 'host' : isGroupCohost ? 'cohost' : 'participant',
+              canEdit: canEditGroupList,
+              lastSpinText: groupSpinDisplay
+                ? `Last spin: ${groupSpinDisplay.relativeText} (${groupSpinDisplay.absoluteText})`
+                : null,
+              isLateJoin: Boolean(groupSpinDisplay && groupSpinDisplay.ageMs >= LATE_JOIN_NOTICE_MS),
+              canSaveCopy: displayedManualRestaurantNames.length > 0,
+              onSaveCopy: handleSaveRoomListToManualLists,
+              onLeave: () => { void handleLeaveGroupRoom(); },
+            } : null}
+            externalSpinId={manualExternalSpin?.spinId ?? null}
+            wheel={(
+              <RouletteWheel
+                key={isGroupRoomActive ? `manual-room-${groupRoomId || 'none'}` : `manual-${manualWheelKey}-${displayedManualRestaurants.length}`}
+                restaurants={displayedManualRestaurants}
+                totalCount={displayedManualRestaurants.length}
+                onSpinComplete={handleManualSpinComplete}
+                isSpinning={isSpinning}
+                setIsSpinning={setIsSpinning}
+                onShuffle={() => {
+                  shuffleManualRestaurants();
+                }}
+                canSpin={displayedManualRestaurants.length >= 2 && (!isGroupRoomActive || isGroupHost || isGroupCohost)}
+                helperText={manualHelperText}
+                spinButtonLabel={isGroupRoomActive
+                  ? (isGroupHost || isGroupCohost ? 'Spin for everyone' : 'Waiting for host or co-host spin')
+                  : 'Spin the Wheel!'}
+                externalSpin={manualExternalSpin}
+                onRequestSpin={isGroupRoomActive ? handleRequestGroupSpin : undefined}
+                canRequestSpin={!isGroupRoomActive || isGroupHost || isGroupCohost}
+                emptyStateTitle="Add restaurants to start"
+                emptyStateSubtitle="Type any restaurant you like…"
+                onSaveFavourite={(r) => handleSaveFavourite(r, 'manual')}
+                onLetsGo={handleLetsGo}
+                onShareResult={handleShareResult}
+                isFavourite={isFavouriteCheck}
+                getLastVisitedAt={getLastVisitedAt}
+              />
+            )}
+          />
         )}
 
         {/* Wheel section for auto mode */}

@@ -39,7 +39,7 @@ test.describe('Smoke tests', () => {
     await expect(twitterCard).toHaveAttribute('content', 'summary');
   });
 
-  test('"My list" tab hides hero and shows wheel section', async ({ page }) => {
+  test('"My list" tab hides hero and shows the list screen', async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem('eatspin:first-run-onboarding-seen', '1');
     });
@@ -56,7 +56,8 @@ test.describe('Smoke tests', () => {
     // Hero should disappear
     await expect(heading).not.toBeVisible({ timeout: 5_000 });
 
-    // Manual mode content should be visible (wheel or add input)
-    await expect(page.getByText(/add restaurants to start/i)).toBeVisible({ timeout: 5_000 });
+    // My list screen: heading and the pinned "Add a place" input
+    await expect(page.getByRole('heading', { name: 'My list', exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByLabel('Add a place')).toBeVisible();
   });
 });

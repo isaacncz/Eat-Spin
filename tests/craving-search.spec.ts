@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+import { filtersButton } from './spin-helpers';
+
 test.use({
   geolocation: { latitude: 1.3521, longitude: 103.8198 },
   permissions: ['geolocation'],
@@ -18,18 +20,18 @@ test.describe('Craving search', () => {
       await locationBtn.click();
     }
 
-    // Wait for spin mode to be ready
-    await expect(page.getByRole('button', { name: /spin now/i })).toBeVisible({
+    // Wait for spin mode to be ready (the search button only shows once there is a location)
+    await expect(page.getByRole('button', { name: /search instead/i })).toBeVisible({
       timeout: 15_000,
     });
   });
 
-  test('"Search instead" link is visible', async ({ page }) => {
-    await expect(page.getByText(/search instead/i)).toBeVisible();
+  test('"Search instead" button is visible', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /search instead/i })).toBeVisible();
   });
 
-  test('clicking search link shows search input', async ({ page }) => {
-    await page.getByText(/search instead/i).click();
+  test('clicking search button shows search input', async ({ page }) => {
+    await page.getByRole('button', { name: /search instead/i }).click();
 
     const input = page.getByLabel(/search for food/i);
     await expect(input).toBeVisible();
@@ -37,7 +39,7 @@ test.describe('Craving search', () => {
   });
 
   test('popular chips are visible in search mode', async ({ page }) => {
-    await page.getByText(/search instead/i).click();
+    await page.getByRole('button', { name: /search instead/i }).click();
 
     // Scope to the "Popular" section inside the search area
     const popularSection = page.getByText('Popular').locator('..');
@@ -50,15 +52,15 @@ test.describe('Craving search', () => {
   });
 
   test('"Back to Spin" returns to spin mode', async ({ page }) => {
-    await page.getByText(/search instead/i).click();
+    await page.getByRole('button', { name: /search instead/i }).click();
     await expect(page.getByLabel(/search for food/i)).toBeVisible();
 
     await page.getByText(/back to spin/i).click();
-    await expect(page.getByRole('button', { name: /spin now/i })).toBeVisible();
+    await expect(filtersButton(page)).toBeVisible();
   });
 
   test('typing in search input shows clear button', async ({ page }) => {
-    await page.getByText(/search instead/i).click();
+    await page.getByRole('button', { name: /search instead/i }).click();
 
     const input = page.getByLabel(/search for food/i);
     await input.fill('coffee');
@@ -67,7 +69,7 @@ test.describe('Craving search', () => {
   });
 
   test('clear button resets search', async ({ page }) => {
-    await page.getByText(/search instead/i).click();
+    await page.getByRole('button', { name: /search instead/i }).click();
 
     const input = page.getByLabel(/search for food/i);
     await input.fill('coffee');

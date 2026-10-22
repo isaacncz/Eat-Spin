@@ -269,7 +269,8 @@
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 50;
+  /* Above the full-screen result view (z-50), below the toasts. */
+  z-index: 60;
   overflow: hidden;
 }
 

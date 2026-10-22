@@ -28,22 +28,27 @@ export function RarityBadge({ rarity, className = '' }: RarityBadgeProps) {
   );
 }
 
-/** Full-width band for the spin result card, directly under the card header strip. */
+/**
+ * Tab that sits on the top edge of the result card. The parent must be `relative` and must
+ * not clip overflow. The tier is spelled out in text; the explanation is read by screen
+ * readers, and sighted players get it from the "last visit" line under the name.
+ */
 export function RarityRibbon({ rarity }: { rarity: Rarity }) {
   const { surface, Icon } = TIER_STYLE[rarity];
   return (
     <div
       data-testid="rarity-ribbon"
       data-rarity={rarity}
-      className={`flex flex-col items-center justify-center gap-0.5 border-b-4 border-brand-ink px-4 py-2 text-center text-brand-ink ${surface}`}
+      className={`absolute -top-4 left-4 z-10 flex max-w-[calc(100%-2rem)] items-center gap-1.5 rounded-[14px] border-[3px] border-brand-ink px-3 py-1 text-brand-ink ${surface}`}
     >
-      <p className="flex items-center justify-center gap-1.5 font-heading text-base font-bold uppercase tracking-wide">
-        <Icon size={18} aria-hidden="true" />
+      <Icon size={16} className="shrink-0" aria-hidden="true" />
+      <p className="font-heading text-sm font-bold uppercase leading-tight tracking-[0.06em]">
         <span>{RARITY_LABEL[rarity]} place</span>
-        <span aria-hidden="true">&middot;</span>
+        <span aria-hidden="true"> &middot; </span>
+        <span className="sr-only">, </span>
         <span>{RARITY_XP_MULTIPLIER[rarity]}x XP</span>
       </p>
-      <p className="text-xs font-medium">{RARITY_HINT[rarity]}</p>
+      <span className="sr-only">{RARITY_HINT[rarity]}</span>
     </div>
   );
 }

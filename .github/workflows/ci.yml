@@ -18,9 +18,10 @@ permissions:
   contents: read
 
 env:
-  # Vite 7 / @vitejs/plugin-react 5 require Node ^20.19.0 || >=22.12.0 and the
-  # repo has no engines field or .nvmrc. Node 22 is LTS and is what the checks
-  # were validated against.
+  # Must be Node >= 22.12. Vite 7 / @vitejs/plugin-react 5 need ^20.19.0 ||
+  # >=22.12.0, and vitest 5 (added by the stacked PRs) needs ^22.12.0 ||
+  # ^24.0.0 || >=26.0.0 (npm registry, vitest 5.0.5). The repo has no engines
+  # field or .nvmrc. `22` resolves to the newest 22.x, which is above 22.12.
   NODE_VERSION: 22
 
 jobs:

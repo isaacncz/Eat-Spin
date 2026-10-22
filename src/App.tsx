@@ -1,39 +1,20 @@
 import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
 
 import { trackEvent } from '@/lib/analytics';
-import { APP_FEATURES } from '@/lib/featureFlags';
-import { useLocation } from '@/hooks/useLocation';
-import { useNearbyRestaurants } from '@/hooks/useNearbyRestaurants';
-import { useTextSearch } from '@/hooks/useTextSearch';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
 import { getMealTimeEmoji, getSuggestedManualListName, useManualLists } from '@/hooks/useManualLists';
-import { useSpinChallenge } from '@/hooks/useSpinChallenge';
-import { useDiscoverFeed } from '@/hooks/useDiscoverFeed';
-import type { FoodCategory, ManualListMealTime, MealTime, Restaurant } from '@/types';
-import { restaurants as localRestaurants } from '@/data/restaurants';
-import {
-  AUTO_SPIN_MINUTES_UNTIL_CLOSE_CUTOFF,
-  enhancedFilterRestaurants,
-  findNearbyFavourites,
-} from '@/lib/restaurantUtils';
+import type { ManualListMealTime, MealTime, Restaurant } from '@/types';
 import { getCurrentMealTime } from '@/lib/utils';
 import { RouletteWheel } from '@/components/RouletteWheel';
-import { LocationPermission } from '@/components/LocationPermission';
-import { SubscriptionModal } from '@/components/SubscriptionModal';
-import { SpinLimitWarning } from '@/components/SpinLimitWarning';
 import { AppNavbar } from '@/sections/AppNavbar';
-import { QuickSpinHero, type FoodMood } from '@/sections/QuickSpinHero';
-import { applyServesFilters, SERVES_FILTERS, type ServesFilterId } from '@/lib/servesFilters';
-import { getTimeOfDayFilters } from '@/lib/timeOfDayDefaults';
-import { FilterPanel } from '@/components/FilterPanel';
 import { Footer } from '@/sections/Footer';
 import { GroupSpin } from '@/sections/GroupSpin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
-import { RotateCcw, Crown, MapPin, Utensils, PencilLine, Plus, X, Trash2, ChevronDown, CheckCircle2, Heart } from 'lucide-react';
+import { PencilLine, Plus, X, Trash2, ChevronDown, CheckCircle2, Heart } from 'lucide-react';
 import { useFavourites } from '@/hooks/useFavourites';
 import { useFeedbackPrompt } from '@/hooks/useFeedbackPrompt';
 import { enqueueFeedback } from '@/lib/feedbackStore';
@@ -51,48 +32,13 @@ const Features = lazy(() => import('@/sections/Features').then(m => ({ default: 
 const Testimonials = lazy(() => import('@/sections/Testimonials').then(m => ({ default: m.Testimonials })));
 const CTA = lazy(() => import('@/sections/CTA').then(m => ({ default: m.CTA })));
 
-type SpinTab = 'auto' | 'manual';
-type AutoRangeMode = 'walk' | 'drive10' | 'drive20';
 
-const AUTO_RANGE_MODE_STORAGE_KEY = 'eatspin:auto-range-mode';
-const SPIN_REJECTION_STORAGE_KEY = 'eatspin:spin-rejections';
 const FIRST_RUN_ONBOARDING_SEEN_KEY = 'eatspin:first-run-onboarding-seen';
 const ROOM_LIST_SYNC_GRACE_MS = 2_500;
 const GROUP_SPIN_REPLAY_WINDOW_MS = 30_000;
 const LATE_JOIN_NOTICE_MS = 5 * 60 * 1000;
-const REVIEW_PREVIEW_COUNT = 30;
 const SPIN_HISTORY_PREVIEW_COUNT = 8;
 const MANUAL_SUGGESTED_RESTAURANTS = ['Sushi Place', 'Burger Spot', 'Local Noodles', 'Pizza Corner'];
-const DEFAULT_AUTO_RANGE_MODE: AutoRangeMode = 'drive10';
-const AUTO_RANGE_RADIUS_KM: Record<AutoRangeMode, number> = {
-  walk: 0.85,
-  drive10: 4.3,
-  drive20: 8.5,
-};
-
-const isAutoRangeMode = (value: string): value is AutoRangeMode =>
-  value === 'walk' || value === 'drive10' || value === 'drive20';
-
-/** Estimate travel time from straight-line distance using road detour factor. */
-const estimateTravelTime = (straightLineKm: number): string => {
-  const roadKm = straightLineKm * 1.4;
-  if (roadKm <= 1.2) {
-    const minutes = Math.round((roadKm / 5) * 60);
-    return `~${Math.max(1, minutes)} min walk`;
-  }
-  const minutes = Math.round((roadKm / 30) * 60);
-  return `~${Math.max(1, minutes)} min drive`;
-};
-
-const loadAutoRangeMode = (): AutoRangeMode => {
-  if (typeof window === 'undefined') return DEFAULT_AUTO_RANGE_MODE;
-  const storedMode = window.localStorage.getItem(AUTO_RANGE_MODE_STORAGE_KEY);
-  if (!storedMode || !isAutoRangeMode(storedMode)) {
-    return DEFAULT_AUTO_RANGE_MODE;
-  }
-  return storedMode;
-};
-
 const createManualRestaurant = (name: string): Restaurant => {
   const now = Date.now();
   return {
@@ -139,9 +85,6 @@ const formatRelativeSpinTime = (ageMs: number) => {
 const formatAbsoluteSpinTime = (timestamp: number) =>
   new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
-const formatAbsoluteSyncTime = (timestamp: number) =>
-  new Date(timestamp).toLocaleString([], { hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric' });
-
 const toDateKey = (timestamp: Date | string | number): string => {
   const date = new Date(timestamp);
   const year = date.getFullYear();
@@ -149,14 +92,6 @@ const toDateKey = (timestamp: Date | string | number): string => {
   const day = `${date.getDate()}`.padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
-
-const formatSpinTimestamp = (timestamp: Date | string | number): string =>
-  new Date(timestamp).toLocaleString([], {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
 
 const calculateCurrentSpinStreak = (timestamps: Array<Date | string | number>): number => {
   const uniqueDayKeys = Array.from(new Set(timestamps.map((value) => toDateKey(value))));
@@ -177,34 +112,12 @@ const calculateCurrentSpinStreak = (timestamps: Array<Date | string | number>): 
 
 function App() {
   // State management
-  const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
-  const [selectedPriceRanges, setSelectedPriceRanges] = useState<Restaurant['priceRange'][]>([]);
-  const [rangeMode, setRangeMode] = useState<AutoRangeMode>(() => loadAutoRangeMode());
   const [isSpinning, setIsSpinning] = useState(false);
-  const respinCountRef = useRef(0);
-  const [showSubscription, setShowSubscription] = useState(false);
-  const [showSpinLimitWarning, setShowSpinLimitWarning] = useState(false);
   const [currentMealTime, setCurrentMealTime] = useState<MealTime>('none');
-  const [isPremium, setIsPremium] = useState(false);
-  const [showWheelSection, setShowWheelSection] = useState(false);
-  const [wheelRestaurants, setWheelRestaurants] = useState<Restaurant[]>([]);
-  const [roundRemovedRestaurantIds, setRoundRemovedRestaurantIds] = useState<string[]>([]);
-  const [pendingAutoRemovalId, setPendingAutoRemovalId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<SpinTab>(() => {
-    if (typeof window === 'undefined') return 'auto';
-    return new URLSearchParams(window.location.search).get('room') ? 'manual' : 'auto';
-  });
-  const [autoWheelKey, setAutoWheelKey] = useState(0);
-  const [isReviewExpanded, setIsReviewExpanded] = useState(false);
-  const [showAllRoundRestaurants, setShowAllRoundRestaurants] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     if (typeof window === 'undefined') return false;
     return !window.localStorage.getItem(FIRST_RUN_ONBOARDING_SEEN_KEY);
   });
-  const [challengeJoinInput, setChallengeJoinInput] = useState('');
-  const [uiNowMs, setUiNowMs] = useState(() => Date.now());
-  const [, setSelectedMood] = useState<FoodMood | null>(null);
-  const [activeServesFilters, setActiveServesFilters] = useState<ServesFilterId[]>(getTimeOfDayFilters);
   const [showAboutSections, setShowAboutSections] = useState(false);
 
   const [manualInput, setManualInput] = useState('');
@@ -227,10 +140,6 @@ function App() {
   const [isEditingListDetails, setIsEditingListDetails] = useState(false);
   const [isCreatingNewList, setIsCreatingNewList] = useState(false);
   const [groupSpinNow, setGroupSpinNow] = useState(() => Date.now());
-  // Fetch radius follows the selected range mode so each mode gets its own
-  // focused 20-place pool from Google. Cached separately per radius — repeat
-  // visits cost nothing for 7 days.
-  const fetchRadiusKm = AUTO_RANGE_RADIUS_KM[rangeMode];
   const autoLoadedMealTimeRef = useRef<ManualListMealTime>(null);
   const hasUserSelectedManualListRef = useRef(false);
   const seededRoomSyncIdRef = useRef('');
@@ -250,36 +159,8 @@ function App() {
     window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
   }, []);
 
-  const handleMoodSelect = useCallback((mood: FoodMood) => {
-    setSelectedMood(mood);
-    trackEvent('mood_selected', { mood });
-
-    const moodToCategoriesMap: Record<FoodMood, FoodCategory[]> = {
-      'quick-bite': ['street food', 'noodles', 'rice'],
-      'treat-myself': ['western', 'japanese', 'korean'],
-      'healthy': ['vegetarian', 'cafe'],
-      'surprise-me': [],
-    };
-
-    const categories = moodToCategoriesMap[mood];
-    setSelectedCategories(categories);
-
-    if (mood === 'surprise-me') {
-      setSelectedPriceRanges([]);
-      setActiveServesFilters([]);
-    }
-  }, []);
-
-  const handleToggleServesFilter = useCallback((id: ServesFilterId) => {
-    setActiveServesFilters((prev) =>
-      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id],
-    );
-    trackEvent('serves_filter_toggle', { filter: id });
-  }, []);
-
   // Custom hooks
-  const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
-  const { spins, canSpin, recordSpin } = useSpinTracker();
+  const { spins, recordSpin } = useSpinTracker();
   const {
     favourites,
     isFavourite: isFavouriteCheck,
@@ -290,23 +171,6 @@ function App() {
     updateRating: updateFavouriteRating,
   } = useFavourites();
   const { pending: feedbackPending, dismiss: dismissFeedback } = useFeedbackPrompt();
-  const {
-    restaurants: nearbyRestaurants,
-    isLoading: nearbyRestaurantsLoading,
-    error: nearbyRestaurantsError,
-    source: nearbyRestaurantsSource,
-    shouldUseLocalFallback,
-    lastSyncedAt: nearbyLastSyncedAt,
-  } = useNearbyRestaurants({
-    enabled: activeTab === 'auto' && Boolean(location),
-    location,
-    radiusKm: fetchRadiusKm,
-    openNowOnly: true,
-    selectedCategories,
-  });
-
-  const textSearch = useTextSearch({ location });
-
   const {
     authUid: groupAuthUid,
     isFirebaseConfigured,
@@ -350,29 +214,6 @@ function App() {
     spinCount: spins.length,
     showAfterSpins: 2,
   });
-  const {
-    challengeId,
-    challengeLink,
-    leaderboard: challengeLeaderboard,
-    myParticipant: myChallengeParticipant,
-    meta: challengeMeta,
-    isBusy: challengeBusy,
-    error: challengeError,
-    createChallenge,
-    joinChallenge,
-    leaveChallenge,
-    recordDailySpin,
-  } = useSpinChallenge(groupAuthUid, groupResolvedDisplayName, {
-    enabled: APP_FEATURES.spinChallenge,
-  });
-  const {
-    events: discoverEvents,
-    error: discoverFeedError,
-    geoKey: discoverGeoKey,
-    publishSpin: publishDiscoverSpin,
-  } = useDiscoverFeed(location, groupAuthUid, {
-    enabled: APP_FEATURES.discoverFeed,
-  });
 
   const isGroupRoomActive = Boolean(groupRoomId);
   const shouldShowRoomManualRestaurants = isGroupRoomActive && !isManualRoomLeavePending;
@@ -397,68 +238,6 @@ function App() {
     [displayedManualRestaurants],
   );
   const isManualListReadOnly = shouldShowRoomManualRestaurants && !canEditGroupList;
-  const localFallbackAutoRestaurants = useMemo(
-    () => localRestaurants.map((restaurant) => ({
-      ...restaurant,
-      source: 'local-fallback' as const,
-      categoryConfidence: 'high' as const,
-    })),
-    []
-  );
-  const autoSourceRestaurants = useMemo(() => {
-    if (!location) return [];
-    if (nearbyRestaurants.length > 0) return nearbyRestaurants;
-    if (shouldUseLocalFallback) return localFallbackAutoRestaurants;
-    return [];
-  }, [location, nearbyRestaurants, shouldUseLocalFallback, localFallbackAutoRestaurants]);
-  const autoDataSourceLabel = useMemo(() => {
-    if (!location) return null;
-    if (nearbyRestaurantsLoading) return 'Loading nearby restaurants...';
-    if (nearbyRestaurantsSource === 'google-cache') {
-      if (!nearbyLastSyncedAt) return 'Using cached nearby results (refresh after moving >100m).';
-      return `Using cached nearby results (refresh after moving >100m, last sync ${formatAbsoluteSyncTime(nearbyLastSyncedAt)}).`;
-    }
-    if (nearbyRestaurantsSource === 'google-live') {
-      if (!nearbyLastSyncedAt) return 'Using live nearby results.';
-      return `Using live nearby results (synced ${formatAbsoluteSyncTime(nearbyLastSyncedAt)}).`;
-    }
-    if (shouldUseLocalFallback) return 'Google unavailable. Using local fallback results.';
-    return null;
-  }, [
-    location,
-    nearbyLastSyncedAt,
-    nearbyRestaurantsLoading,
-    nearbyRestaurantsSource,
-    shouldUseLocalFallback,
-  ]);
-
-  const togglePriceRange = (price: Restaurant['priceRange']) => {
-    setSelectedPriceRanges((prev) =>
-      prev.includes(price) ? prev.filter((p) => p !== price) : [...prev, price]
-    );
-    setShowAllRoundRestaurants(false);
-  };
-
-  const handleCategoryChange = useCallback((categories: FoodCategory[]) => {
-    setSelectedCategories(categories);
-    setShowAllRoundRestaurants(false);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(AUTO_RANGE_MODE_STORAGE_KEY, rangeMode);
-  }, [rangeMode]);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setUiNowMs(Date.now());
-    }, 60_000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, []);
-
   // Update current meal time
   useEffect(() => {
     const updateMealTime = () => {
@@ -471,35 +250,6 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const avoidedRestaurantIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const fav of favourites) {
-      if (fav.userRating === 'avoid') {
-        ids.add(fav.id);
-        if (fav.restaurant.googlePlaceId) ids.add(fav.restaurant.googlePlaceId);
-      }
-    }
-    return ids;
-  }, [favourites]);
-
-  // Nearby favourites: favourites within ~1.5 km of the user's current location
-  const nearbyFavourites = useMemo(() => {
-    if (!location) return [];
-    return findNearbyFavourites(favourites, location.lat, location.lng);
-  }, [favourites, location]);
-
-  // Favourite category visit counts — used to boost popular categories in selector
-  const favouriteCategoryCounts = useMemo(() => {
-    const counts: Partial<Record<FoodCategory, number>> = {};
-    for (const fav of favourites) {
-      if (fav.userRating === 'avoid') continue;
-      for (const cat of fav.restaurant.category) {
-        counts[cat] = (counts[cat] ?? 0) + fav.visitCount;
-      }
-    }
-    return counts;
-  }, [favourites]);
-
   const spinHistorySummary = useMemo(() => {
     const categoryCounter = new Map<string, number>();
     const restaurantIds = new Set<string>();
@@ -508,7 +258,7 @@ function App() {
       const restaurant = spin.restaurant;
       const category = restaurant.category?.[0] ?? 'other';
       categoryCounter.set(category, (categoryCounter.get(category) ?? 0) + 1);
-      restaurantIds.add(restaurant.googlePlaceId ?? restaurant.id);
+      restaurantIds.add(restaurant.id);
     }
 
     const topCategory = [...categoryCounter.entries()]
@@ -533,120 +283,22 @@ function App() {
     };
   }, [spins]);
 
-  const filterResult = useMemo(() => (
-    enhancedFilterRestaurants(
-      autoSourceRestaurants,
-      location,
-      selectedCategories,
-      rangeMode,
-      selectedPriceRanges,
-      'all',
-      undefined,
-      avoidedRestaurantIds,
-    )
-  ), [autoSourceRestaurants, location, selectedCategories, rangeMode, selectedPriceRanges, avoidedRestaurantIds]);
-
-  const filteredRestaurants = useMemo(
-    () => applyServesFilters(filterResult.results, activeServesFilters),
-    [filterResult.results, activeServesFilters],
-  );
-  const closingSoonExcludedCount = filterResult.closingSoonExcludedCount;
-  const closedNowExcludedCount = filterResult.closedNowExcludedCount;
-
-  const autoAvailabilityHelperText = useMemo(() => {
-    const messages: string[] = [];
-
-    if (closingSoonExcludedCount > 0) {
-      messages.push(
-        `${closingSoonExcludedCount} place${closingSoonExcludedCount === 1 ? '' : 's'} will close in under ${AUTO_SPIN_MINUTES_UNTIL_CLOSE_CUTOFF} min, so they were skipped.`
-      );
-    }
-
-    if (closedNowExcludedCount > 0) {
-      messages.push(
-        `${closedNowExcludedCount} place${closedNowExcludedCount === 1 ? '' : 's'} are closed right now.`
-      );
-    }
-
-    return messages.join(' ');
-  }, [closedNowExcludedCount, closingSoonExcludedCount]);
-
-  const autoEmptyStateSubtitle = useMemo(() => {
-    // Check if serves-filters are the culprit
-    if (activeServesFilters.length > 0 && filterResult.results.length > 0 && filteredRestaurants.length === 0) {
-      const labels = activeServesFilters.map(
-        (id) => SERVES_FILTERS.find((f) => f.id === id)?.label ?? id,
-      );
-      return `None of the nearby places match your ${labels.join(' + ')} filter${labels.length > 1 ? 's' : ''}. Try removing a filter pill.`;
-    }
-
-    if (closingSoonExcludedCount > 0 && filteredRestaurants.length === 0) {
-      return `Everything nearby is either closed or shutting within ${AUTO_SPIN_MINUTES_UNTIL_CLOSE_CUTOFF} min. Try a wider range or check back soon.`;
-    }
-
-    if (closedNowExcludedCount > 0 && filteredRestaurants.length === 0) {
-      return 'Everything matching your filters is closed right now. Try widening your filters or check back soon.';
-    }
-
-    return 'Try selecting different categories or check back during meal hours';
-  }, [closedNowExcludedCount, closingSoonExcludedCount, filteredRestaurants.length, activeServesFilters, filterResult.results.length]);
-
-  const roundRestaurants = useMemo(() => (
-    filteredRestaurants.filter((restaurant) => !roundRemovedRestaurantIds.includes(restaurant.id))
-  ), [filteredRestaurants, roundRemovedRestaurantIds]);
-
-  const displayedRoundRestaurants = useMemo(() => (
-    showAllRoundRestaurants
-      ? roundRestaurants
-      : roundRestaurants.slice(0, REVIEW_PREVIEW_COUNT)
-  ), [roundRestaurants, showAllRoundRestaurants]);
-
-  const removeRestaurantForRound = useCallback((
-    restaurantId: string,
-    options?: { bumpKey?: boolean },
-  ) => {
-    const { bumpKey = true } = options ?? {};
-    setRoundRemovedRestaurantIds((prev) => (prev.includes(restaurantId) ? prev : [...prev, restaurantId]));
-    setWheelRestaurants((prev) => prev.filter((restaurant) => restaurant.id !== restaurantId));
-    if (bumpKey) {
-      setAutoWheelKey((prev) => prev + 1);
-    }
-  }, []);
-
-  const handleAutoSpinStart = useCallback(() => {
-    if (!pendingAutoRemovalId) return null;
-
-    setPendingAutoRemovalId(null);
-    removeRestaurantForRound(pendingAutoRemovalId, { bumpKey: false });
-    return wheelRestaurants.filter((restaurant) => restaurant.id !== pendingAutoRemovalId);
-  }, [pendingAutoRemovalId, removeRestaurantForRound, wheelRestaurants]);
-
-  // Handle spin complete
-  const handleSpinComplete = useCallback((restaurant: Restaurant) => {
-    trackEvent('spin_complete', { mode: 'auto', restaurant_name: restaurant.name, category: restaurant.category?.[0] ?? '' });
-    recordSpin(restaurant, currentMealTime);
-    void recordDailySpin();
-    void publishDiscoverSpin(restaurant.name, currentMealTime);
-    setPendingAutoRemovalId(restaurant.id);
-  }, [currentMealTime, publishDiscoverSpin, recordDailySpin, recordSpin]);
-
   const handleManualSpinComplete = useCallback((restaurant: Restaurant) => {
     trackEvent('spin_complete', { mode: 'manual', restaurant_name: restaurant.name });
     setManualSpinResult(restaurant);
-    void recordDailySpin();
-    void publishDiscoverSpin(restaurant.name, currentMealTime);
-  }, [currentMealTime, publishDiscoverSpin, recordDailySpin]);
+    recordSpin(restaurant, currentMealTime);
+  }, [currentMealTime, recordSpin]);
 
-  const handleSaveFavourite = useCallback((restaurant: Restaurant, mode: 'auto' | 'manual') => {
-    trackEvent('favourite_saved', { restaurant_name: restaurant.name, mode });
-    void saveFavourite(restaurant, mode === 'auto' ? 'spin-auto' : 'spin-manual');
+  const handleSaveFavourite = useCallback((restaurant: Restaurant) => {
+    trackEvent('favourite_saved', { restaurant_name: restaurant.name });
+    void saveFavourite(restaurant, 'spin-manual');
     toast.success(`${restaurant.name} saved to favourites!`, {
       description: 'Find it in the "I Know Where" tab under My Favourites.',
     });
   }, [saveFavourite]);
 
   const handleShareResult = useCallback(async (restaurant: Restaurant, cardElement: HTMLElement) => {
-    trackEvent('share_result_open', { restaurant_name: restaurant.name, tab: activeTab });
+    trackEvent('share_result_open', { restaurant_name: restaurant.name });
 
     try {
       const shareMethod = await shareCard({
@@ -660,7 +312,6 @@ function App() {
       trackEvent('share_result_success', {
         restaurant_name: restaurant.name,
         method: shareMethod,
-        tab: activeTab,
       });
 
       toast.success('Share ready!', {
@@ -672,33 +323,11 @@ function App() {
       const message = error instanceof Error ? error.message : 'unknown';
       trackEvent('share_result_failure', {
         restaurant_name: restaurant.name,
-        tab: activeTab,
         error: message,
       });
       toast.error('Unable to share this result right now.');
     }
-  }, [activeTab]);
-
-  const handleAutoSpinAgain = useCallback((restaurant: Restaurant) => {
-    respinCountRef.current += 1;
-    trackEvent('spin_again_requested', {
-      restaurant_name: restaurant.name,
-      round_size: wheelRestaurants.length,
-      respin_count: respinCountRef.current,
-    });
-
-    if (typeof window === 'undefined') return;
-
-    try {
-      const raw = window.localStorage.getItem(SPIN_REJECTION_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) as Record<string, number> : {};
-      const key = restaurant.googlePlaceId ?? restaurant.id;
-      parsed[key] = (parsed[key] ?? 0) + 1;
-      window.localStorage.setItem(SPIN_REJECTION_STORAGE_KEY, JSON.stringify(parsed));
-    } catch {
-      // Best-effort local signal; analytics still tracks action.
-    }
-  }, [wheelRestaurants.length]);
+  }, []);
 
   const handlePwaInstall = useCallback(async () => {
     trackEvent('pwa_install_prompt_open', { spin_count: spins.length });
@@ -762,36 +391,6 @@ function App() {
     trackEvent('first_run_onboarding_dismissed');
   }, []);
 
-  const handleOnboardingOpenAutoMode = useCallback(() => {
-    setActiveTab('auto');
-    scrollToSection('app-main-section');
-    trackEvent('first_run_onboarding_auto_mode_opened');
-  }, [scrollToSection]);
-
-  const handleCreateChallenge = useCallback(() => {
-    trackEvent('challenge_create_requested');
-    void createChallenge();
-  }, [createChallenge]);
-
-  const handleJoinChallenge = useCallback(() => {
-    if (!challengeJoinInput.trim()) return;
-    trackEvent('challenge_join_requested');
-    void joinChallenge(challengeJoinInput);
-    setChallengeJoinInput('');
-  }, [challengeJoinInput, joinChallenge]);
-
-  const handleCopyChallengeLink = useCallback(async () => {
-    if (!challengeLink || typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return;
-    await navigator.clipboard.writeText(challengeLink);
-    toast.success('Challenge link copied.');
-    trackEvent('challenge_link_copied');
-  }, [challengeLink]);
-
-  const handleLeaveChallenge = useCallback(() => {
-    trackEvent('challenge_left');
-    void leaveChallenge();
-  }, [leaveChallenge]);
-
   const handleLetsGo = useCallback((restaurant: Restaurant) => {
     trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
     void recordVisitAndSave(restaurant);
@@ -800,17 +399,8 @@ function App() {
     const favId = deriveFavouriteId(restaurant);
     enqueueFeedback({ favouriteId: favId, restaurantName: restaurant.name });
 
-    // Open Google Maps navigation — prefer the official URI from the API
-    let mapsUrl: string;
-    if (restaurant.googleMapsUri) {
-      mapsUrl = restaurant.googleMapsUri;
-    } else {
-      const { lat, lng } = restaurant.coordinates;
-      const query = encodeURIComponent(restaurant.name);
-      mapsUrl = lat && lng
-        ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${restaurant.googlePlaceId ?? ''}&query=${query}`
-        : `https://www.google.com/maps/search/?api=1&query=${query}`;
-    }
+    // Plain Maps search link (no API key needed)
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.name)}`;
     window.open(mapsUrl, '_blank', 'noopener,noreferrer');
 
     toast.success(`Navigating to ${restaurant.name}!`, {
@@ -907,89 +497,6 @@ function App() {
     trackEvent('feedback_didnt_go', { restaurant_name: feedbackPending.restaurantName });
     dismissFeedback();
   }, [dismissFeedback, feedbackPending]);
-
-  // Handle spin attempt
-  const handleSpinAttempt = () => {
-    if (!canSpin(currentMealTime)) {
-      trackEvent('spin_blocked', { mode: activeTab });
-      setShowSpinLimitWarning(true);
-      return false;
-    }
-    trackEvent('spin_start', { mode: activeTab, restaurant_count: activeTab === 'auto' ? wheelRestaurants.length : displayedManualRestaurants.length });
-    respinCountRef.current = 0;
-    return true;
-  };
-
-  // Handle subscription
-  const handleSubscribe = () => {
-    setIsPremium(true);
-    setShowSubscription(false);
-    setShowSpinLimitWarning(false);
-  };
-
-  const resetAutoWheel = () => {
-    setShowSpinLimitWarning(false);
-    setRoundRemovedRestaurantIds([]);
-    setPendingAutoRemovalId(null);
-    setShowWheelSection(false);
-    setWheelRestaurants([]);
-    setAutoWheelKey((prev) => prev + 1);
-  };
-
-  const handleAutoRangeModeChange = (nextMode: AutoRangeMode) => {
-    if (nextMode === rangeMode) return;
-    trackEvent('range_mode_changed', { mode: nextMode });
-    setRangeMode(nextMode);
-    setShowAllRoundRestaurants(false);
-    resetAutoWheel();
-  };
-
-  // Shuffle wheel restaurants
-  const shuffleWheel = () => {
-    trackEvent('shuffle_wheel', { restaurant_count: roundRestaurants.length });
-    const shuffled = [...roundRestaurants].sort(() => Math.random() - 0.5);
-    const sliced = shuffled.slice(0, 12);
-    const sortedByDistance = location
-      ? [...sliced].sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
-      : sliced;
-    setWheelRestaurants(sortedByDistance);
-  };
-
-  const handleQuickSpin = useCallback(() => {
-    trackEvent('quick_spin_tapped');
-    if (!location) {
-      requestLocation();
-      return;
-    }
-
-    setActiveTab('auto');
-
-    if (roundRestaurants.length > 0 && handleSpinAttempt()) {
-      shuffleWheel();
-      setShowWheelSection(true);
-      setTimeout(() => {
-        const wheelSection = document.getElementById('wheel');
-        wheelSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location, requestLocation, roundRestaurants.length]);
-
-  const switchTab = (tab: SpinTab) => {
-    trackEvent('tab_switched', { tab });
-    setActiveTab(tab);
-    if (tab === 'auto') {
-      setWheelRestaurants([]);
-      setShowWheelSection(false);
-      setRoundRemovedRestaurantIds([]);
-      setPendingAutoRemovalId(null);
-      setAutoWheelKey((prev) => prev + 1);
-    } else {
-      setManualSpinResult(null);
-      setManualWheelKey((prev) => prev + 1);
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
 
   const addManualRestaurant = () => {
     addManualRestaurantByName(manualInput);
@@ -1318,7 +825,6 @@ function App() {
 
   const handleCreateGroupRoom = useCallback(async () => {
     trackEvent('group_room_created');
-    setActiveTab('manual');
     setIsManualRoomLeavePending(false);
     setRoomManualRestaurants([]);
     await createGroupRoom();
@@ -1326,7 +832,6 @@ function App() {
 
   const handleJoinGroupRoom = useCallback(async (value: string) => {
     trackEvent('group_room_joined', { room_id: value });
-    setActiveTab('manual');
     setIsManualRoomLeavePending(false);
     setRoomManualRestaurants([]);
     await joinGroupRoom(value);
@@ -1453,40 +958,11 @@ function App() {
     <div className="min-h-screen overflow-x-clip bg-brand-linen">
       {/* App-style navbar with built-in tab toggle */}
       <AppNavbar
-        activeTab={activeTab}
-        onTabChange={switchTab}
         activeRoomId={groupRoomId}
         onGroupSpin={() => scrollToSection('group-spin')}
         onAbout={() => setShowAboutSections(prev => !prev)}
         onLeaveRoom={isGroupRoomActive ? handleLeaveGroupRoom : undefined}
       />
-
-      {/* QuickSpinHero - only in auto (discovery) mode */}
-      {activeTab === 'auto' && (
-        <QuickSpinHero
-          currentMealTime={currentMealTime}
-          onQuickSpin={handleQuickSpin}
-          onMoodSelect={handleMoodSelect}
-          isSpinning={isSpinning}
-          hasLocation={Boolean(location)}
-          onRequestLocation={requestLocation}
-          isLocationLoading={locationLoading}
-          locationError={locationError}
-          restaurantCount={roundRestaurants.length}
-          onGroupSpin={() => scrollToSection('group-spin')}
-          isLoadingRestaurants={nearbyRestaurantsLoading}
-          totalNearbyCount={autoSourceRestaurants.length}
-          closedNowCount={closedNowExcludedCount}
-          searchQuery={textSearch.query}
-          onSearch={textSearch.search}
-          searchResults={textSearch.results}
-          isSearching={textSearch.isLoading}
-          searchError={textSearch.error}
-          recentSearches={textSearch.recentSearches}
-          onLetsGo={handleLetsGo}
-          onClearSearch={textSearch.clearResults}
-        />
-      )}
 
       {/* Main app section */}
       <section id="app-main-section" className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 bg-white">
@@ -1523,221 +999,7 @@ function App() {
             </div>
           )}
 
-          {/* AUTO MODE */}
-          {activeTab === 'auto' && (
-            <>
-              {!location && (
-                <div className="mb-6">
-                  <LocationPermission
-                    isLoading={locationLoading}
-                    error={locationError}
-                    onRequestLocation={requestLocation}
-                    location={location}
-                  />
-                </div>
-              )}
-
-              {location && (
-                <FilterPanel
-                  rangeMode={rangeMode}
-                  onRangeModeChange={handleAutoRangeModeChange}
-                  selectedPriceRanges={selectedPriceRanges}
-                  onTogglePriceRange={togglePriceRange}
-                  selectedCategories={selectedCategories}
-                  onCategoryChange={handleCategoryChange}
-                  restaurantCount={roundRestaurants.length}
-                  isLoading={nearbyRestaurantsLoading}
-                  dataSourceLabel={autoDataSourceLabel}
-                  nearbyError={nearbyRestaurantsError}
-                  closingSoonCount={closingSoonExcludedCount}
-                  closedNowCount={closedNowExcludedCount}
-                  favouriteCategoryCounts={favouriteCategoryCounts}
-                  activeServesFilters={activeServesFilters}
-                  onToggleServesFilter={handleToggleServesFilter}
-                />
-              )}
-
-              {/* Empty state */}
-              {location && filteredRestaurants.length === 0 && !nearbyRestaurantsLoading && autoSourceRestaurants.length > 0 && (
-                <div className="mb-5 mt-4 rounded-2xl border border-eatspin-peach/60 bg-white p-5 text-center">
-                  <p className="text-2xl">
-                    {activeServesFilters.length > 0 ? '🔍' : '😕'}
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-brand-black">
-                    {closingSoonExcludedCount > 0 || closedNowExcludedCount > 0
-                      ? 'No open spots left for the wheel right now.'
-                      : 'No matches — try clearing a filter.'}
-                  </p>
-                  <p className="mt-1 text-xs text-eatspin-gray-1">
-                    {autoEmptyStateSubtitle}
-                  </p>
-                  {selectedPriceRanges.length > 0 && (
-                    <p className="mt-1 text-xs text-eatspin-gray-1">
-                      Price filter is active.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Spin + Reset (compact - hero has the primary CTA) */}
-              {location && roundRestaurants.length > 0 && (
-                <div className="mb-4 mt-3 flex items-center gap-2 justify-center">
-                  <Button
-                    onClick={() => {
-                      if (handleSpinAttempt()) {
-                        shuffleWheel();
-                        setShowWheelSection(true);
-                        setTimeout(() => {
-                          const wheelSection = document.getElementById('wheel');
-                          wheelSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, 100);
-                      }
-                    }}
-                    disabled={isSpinning || roundRestaurants.length === 0}
-                    className="bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-sm sm:text-base font-bold px-5 sm:px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-70"
-                  >
-                    <Utensils size={16} className="mr-1.5" />
-                    Spin for {currentMealTime !== 'none' ? currentMealTime : 'Food'}
-                  </Button>
-
-                  <Button
-                    onClick={resetAutoWheel}
-                    variant="outline"
-                    size="sm"
-                    className="border-eatspin-orange/50 text-eatspin-orange hover:bg-eatspin-orange/10 font-medium px-3 py-3 rounded-xl"
-                  >
-                    <RotateCcw size={14} className="mr-1" />
-                    Reset
-                  </Button>
-                </div>
-              )}
-
-              {/* Review section */}
-              {location && roundRestaurants.length > 0 && (
-                <div className="mb-8 rounded-2xl border border-eatspin-peach/60 bg-white p-4 sm:p-5">
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsReviewExpanded(!isReviewExpanded)}
-                        className="flex items-center gap-2"
-                      >
-                        <ChevronDown
-                          size={20}
-                          className={`text-eatspin-gray-1 transition-transform duration-200 ${
-                            isReviewExpanded ? 'rotate-180' : ''
-                          }`}
-                        />
-                        <h3 className="font-heading text-lg font-semibold text-brand-black">Review this round</h3>
-                      </button>
-                    </div>
-                    <p className="text-sm font-medium text-brand-black">
-                      {roundRestaurants.length} restaurants remaining
-                    </p>
-                  </div>
-
-                  <div
-                    className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
-                      isReviewExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                    }`}
-                  >
-                      <ul className="max-h-72 overflow-y-auto overscroll-contain space-y-2 pr-1">
-                      {displayedRoundRestaurants.map((restaurant) => (
-                        <li key={restaurant.id} className="flex items-center justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
-                          <div>
-                            <p className="font-medium text-brand-black">
-                              {restaurant.name}
-                              {isFavouriteCheck(restaurant) && (
-                                <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-pink-100 px-1.5 py-0.5 text-[10px] font-semibold text-pink-600 align-middle">
-                                  <Heart size={10} className="fill-pink-500 text-pink-500" /> Fave
-                                </span>
-                              )}
-                            </p>
-                            <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-eatspin-gray-1">
-                              {restaurant.category.slice(0, 2).map((tag) => (
-                                <span key={`${restaurant.id}-${tag}`} className="rounded-full bg-white px-2 py-0.5 capitalize">
-                                  {tag}
-                                </span>
-                              ))}
-                              <span className="rounded-full bg-white px-2 py-0.5">{restaurant.priceRange}</span>
-                              {restaurant.distance !== undefined && (
-                                <span className="rounded-full bg-white px-2 py-0.5">{estimateTravelTime(restaurant.distance)}</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            {isFavouriteCheck(restaurant) ? (
-                              <span
-                                className="inline-flex items-center gap-1 rounded-full bg-pink-50 border border-pink-200 px-2.5 py-1 text-xs font-medium text-pink-500"
-                                title="Already in My Favourites"
-                              >
-                                <Heart size={12} className="fill-pink-500 text-pink-500" /> Saved
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleSaveFavourite(restaurant, 'auto')}
-                                className="inline-flex items-center gap-1 rounded-full border border-pink-200 bg-white px-2.5 py-1 text-xs font-medium text-pink-500 hover:bg-pink-50"
-                                aria-label={`Save ${restaurant.name} to favourites`}
-                              >
-                                <Heart size={12} /> Save
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => removeRestaurantForRound(restaurant.id)}
-                              className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-                              aria-label={`Remove ${restaurant.name} for this round`}
-                            >
-                              <X size={14} /> Remove
-                            </button>
-                          </div>
-                        </li>
-                      ))}
-
-                      </ul>
-                      {roundRestaurants.length > REVIEW_PREVIEW_COUNT && (
-                        <div className="mt-3 flex justify-center">
-                          <button
-                            type="button"
-                            onClick={() => setShowAllRoundRestaurants((prev) => !prev)}
-                            className="rounded-full border border-eatspin-peach/80 bg-white px-3 py-1.5 text-xs font-medium text-eatspin-gray-1 hover:bg-brand-linen"
-                          >
-                            {showAllRoundRestaurants
-                              ? `Show first ${REVIEW_PREVIEW_COUNT}`
-                              : `Show all ${roundRestaurants.length}`}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-              {/* Spin limit warning */}
-              {showSpinLimitWarning && currentMealTime !== 'none' && (
-                <div className="mb-6">
-                  <SpinLimitWarning
-                    mealTime={currentMealTime}
-                    onUpgrade={() => setShowSubscription(true)}
-                    onClose={() => setShowSpinLimitWarning(false)}
-                  />
-                </div>
-              )}
-
-              {/* Premium badge */}
-              {isPremium && (
-                <div className="text-center">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full text-sm font-medium">
-                    <Crown size={16} />
-                    Premium Member - Unlimited Spins
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
           {/* MANUAL MODE */}
-          {activeTab === 'manual' && (
             <div id="wheel" className="py-4 pb-14 sm:pb-8">
               {isGroupRoomActive && (
                 <div className="mb-4 rounded-xl border border-brand-orange/30 bg-brand-linen px-4 py-3 text-sm text-eatspin-gray-1">
@@ -1981,59 +1243,11 @@ function App() {
                 canRequestSpin={!isGroupRoomActive || isGroupHost || isGroupCohost}
                 emptyStateTitle="Add restaurants to start"
                 emptyStateSubtitle="Type any restaurant you like…"
-                onSaveFavourite={(r) => handleSaveFavourite(r, 'manual')}
+                onSaveFavourite={handleSaveFavourite}
                 onLetsGo={handleLetsGo}
                 onShareResult={handleShareResult}
                 isFavourite={isFavouriteCheck}
               />
-
-                {/* Nearby Favourites Section */}
-                {nearbyFavourites.length > 0 && (
-                  <div className="mt-6 max-w-xl mx-auto">
-                    <div className="bg-white rounded-xl border border-green-200/60 p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="h-2 w-2 rounded-full bg-eatspin-success animate-pulse" />
-                        <h4 className="font-heading font-semibold text-brand-black flex items-center gap-2">
-                          <MapPin size={16} className="text-eatspin-success" />
-                          Nearby Favourites
-                        </h4>
-                      </div>
-                      <p className="text-xs text-eatspin-gray-1 mb-3">
-                        You're close to places you've saved before!
-                      </p>
-                      <ul className="space-y-2">
-                        {nearbyFavourites.map((nf) => {
-                          const alreadyInList = displayedManualRestaurants.some(
-                            (r) => r.name.toLowerCase() === nf.restaurantName.toLowerCase()
-                          );
-                          return (
-                            <li key={nf.favouriteId} className="flex items-center justify-between gap-2 rounded-lg bg-green-50 px-3 py-2">
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium text-brand-black truncate">{nf.restaurantName}</p>
-                                <p className="text-xs text-eatspin-gray-1">{estimateTravelTime(nf.distanceKm)}</p>
-                              </div>
-                              <div className="flex items-center gap-1.5 flex-shrink-0">
-                                {!alreadyInList && !isManualListReadOnly && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAddFavouriteToManualList(nf.restaurantName)}
-                                    className="inline-flex items-center gap-1 rounded-full border border-brand-orange/40 bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
-                                    aria-label={`Add ${nf.restaurantName} to spin list`}
-                                  >
-                                    <Plus size={12} /> Add
-                                  </button>
-                                )}
-                                {alreadyInList && (
-                                  <span className="text-xs text-eatspin-success font-medium">In list ✓</span>
-                                )}
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  </div>
-                )}
 
                 {/* My Favourites Section */}
                 {favourites.length > 0 && (
@@ -2188,45 +1402,8 @@ function App() {
 
                 </div>
             </div>
-          )}
         </div>
       </section>
-
-      {/* Wheel section for auto mode */}
-      {activeTab === 'auto' && showWheelSection && location && roundRestaurants.length > 0 && (
-        <section id="wheel" className="py-10 sm:py-12 px-4 sm:px-6 lg:px-8 bg-brand-linen">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-5 sm:mb-6">
-              <h2 className="font-heading text-xl sm:text-2xl font-bold text-brand-black mb-1.5">
-                Spin the Wheel!
-              </h2>
-              <p className="text-sm sm:text-base text-eatspin-gray-1">
-                {roundRestaurants.length} restaurants ready for this round
-              </p>
-            </div>
-
-            <RouletteWheel
-              key={`auto-${autoWheelKey}`}
-              restaurants={wheelRestaurants}
-              totalCount={roundRestaurants.length}
-              onSpinComplete={handleSpinComplete}
-              isSpinning={isSpinning}
-              setIsSpinning={setIsSpinning}
-              onShuffle={shuffleWheel}
-              onSpinStart={handleAutoSpinStart}
-              onSaveFavourite={(r) => handleSaveFavourite(r, 'auto')}
-              onLetsGo={handleLetsGo}
-              onShareResult={handleShareResult}
-              onSpinAgain={handleAutoSpinAgain}
-              canSpinAgain={wheelRestaurants.length >= 2}
-              isFavourite={isFavouriteCheck}
-              helperText={autoAvailabilityHelperText || undefined}
-              emptyStateTitle="No open restaurants ready to spin"
-              emptyStateSubtitle={autoEmptyStateSubtitle}
-            />
-          </div>
-        </section>
-      )}
 
       {/* Group Spin section */}
       <GroupSpin
@@ -2278,146 +1455,6 @@ function App() {
       </section>
       )}
 
-      {/* Challenge + Discover Feed (feature-flagged) */}
-      {APP_FEATURES.spinChallenge && (
-        <section className="py-6 px-4 sm:px-6 lg:px-8 bg-brand-linen">
-          <div className="max-w-4xl mx-auto">
-            <div className="rounded-2xl border border-brand-orange/35 bg-white p-4 sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="font-heading text-lg font-bold text-brand-black">7-Day Challenge a Friend</h3>
-                <p className="text-sm text-eatspin-gray-1">Challenge friends to spin daily and compare streak progress.</p>
-              </div>
-              {challengeId && (
-                <span className="rounded-full bg-brand-orange/10 px-3 py-1 text-xs font-semibold text-brand-orange">
-                  Challenge {challengeId}
-                </span>
-              )}
-            </div>
-
-            {challengeError && (
-              <p className="mt-2 text-sm text-eatspin-error">{challengeError}</p>
-            )}
-
-            {!challengeId ? (
-              <div className="mt-4 grid gap-2 sm:grid-cols-[auto_1fr_auto]">
-                <Button
-                  type="button"
-                  className="bg-brand-orange text-white hover:bg-brand-orange/90"
-                  disabled={challengeBusy}
-                  onClick={handleCreateChallenge}
-                >
-                  {challengeBusy ? 'Working...' : 'Create 7-day challenge'}
-                </Button>
-                <Input
-                  value={challengeJoinInput}
-                  onChange={(event) => setChallengeJoinInput(event.target.value)}
-                  placeholder="Paste challenge link or code"
-                  className="h-11"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-brand-orange/40 text-brand-black hover:bg-brand-linen"
-                  disabled={challengeBusy || !challengeJoinInput.trim()}
-                  onClick={handleJoinChallenge}
-                >
-                  Join
-                </Button>
-              </div>
-            ) : (
-              <div className="mt-4 space-y-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-brand-orange/40 text-brand-orange hover:bg-brand-orange/10"
-                    onClick={() => { void handleCopyChallengeLink(); }}
-                  >
-                    Copy invite link
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                    onClick={handleLeaveChallenge}
-                  >
-                    Leave challenge
-                  </Button>
-                  {challengeMeta && (
-                    <span className="text-xs text-eatspin-gray-1">
-                      Ends in {Math.max(0, Math.ceil((challengeMeta.endsAt - uiNowMs) / (24 * 60 * 60 * 1000)))} day(s)
-                    </span>
-                  )}
-                </div>
-
-                <div className="rounded-xl border border-eatspin-peach/50 bg-brand-linen/60 px-3 py-2">
-                  <p className="text-xs text-eatspin-gray-1">
-                    Your completed days: <strong className="text-brand-black">{myChallengeParticipant?.completedDayKeys.length ?? 0}</strong>/7
-                  </p>
-                </div>
-
-                <ul className="space-y-2">
-                  {challengeLeaderboard.map((participant) => (
-                    <li
-                      key={participant.uid}
-                      className="flex items-center justify-between rounded-lg border border-eatspin-peach/50 bg-brand-linen px-3 py-2 text-sm"
-                    >
-                      <span className="font-medium text-brand-black">
-                        {participant.name} {participant.uid === groupAuthUid ? '(You)' : ''}
-                      </span>
-                      <span className="text-eatspin-gray-1">{participant.completedDayKeys.length}/7 days</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {APP_FEATURES.discoverFeed && (
-        <section className="py-6 px-4 sm:px-6 lg:px-8 bg-white">
-          <div className="max-w-4xl mx-auto">
-            <div className="rounded-2xl border border-eatspin-peach/60 bg-brand-linen/70 p-4 sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h3 className="font-heading text-lg font-bold text-brand-black">Discover Feed</h3>
-                <p className="text-sm text-eatspin-gray-1">See what others nearby are spinning right now.</p>
-              </div>
-              {discoverGeoKey && (
-                <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-eatspin-gray-1">
-                  Area: {discoverGeoKey}
-                </span>
-              )}
-            </div>
-
-            {discoverFeedError && (
-              <p className="mt-2 text-xs text-eatspin-error">{discoverFeedError}</p>
-            )}
-
-            <ul className="mt-3 space-y-2">
-              {discoverEvents.length === 0 && (
-                <li className="rounded-lg bg-white px-3 py-2 text-sm text-eatspin-gray-1">
-                  No nearby spins yet. Your next spin can kick off the feed.
-                </li>
-              )}
-              {discoverEvents.map((event) => (
-                <li key={event.id} className="rounded-lg bg-white px-3 py-2 text-sm">
-                  <p className="font-medium text-brand-black">
-                    Someone nearby spun {event.restaurantName}
-                    {event.mealTime !== 'none' ? ` • ${event.mealTime}` : ''}
-                  </p>
-                  <p className="text-xs text-eatspin-gray-1">{formatSpinTimestamp(event.createdAt)}</p>
-                </li>
-              ))}
-            </ul>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* About Sections (collapsible) */}
       <div className="border-t border-eatspin-peach/30">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -2447,12 +1484,6 @@ function App() {
       <Footer />
 
       {/* Modals */}
-      <SubscriptionModal
-        isOpen={showSubscription}
-        onClose={() => setShowSubscription(false)}
-        onSubscribe={handleSubscribe}
-      />
-
       {feedbackPending && (
         <FeedbackPrompt
           restaurantName={feedbackPending.restaurantName}
@@ -2465,8 +1496,6 @@ function App() {
       <FirstRunOnboarding
         open={showOnboarding}
         onClose={dismissFirstRunOnboarding}
-        onRequestLocation={requestLocation}
-        onOpenAutoMode={handleOnboardingOpenAutoMode}
       />
 
       <Toaster />

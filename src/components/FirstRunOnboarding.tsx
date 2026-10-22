@@ -4,34 +4,22 @@ import { Button } from '@/components/ui/button';
 interface FirstRunOnboardingProps {
   open: boolean;
   onClose: () => void;
-  onRequestLocation: () => void;
-  onOpenAutoMode: () => void;
 }
 
 const steps = [
   {
-    title: 'Step 1: Allow location',
-    description: 'Enable location so EatSpin can preload nearby restaurants immediately.',
-    actionLabel: 'Enable Location',
+    title: 'Step 1: Build your list',
+    description: 'Type the places you like. Add at least 2 to unlock the wheel.',
+    actionLabel: 'Next',
   },
   {
-    title: 'Step 2: Load auto wheel',
-    description: 'We will switch to Spin for me so your wheel is ready right away.',
-    actionLabel: 'Open Auto Mode',
-  },
-  {
-    title: 'Step 3: Tap spin',
+    title: 'Step 2: Tap spin',
     description: 'Tap the big spin button and let fate choose your next meal in seconds.',
     actionLabel: 'Done',
   },
 ];
 
-export function FirstRunOnboarding({
-  open,
-  onClose,
-  onRequestLocation,
-  onOpenAutoMode,
-}: FirstRunOnboardingProps) {
+export function FirstRunOnboarding({ open, onClose }: FirstRunOnboardingProps) {
   const [stepIndex, setStepIndex] = useState(0);
 
   if (!open) return null;
@@ -40,13 +28,6 @@ export function FirstRunOnboarding({
   const isLastStep = stepIndex === steps.length - 1;
 
   const handleNext = () => {
-    if (stepIndex === 0) {
-      onRequestLocation();
-    }
-    if (stepIndex === 1) {
-      onOpenAutoMode();
-    }
-
     if (isLastStep) {
       onClose();
       return;

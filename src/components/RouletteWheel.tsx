@@ -1,11 +1,9 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Heart, Navigation, Share2, Volume2, VolumeX } from 'lucide-react';
+import { Loader2, Trophy, Heart, Navigation, Share2, Volume2, VolumeX } from 'lucide-react';
 import gsap from 'gsap';
-import { foodCategories } from '@/data/restaurants';
 import { Button } from '@/components/ui/button';
 import { playSpinTick, playSpinWin, startSpinDrumroll, stopSpinDrumroll, triggerSpinHaptic } from '@/lib/spinAudio';
-import { PhotoCarousel } from '@/components/PhotoCarousel';
 
 
 interface RouletteWheelProps {
@@ -63,19 +61,6 @@ const WHEEL_COLORS = [
 function getSegmentColor(index: number): string {
   return WHEEL_COLORS[index % WHEEL_COLORS.length];
 }
-
-/** Estimate travel time from straight-line distance using road detour factor. */
-const estimateTravelTime = (straightLineKm: number): string => {
-  const roadKm = straightLineKm * 1.4; // detour factor
-  if (roadKm <= 1.2) {
-    // Walking range
-    const minutes = Math.round((roadKm / 5) * 60); // 5 km/h walk speed
-    return `~${Math.max(1, minutes)} min walk`;
-  }
-  // Driving range — urban avg ~30 km/h
-  const minutes = Math.round((roadKm / 30) * 60);
-  return `~${Math.max(1, minutes)} min drive`;
-};
 
 const compactRestaurantName = (name: string, maxLength: number): string => {
   const normalized = name.trim().replace(/\s+/g, ' ');
@@ -138,8 +123,6 @@ const loadSoundPreference = (): boolean => {
   return storedValue !== '0';
 };
 
-
-import { getSmartHoursLabel } from '@/lib/smartHours';
 
 export function RouletteWheel({
   restaurants,
@@ -539,7 +522,6 @@ export function RouletteWheel({
   const angleRad = (segmentAngle * Math.PI) / 180;
   const usableArcWidth = Math.max(labelRadius * angleRad * 0.92, wheelSize * 0.19);
   const radialBandHeight = Math.max((labelOuterRadius - labelInnerRadius) * 0.8, wheelSize * 0.15);
-  const canShowDistance = segmentAngle >= 22 && radialBandHeight >= 36;
 
   const labelLayouts = restaurants.map((restaurant, index) => {
       const startAngle = segmentAngle * index;
@@ -567,9 +549,6 @@ export function RouletteWheel({
       const densityScale = clamp(labelMaxChars / longestLineLength, 0.75, 1.08);
       const labelBaseFontSize = clamp(Math.min(constrainedWidth * 0.16, radialBandHeight * 0.28), 11.5, 22);
       const fontSize = clamp(labelBaseFontSize * densityScale, 11.5, 24);
-      const distanceLabel = canShowDistance && lines.length <= 3 && restaurant.distance !== undefined
-        ? estimateTravelTime(restaurant.distance)
-        : null;
 
       return {
         restaurant,
@@ -577,17 +556,9 @@ export function RouletteWheel({
         y,
         lines,
         fontSize,
-        distanceLabel,
         constrainedWidth,
       };
     });
-
-  const isManualResult = Boolean(
-    spinResult
-      && (spinResult.id.startsWith('manual-')
-        || spinResult.address === 'Your custom pick'
-        || spinResult.description === 'Added by you.')
-  );
 
   return (
     <div className="flex flex-col items-center gap-6 py-4 sm:py-5">
@@ -640,7 +611,7 @@ export function RouletteWheel({
             )}
 
             {/* Labels remain upright by counter-rotating the wheel transform. */}
-            {labelLayouts.map(({ restaurant, x, y, lines, fontSize, distanceLabel, constrainedWidth }) => {
+            {labelLayouts.map(({ restaurant, x, y, lines, fontSize, constrainedWidth }) => {
               return (
                 <div
                   key={restaurant.id}
@@ -668,18 +639,6 @@ export function RouletteWheel({
                       </span>
                     ))}
                   </div>
-                  {distanceLabel && (
-                    <span
-                      className="mt-0.5 text-[10px] sm:text-[11px] font-semibold whitespace-nowrap"
-                      style={{
-                        color: '#FFFFFF',
-                        textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 1px 1px rgba(0,0,0,0.6)',
-                        opacity: 0.8,
-                      }}
-                    >
-                      {distanceLabel}
-                    </span>
-                  )}
                 </div>
               );
             })}
@@ -751,46 +710,6 @@ export function RouletteWheel({
         </div>
       )}
 
-      {/* Distance legend – compact list of restaurants sorted by proximity */}
-      {restaurants.some((r) => r.distance !== undefined) && (
-        <div className="w-full max-w-md">
-          <details className="group rounded-xl border border-eatspin-peach/50 bg-white/80 backdrop-blur-sm overflow-hidden">
-            <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold text-brand-black select-none hover:bg-eatspin-peach/10 transition-colors">
-              <span className="inline-flex items-center gap-2">
-                <MapPin size={15} className="text-brand-orange" />
-                Distance Guide
-              </span>
-              <span className="text-xs text-eatspin-gray-1 group-open:hidden">tap to expand</span>
-              <span className="text-xs text-eatspin-gray-1 hidden group-open:inline">tap to collapse</span>
-            </summary>
-            <ul className="divide-y divide-eatspin-peach/30 px-4 pb-3">
-              {[...restaurants]
-                .filter((r) => r.distance !== undefined)
-                .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
-                .map((r) => (
-                  <li key={r.id} className="flex items-center justify-between gap-2 py-2 text-sm">
-                    <span className="flex items-center gap-2 min-w-0">
-                      <span
-                        className="flex-shrink-0 w-3 h-3 rounded-full"
-                        style={{ backgroundColor: getSegmentColor(restaurants.indexOf(r)) }}
-                      />
-                      <span className="truncate text-brand-black">
-                        {r.name}
-                        {isFavourite?.(r) && (
-                          <Heart size={10} className="inline ml-1 fill-pink-500 text-pink-500" />
-                        )}
-                      </span>
-                    </span>
-                    <span className="flex-shrink-0 text-xs font-semibold text-brand-orange tabular-nums">
-                      {estimateTravelTime(r.distance!)}
-                    </span>
-                  </li>
-                ))}
-            </ul>
-          </details>
-        </div>
-      )}
-
       {/* Result Display */}
       {spinResult && (
         <div id="spin-result-card" ref={resultCardRef} className="w-full max-w-md relative z-10">
@@ -814,157 +733,12 @@ export function RouletteWheel({
                 <Trophy size={22} className="celebration-floating-icon text-[#FFD700]" />
               </h3>
 
-              {!isManualResult && (spinResult.photos?.length ?? 0) > 1 ? (
-                <PhotoCarousel
-                  photos={spinResult.photos!}
-                  alt={`Photos of ${spinResult.name}`}
-                  className="mb-4"
-                />
-              ) : !isManualResult && spinResult.image ? (
-                <div className="mb-4 overflow-hidden rounded-xl border border-eatspin-peach/60">
-                  <img
-                    src={spinResult.image}
-                    alt={`Photo of ${spinResult.name}`}
-                    className="h-48 w-full object-cover"
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              ) : null}
-              
-              {!isManualResult && (
-                <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                  <MapPin size={16} className="text-brand-orange flex-shrink-0" />
-                  <span>{spinResult.address}</span>
-                </div>
-                
-                <div className="flex items-center justify-center gap-3 text-eatspin-gray-1">
-                  <span className="inline-flex items-center gap-1">
-                    <Star size={16} className="text-[#FFD700] flex-shrink-0" />
-                    <span className="font-semibold text-brand-black">{spinResult.rating}</span>
-                    <span>/5</span>
-                  </span>
-                  <span className="text-eatspin-gray-3">|</span>
-                  <span className="font-semibold text-brand-orange">{spinResult.priceRange}</span>
-                  {spinResult.distance !== undefined && (
-                    <>
-                      <span className="text-eatspin-gray-3">|</span>
-                      <span>{estimateTravelTime(spinResult.distance)}</span>
-                    </>
-                  )}
-                </div>
-
-                {(() => {
-                  const hoursInfo = getSmartHoursLabel(spinResult);
-                  return (
-                    <div className="flex items-center justify-center gap-2">
-                      <Clock3
-                        size={16}
-                        className={
-                          hoursInfo.status === 'closing-soon'
-                            ? 'text-amber-500 flex-shrink-0'
-                            : hoursInfo.status === 'closed'
-                              ? 'text-red-400 flex-shrink-0'
-                              : 'text-brand-orange flex-shrink-0'
-                        }
-                      />
-                      <span
-                        className={
-                          hoursInfo.status === 'closing-soon'
-                            ? 'text-amber-600 font-medium'
-                            : hoursInfo.status === 'closed'
-                              ? 'text-red-400'
-                              : 'text-eatspin-gray-1'
-                        }
-                      >
-                        {hoursInfo.label}
-                      </span>
-                    </div>
-                  );
-                })()}
-                
-                {spinResult.phone && (
-                  <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                    <Phone size={16} className="text-brand-orange flex-shrink-0" />
-                    <a href={`tel:${spinResult.phone}`} className="hover:text-eatspin-orange">
-                      {spinResult.phone}
-                    </a>
-                  </div>
-                )}
-                </div>
-              )}
-              
               {spinResult.description && (
                  <p className="mt-3 text-sm text-eatspin-gray-1 leading-relaxed">
                   {spinResult.description}
                 </p>
               )}
               
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-                {spinResult.category.slice(0, 3).map((cat) => {
-                  const categoryConfig = foodCategories.find((c) => c.id === cat);
-                  return (
-                    <span
-                      key={cat}
-                      className="px-3 py-1 rounded-full text-xs font-medium text-white"
-                      style={{ backgroundColor: categoryConfig?.color || '#F54703' }}
-                    >
-                      {categoryConfig?.icon} {categoryConfig?.name}
-                    </span>
-                  );
-                })}
-              </div>
-
-              {/* Service badges */}
-              {(spinResult.delivery || spinResult.takeout || spinResult.dineIn) && (
-                <div className="mt-2 flex flex-wrap justify-center gap-1.5">
-                  {spinResult.dineIn && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      🍽️ Dine-in
-                    </span>
-                  )}
-                  {spinResult.takeout && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                      📦 Takeout
-                    </span>
-                  )}
-                  {spinResult.delivery && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
-                      🛵 Delivery
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Vibe / context tags */}
-              {(spinResult.goodForGroups || spinResult.goodForChildren || spinResult.outdoorSeating) && (
-                <div className="mt-2 flex flex-wrap justify-center gap-1.5">
-                  {spinResult.goodForGroups && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                      👥 Groups
-                    </span>
-                  )}
-                  {spinResult.goodForChildren && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-cyan-50 text-cyan-700 border border-cyan-200">
-                      👶 Kids
-                    </span>
-                  )}
-                  {spinResult.outdoorSeating && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-50 text-green-700 border border-green-200">
-                      🌿 Outdoor
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* AI-generated summary */}
-              {spinResult.generativeSummary && (
-                <p className="mt-3 text-xs italic text-eatspin-gray-1 leading-relaxed px-2">
-                  "{spinResult.generativeSummary}"
-                </p>
-              )}
-
               {/* Branded footer - visible in screenshots */}
               <div className="mt-4 pt-3 border-t border-eatspin-peach/40 flex items-center justify-center gap-2">
                 <span className="text-xs font-bold text-brand-orange">🍴 EatSpin</span>

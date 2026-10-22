@@ -39,38 +39,6 @@
           }
         }
       }
-    },
-    "challenges": {
-      "$challengeId": {
-        ".read": "auth != null",
-        ".write": "auth != null && ((!data.exists() && newData.child('meta/createdBy').val() === auth.uid && newData.child('participants/'+auth.uid).exists()) || (data.exists() && !newData.exists() && data.child('meta/endsAt').isNumber() && data.child('meta/endsAt').val() <= now))",
-        "meta": {
-          ".validate": "newData.hasChildren(['createdAt','endsAt','createdBy']) && newData.child('createdAt').isNumber() && newData.child('endsAt').isNumber() && newData.child('createdBy').isString()"
-        },
-        "participants": {
-          "$uid": {
-            ".write": "auth != null && auth.uid === $uid",
-            ".validate": "newData.hasChildren(['name','joinedAt']) && newData.child('name').isString() && newData.child('joinedAt').isNumber()",
-            "completedDays": {
-              "$dayKey": {
-                ".write": "auth != null && auth.uid === $uid",
-                ".validate": "$dayKey.matches(/^\\d{4}-\\d{2}-\\d{2}$/) && newData.val() === true"
-              }
-            }
-          }
-        }
-      }
-    },
-    "discover": {
-      "$geoKey": {
-        ".read": "auth != null",
-        "events": {
-          "$eventId": {
-            ".write": "auth != null && $geoKey.matches(/^[A-Za-z0-9_-]+$/) && !data.exists()",
-            ".validate": "newData.hasChildren(['restaurantName','mealTime','createdAt']) && newData.child('restaurantName').isString() && newData.child('mealTime').val().matches(/^(none|breakfast|lunch|dinner)$/) && newData.child('createdAt').isNumber()"
-          }
-        }
-      }
     }
   }
 }

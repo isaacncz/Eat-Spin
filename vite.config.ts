@@ -21,11 +21,8 @@ export default defineConfig({
             if (id.includes('firebase')) return 'firebase';
             if (id.includes('gsap') || id.includes('@gsap')) return 'gsap';
             if (id.includes('lucide-react')) return 'icons';
-            if (id.includes('date-fns') || id.includes('zod')) return 'utils';
             if (id.includes('@radix-ui')) return 'radix';
-            if (id.includes('embla-carousel') || id.includes('sonner') || id.includes('react-hook-form')) return 'ui-vendor';
-            if (id.includes('html-to-image')) return 'html-to-image';
-            if (id.includes('recharts') || id.includes('d3-')) return 'charts';
+            if (id.includes('sonner')) return 'ui-vendor';
           }
         },
       },

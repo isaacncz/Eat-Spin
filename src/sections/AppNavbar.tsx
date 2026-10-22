@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Users, Info, Menu, X, Sparkles, PencilLine, LogOut } from 'lucide-react';
+import { Users, Info, Menu, X, LogOut } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
 
 interface AppNavbarProps {
-  activeTab: 'auto' | 'manual';
-  onTabChange: (tab: 'auto' | 'manual') => void;
   activeRoomId: string;
   onGroupSpin: () => void;
   onAbout: () => void;
@@ -15,8 +13,6 @@ const MOBILE_HEIGHT = 56;
 const DESKTOP_HEIGHT = 48;
 
 export function AppNavbar({
-  activeTab,
-  onTabChange,
   activeRoomId,
   onGroupSpin,
   onAbout,
@@ -46,13 +42,6 @@ export function AppNavbar({
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
-
-  const handleTabChange = useCallback(
-    (tab: 'auto' | 'manual') => {
-      onTabChange(tab);
-    },
-    [onTabChange],
-  );
 
   const handleGroupSpin = useCallback(() => {
     trackEvent('navbar_group_spin');
@@ -98,9 +87,6 @@ export function AppNavbar({
                 EatSpin
               </span>
             </a>
-
-            {/* ── Tab toggle (star of the show) ── */}
-            <TabToggle activeTab={activeTab} onChange={handleTabChange} />
 
             {/* ── Right actions ── */}
             <div className="flex items-center gap-1 shrink-0">
@@ -208,90 +194,6 @@ export function AppNavbar({
         style={{ height: `var(--navbar-height, ${MOBILE_HEIGHT}px)` }}
       />
     </>
-  );
-}
-
-/* ─────────────────── Tab Toggle ─────────────────── */
-
-function TabToggle({
-  activeTab,
-  onChange,
-}: {
-  activeTab: 'auto' | 'manual';
-  onChange: (tab: 'auto' | 'manual') => void;
-}) {
-  const isAuto = activeTab === 'auto';
-
-  return (
-    <div
-      className="relative flex items-center rounded-full p-0.5"
-      style={{ background: 'rgba(254,228,199,0.55)' }}
-      role="tablist"
-      aria-label="Mode selector"
-    >
-      {/* Sliding pill indicator */}
-      <span
-        className="absolute top-0.5 bottom-0.5 rounded-full bg-brand-orange shadow-sm transition-all duration-200 ease-out"
-        style={{
-          width: 'calc(50% - 2px)',
-          left: isAuto ? '2px' : 'calc(50% + 0px)',
-        }}
-        aria-hidden
-      />
-
-      <TabButton
-        active={isAuto}
-        onClick={() => onChange('auto')}
-        icon={<Sparkles size={14} />}
-        label="Spin for me"
-        shortLabel="Spin"
-        id="tab-auto"
-      />
-      <TabButton
-        active={!isAuto}
-        onClick={() => onChange('manual')}
-        icon={<PencilLine size={14} />}
-        label="I know where"
-        shortLabel="My List"
-        id="tab-manual"
-      />
-    </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  icon,
-  label,
-  shortLabel,
-  id,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-  shortLabel: string;
-  id: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      id={id}
-      aria-selected={active}
-      onClick={onClick}
-      className={`
-        relative z-10 flex items-center gap-1 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold
-        transition-colors duration-200 whitespace-nowrap cursor-pointer
-        ${active ? 'text-white' : 'text-brand-black/70 hover:text-brand-black'}
-      `}
-    >
-      {icon}
-      {/* Full label on ≥sm, short label on xs */}
-      <span className="hidden sm:inline">{label}</span>
-      <span className="sm:hidden">{shortLabel}</span>
-    </button>
   );
 }
 

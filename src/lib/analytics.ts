@@ -17,30 +17,18 @@ declare global {
 /** Every valid analytics event and its expected params. */
 export interface AnalyticsEventMap {
   // Hero / Navigation
-  quick_spin_hero_spin: { mood: string; mealTime: string };
-  quick_spin_hero_group: void;
-  quick_spin_hero_location_request: void;
-  quick_spin_mood_select: { mood: string };
-  quick_spin_tapped: void;
-  search_mode_open: void;
   navbar_group_spin: void;
   navbar_about: void;
-  tab_switched: { tab: string };
-  mood_selected: { mood: string };
-  serves_filter_toggle: { filter: string };
 
   // Spin lifecycle
   spin_start: { mode: string; restaurant_count: number };
   spin_complete: { mode: string; restaurant_name: string; category?: string };
-  spin_blocked: { mode: string };
-  spin_again_requested: { restaurant_name: string; round_size: number; respin_count: number };
   shuffle_wheel: { restaurant_count: number };
-  range_mode_changed: { mode: string };
 
   // Sharing
-  share_result_open: { restaurant_name: string; tab: string };
-  share_result_success: { restaurant_name: string; method: string; tab: string };
-  share_result_failure: { restaurant_name: string; tab: string; error: string };
+  share_result_open: { restaurant_name: string };
+  share_result_success: { restaurant_name: string; method: string };
+  share_result_failure: { restaurant_name: string; error: string };
   spin_wrapped_share_open: { total_spins: number; current_streak: number };
   spin_wrapped_share_success: void;
   spin_wrapped_share_cancelled: void;
@@ -53,7 +41,7 @@ export interface AnalyticsEventMap {
   pwa_install_banner_closed: { spin_count: number };
 
   // Favourites
-  favourite_saved: { restaurant_name: string; mode: string };
+  favourite_saved: { restaurant_name: string };
   favourite_removed: { favourite_id: string };
 
   // Feedback
@@ -63,17 +51,10 @@ export interface AnalyticsEventMap {
 
   // Onboarding
   first_run_onboarding_dismissed: void;
-  first_run_onboarding_auto_mode_opened: void;
 
   // Challenges
-  challenge_create_requested: void;
-  challenge_join_requested: void;
-  challenge_link_copied: void;
-  challenge_left: void;
 
   // Categories
-  category_selected: { category: string; selected_count: number };
-  category_deselected: { category: string; selected_count: number };
 
   // Manual lists
   manual_list_selected: { list_id: string; list_name: string; count: number };

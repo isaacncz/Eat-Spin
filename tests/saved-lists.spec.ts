@@ -1,17 +1,12 @@
 import { test, expect } from '@playwright/test';
 
-// Shared setup: skip onboarding, go to manual tab
+// Shared setup: skip onboarding, open the app
 const setupManualTab = async (page: import('@playwright/test').Page) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('eatspin:first-run-onboarding-seen', '1');
   });
   await page.goto('/');
-  // Wait for heading to confirm page loaded
-  await page.locator('text=/What.*for/i').first().waitFor({ timeout: 10_000 });
-  // Switch to "I know where" tab
-  const manualTab = page.getByRole('tab', { name: /i know where|my list/i });
-  await manualTab.click();
-  await page.waitForTimeout(300);
+  await page.getByRole('listbox', { name: /saved lists/i }).waitFor({ timeout: 10_000 });
 };
 
 test.describe('Saved lists chips', () => {

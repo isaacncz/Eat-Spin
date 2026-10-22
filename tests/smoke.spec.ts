@@ -6,21 +6,6 @@ test.describe('Smoke tests', () => {
     await expect(page).toHaveTitle(/EatSpin/);
   });
 
-  test('hero section renders with meal-time heading', async ({ page }) => {
-    await page.goto('/');
-    // The heading contains dynamic meal time: "What's for breakfast/lunch/dinner/eating?"
-    const heading = page.locator('text=/What.*for/i').first();
-    await expect(heading).toBeVisible({ timeout: 10_000 });
-  });
-
-  test('mood selector buttons are visible', async ({ page }) => {
-    await page.goto('/');
-    const moods = ['Quick Bite', 'Treat Myself', 'Healthy', 'Surprise Me'];
-    for (const mood of moods) {
-      await expect(page.getByText(mood, { exact: false }).first()).toBeVisible({ timeout: 10_000 });
-    }
-  });
-
   test('Open Graph meta tags are present', async ({ page }) => {
     await page.goto('/');
     const ogTitle = page.locator('meta[property="og:title"]');
@@ -39,24 +24,12 @@ test.describe('Smoke tests', () => {
     await expect(twitterCard).toHaveAttribute('content', 'summary');
   });
 
-  test('"I know where" tab hides hero and shows wheel section', async ({ page }) => {
+  test('opens straight to the list-only wheel', async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem('eatspin:first-run-onboarding-seen', '1');
     });
     await page.goto('/');
-
-    // Hero should be visible in auto mode
-    const heading = page.locator('text=/What.*for/i').first();
-    await expect(heading).toBeVisible({ timeout: 10_000 });
-
-    // Switch to manual mode
-    const manualTab = page.getByRole('tab', { name: /i know where|my list/i });
-    await manualTab.click();
-
-    // Hero should disappear
-    await expect(heading).not.toBeVisible({ timeout: 5_000 });
-
-    // Manual mode content should be visible (wheel or add input)
-    await expect(page.getByText(/add restaurants to start/i)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/add restaurants to start/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('tab')).toHaveCount(0);
   });
 });

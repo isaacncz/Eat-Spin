@@ -220,7 +220,7 @@ function App() {
 
   const [manualInput, setManualInput] = useState('');
   const [shareListOpen, setShareListOpen] = useState(false);
-  const [incomingShareId, setIncomingShareId] = useState<string | null>(() => new URLSearchParams(window.location.search).get('list'));
+  const [incomingShareId, setIncomingShareId] = useState<string | null>(() => { const id = new URLSearchParams(window.location.search).get('list'); return id === '' ? 'invalid' : id; });
   const [importedListToSpin, setImportedListToSpin] = useState<string | null>(null);
   const {
     manualLists,

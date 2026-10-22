@@ -594,7 +594,7 @@ export const fetchNearbyGoogleRestaurants = async (
       excludedTypes: EXCLUDED_TYPES,
       maxResultCount,
       rankPreference: 'POPULARITY',
-      openNow: true,
+      // Nearby Search (New) has no openNow request filter; opening status is filtered locally.
       languageCode: options.language,
       regionCode: options.region,
       locationRestriction: {

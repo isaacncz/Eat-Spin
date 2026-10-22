@@ -11,13 +11,18 @@ interface PhotoCarouselProps {
   photos: string[];
   alt: string;
   className?: string;
+  /**
+   * Dots as buttons (default). Screens that hold every control to 44px turn this off: the
+   * dots then only show where you are, and swiping or the arrow keys still change photo.
+   */
+  interactiveDots?: boolean;
 }
 
 /**
  * Swipeable photo carousel for restaurant result cards.
  * Shows dot indicators when multiple photos are available.
  */
-export function PhotoCarousel({ photos, alt, className }: PhotoCarouselProps) {
+export function PhotoCarousel({ photos, alt, className, interactiveDots = true }: PhotoCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [api, setApi] = useState<CarouselApi>();
 
@@ -70,19 +75,22 @@ export function PhotoCarousel({ photos, alt, className }: PhotoCarouselProps) {
 
       {/* Dot indicators */}
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
-        {photos.map((_, i) => (
-          <button
-            key={i}
-            aria-label={`Go to photo ${i + 1}`}
-            className={cn(
-              'h-1.5 rounded-full transition-all duration-200',
-              i === currentIndex
-                ? 'w-4 bg-white shadow-sm'
-                : 'w-1.5 bg-white/60',
-            )}
-            onClick={() => api?.scrollTo(i)}
-          />
-        ))}
+        {photos.map((_, i) => {
+          const dotClass = cn(
+            'h-1.5 rounded-full transition-all duration-200',
+            i === currentIndex ? 'w-4 bg-white shadow-sm' : 'w-1.5 bg-white/60',
+          );
+          return interactiveDots ? (
+            <button
+              key={i}
+              aria-label={`Go to photo ${i + 1}`}
+              className={dotClass}
+              onClick={() => api?.scrollTo(i)}
+            />
+          ) : (
+            <span key={i} aria-hidden="true" className={dotClass} />
+          );
+        })}
       </div>
 
       {/* Photo counter badge */}

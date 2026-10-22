@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
 /** Wednesday 12:30, so the bundled fallback places are open. Time keeps moving (the wheel animation needs it). */
-export const useLunchtimeClock = async (page: Page) => {
+export const setLunchtimeClock = async (page: Page) => {
   await page.addInitScript(() => {
     const RealDate = Date;
     const offset = new RealDate(2025, 3, 16, 12, 30, 0).getTime() - RealDate.now();
@@ -67,3 +67,33 @@ export const pinnedSpinButton = (page: Page): Locator =>
 
 export const servesGroup = (sheet: Locator): Locator =>
   sheet.getByRole('group', { name: /filter by what.*served/i });
+
+/** Replaces window.open and records the URLs, so "Let's go!" does not open real tabs. */
+export const recordWindowOpen = async (page: Page) => {
+  await page.addInitScript(() => {
+    const opened: string[] = [];
+    (window as unknown as { __opened: string[] }).__opened = opened;
+    window.open = (url?: string | URL) => {
+      opened.push(String(url));
+      return null;
+    };
+  });
+};
+
+export const openedUrls = (page: Page): Promise<string[]> =>
+  page.evaluate(() => (window as unknown as { __opened?: string[] }).__opened ?? []);
+
+/** The full-screen result view that opens when the wheel stops. */
+export const resultDialog = (page: Page): Locator => page.getByRole('dialog', { name: 'You got it!' });
+
+/** Taps the pinned Spin button and waits for the result view (the wheel takes about 6 seconds). */
+export const spinToResult = async (page: Page): Promise<Locator> => {
+  const spin = page.getByRole('button', { name: /^spin!$/i });
+  await expect(spin).toBeVisible({ timeout: 20_000 });
+  await spin.click();
+  const dialog = resultDialog(page);
+  await expect(dialog).toBeVisible({ timeout: 25_000 });
+  // Let the slide-in finish so positions and sizes are final.
+  await dialog.evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)));
+  return dialog;
+};

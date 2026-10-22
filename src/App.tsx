@@ -281,6 +281,7 @@ function App() {
     favourites,
     isFavourite: isFavouriteCheck,
     getLastVisitedAt,
+    getVisitCount,
     save: saveFavourite,
     remove: removeFavouriteEntry,
     restore: restoreFavouriteEntry,
@@ -835,9 +836,12 @@ function App() {
     // Open Google Maps navigation — prefer the official URI from the API
     window.open(getMapsUrl(restaurant), '_blank', 'noopener,noreferrer');
 
-    toast.success(`Navigating to ${restaurant.name}!`, {
-      description: 'We\'ll ask how it was next time you open the app.',
-    });
+    // The Result view shows this message itself, where a toast would sit on top of the reward tiles.
+    if (shownRarity === undefined) {
+      toast.success(`Navigating to ${restaurant.name}!`, {
+        description: 'We\'ll ask how it was next time you open the app.',
+      });
+    }
 
     return buildLetsGoReward(reward, rarity, spinHistorySummary.currentStreak);
   }, [game, getLastVisitedAt, recordVisitAndSave, reportQuestEvent, spinHistorySummary.currentStreak]);
@@ -1571,6 +1575,7 @@ function App() {
                 canSpinAgain={wheelRestaurants.length >= 2}
                 isFavourite={isFavouriteCheck}
                 getLastVisitedAt={getLastVisitedAt}
+                getVisitCount={getVisitCount}
                 helperText={autoAvailabilityHelperText || undefined}
                 emptyStateTitle="No open restaurants ready to spin"
                 emptyStateSubtitle={autoEmptyStateSubtitle}
@@ -1948,10 +1953,10 @@ function App() {
         onOpenAutoMode={handleOnboardingOpenAutoMode}
       />
 
-      {/* Toasts sit above the fixed bottom tab bar */}
+      {/* Toasts sit above the fixed bottom tab bar, or above the Result view's pinned buttons while it covers the bar */}
       <Toaster
-        offset={{ bottom: 'calc(var(--bottom-nav-height) + 16px)' }}
-        mobileOffset={{ bottom: 'calc(var(--bottom-nav-height) + 12px)' }}
+        offset={{ bottom: 'calc(var(--toast-bottom, var(--bottom-nav-height)) + 16px)' }}
+        mobileOffset={{ bottom: 'calc(var(--toast-bottom, var(--bottom-nav-height)) + 12px)' }}
       />
     </div>
   );

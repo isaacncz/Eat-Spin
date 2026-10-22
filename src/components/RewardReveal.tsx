@@ -117,7 +117,7 @@ export function RewardTiles({ reward, animate }: RewardTilesProps) {
           Icon={Zap}
           value={`+${reward.xp}`}
           label={xpLabel}
-          surface={reward.awarded ? 'bg-arcade-cyan' : 'bg-white'}
+          surface={reward.awarded ? 'bg-arcade-yellow' : 'bg-white'}
           animate={animate}
           delayMs={0}
         />
@@ -125,7 +125,7 @@ export function RewardTiles({ reward, animate }: RewardTilesProps) {
           Icon={Coins}
           value={`+${reward.coins}`}
           label="coins"
-          surface={reward.awarded ? 'bg-arcade-yellow' : 'bg-white'}
+          surface={reward.awarded ? 'bg-arcade-cyan' : 'bg-white'}
           animate={animate}
           delayMs={110}
         />
@@ -139,7 +139,7 @@ export function RewardTiles({ reward, animate }: RewardTilesProps) {
         />
       </ul>
       {!reward.awarded && (
-        <p className="mt-2 text-center text-xs font-medium text-eatspin-gray-1">
+        <p className="mt-2 text-center text-xs font-medium text-brand-ink">
           You already earned XP for this place today. Come back tomorrow for more.
         </p>
       )}

@@ -111,8 +111,10 @@ export const addFavourite = async (
     const store = tx.objectStore(STORE_NAME);
     const request = store.put(entry);
 
-    request.onsuccess = () => resolve(entry);
-    request.onerror = () => reject(request.error);
+    // A successful put request can still be rolled back by an aborted transaction.
+    tx.oncomplete = () => { db.close(); resolve(entry); };
+    tx.onerror = () => { db.close(); reject(tx.error ?? request.error ?? new Error('Favourite save failed')); };
+    tx.onabort = () => { db.close(); reject(tx.error ?? new Error('Favourite save was aborted')); };
   });
 };
 

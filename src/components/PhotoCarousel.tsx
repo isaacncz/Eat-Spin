@@ -22,13 +22,21 @@ interface PhotoCarouselProps {
  * Swipeable photo carousel for restaurant result cards.
  * Shows dot indicators when multiple photos are available.
  */
-export function PhotoCarousel({ photos, alt, className, interactiveDots = true }: PhotoCarouselProps) {
+export function PhotoCarousel(props: PhotoCarouselProps) {
+  return <PhotoCarouselView key={props.photos.join('\n')} {...props} />;
+}
+function PhotoCarouselView({ photos, alt, className, interactiveDots = true }: PhotoCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [requested, setRequested] = useState<Set<number>>(() => new Set([0]));
   const [api, setApi] = useState<CarouselApi>();
 
   useEffect(() => {
     if (!api) return;
-    const onSelect = () => setCurrentIndex(api.selectedScrollSnap());
+    const onSelect = () => {
+      const index = api.selectedScrollSnap();
+      setCurrentIndex(index);
+      setRequested((previous) => previous.has(index) ? previous : new Set([...previous, index]));
+    };
     api.on('select', onSelect);
     onSelect(); // sync initial state
     return () => { api.off('select', onSelect); };
@@ -61,13 +69,13 @@ export function PhotoCarousel({ photos, alt, className, interactiveDots = true }
         <CarouselContent className="ml-0">
           {photos.map((photo, i) => (
             <CarouselItem key={i} className="pl-0">
-              <img
+              {requested.has(i) ? <img
                 src={photo}
                 alt={`${alt} — photo ${i + 1}`}
                 className="h-48 w-full object-cover"
                 loading={i === 0 ? 'eager' : 'lazy'}
                 referrerPolicy="no-referrer"
-              />
+              /> : <div className="h-48 w-full bg-brand-linen" aria-label={`${alt} — photo ${i + 1}, not loaded`} />}
             </CarouselItem>
           ))}
         </CarouselContent>

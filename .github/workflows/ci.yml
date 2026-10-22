@@ -1,0 +1,134 @@
+name: CI
+
+# Runs on every pull request, whatever its base branch (no `branches:` filter on
+# purpose, so stacked PRs that target another feature branch are checked too),
+# and on pushes to main.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A newer push to the same PR cancels the older run. Runs on main are never
+# cancelled, so every commit on main keeps its own result.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # Must be Node >= 22.12. Vite 7 / @vitejs/plugin-react 5 need ^20.19.0 ||
+  # >=22.12.0, and vitest 5 (added by the stacked PRs) needs ^22.12.0 ||
+  # ^24.0.0 || >=26.0.0 (npm registry, vitest 5.0.5). The repo has no engines
+  # field or .nvmrc. `22` resolves to the newest 22.x, which is above 22.12.
+  NODE_VERSION: 22
+
+jobs:
+  # tsc, eslint and the unit script. No browser needed.
+  static:
+    name: Typecheck, lint, unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: tsc -b
+        run: npx tsc -b
+
+      # ADVISORY until main is clean. `eslint .` reports 19 errors and 2 warnings
+      # on main at 09054ae (src/ and tests/), so a blocking step would turn every
+      # PR red. The failure is surfaced as a warning annotation below instead.
+      # TODO: delete `continue-on-error` once `npm run lint` passes on main.
+      - name: eslint
+        id: eslint
+        continue-on-error: true
+        run: npm run lint
+
+      # ADVISORY until main is clean. `npm run test:cache` fails on main at
+      # 09054ae: the fixture in scripts/restaurantUtils.cache.test.ts has no
+      # `userRatingCount`, so the review-count quality gate in
+      # src/lib/restaurantUtils.ts drops it and the second assertion sees 0
+      # results instead of 1.
+      # TODO: delete `continue-on-error` once the script passes on main.
+      - name: Unit tests (test:cache)
+        id: unit
+        continue-on-error: true
+        run: npm run test:cache
+
+      - name: Flag advisory eslint failure
+        if: ${{ steps.eslint.outcome == 'failure' }}
+        run: echo "::warning title=ESLint is advisory::eslint reported problems. It is non-blocking until main is lint-clean (19 errors, 2 warnings at 09054ae). See the eslint step log."
+
+      - name: Flag advisory unit test failure
+        if: ${{ steps.unit.outcome == 'failure' }}
+        run: echo "::warning title=Unit tests are advisory::npm run test:cache failed. It is non-blocking until main passes it (stale fixture at 09054ae). See the unit test step log."
+
+  # Playwright smoke. The `webServer` block in playwright.config.ts starts
+  # `npm run dev` on :5173, so no build step is needed. The config runs the
+  # smoke file on both projects (chromium = Desktop Chrome, mobile = Pixel 7);
+  # both are Chromium based, so only Chromium is installed.
+  smoke:
+    name: Playwright smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # GitHub sets CI=true, which the config uses for retries: 2, workers: 1
+      # and forbidOnly. No VITE_* env vars are needed for the smoke file.
+      - name: Playwright smoke tests
+        run: npm run test:e2e -- tests/smoke.spec.ts
+
+      # Uploaded for passing runs too, so retried (flaky) tests can be inspected.
+      # Never committed. run_attempt keeps the name unique when a run is re-run.
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # Single stable check name for branch protection. Require "CI gate" and the
+  # set of jobs behind it can change without editing the ruleset.
+  #
+  # #73 (mobile-first checks): add its jobs above (e.g. `mobile-first`,
+  # `lighthouse`) and list them in `needs` below. Each job needs its own
+  # checkout + setup-node + `npm ci` block, same as `smoke`.
+  gate:
+    name: CI gate
+    if: ${{ always() }}
+    needs: [static, smoke]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Fail if a required job failed or was cancelled
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          echo "One or more required jobs did not succeed."
+          exit 1

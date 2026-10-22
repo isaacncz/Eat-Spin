@@ -114,8 +114,9 @@ export function SpinScreen({
   const [selectedMood, setSelectedMood] = useState<FoodMood | null>(null);
   const [isSearchMode, setIsSearchMode] = useState(false);
 
-  // The pinned button sits over the bottom of the page, so scrolling a result into view
-  // must leave room for it as well as for the tab bar.
+  // The pinned button sits over the bottom of the page, so anything scrolled into view (such as
+  // the "Your pick" button that takes focus when the result view closes) must clear it as well
+  // as the tab bar.
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty('scroll-padding-bottom', 'calc(var(--bottom-nav-height) + 5.5rem)');

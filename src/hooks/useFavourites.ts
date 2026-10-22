@@ -20,6 +20,8 @@ interface UseFavouritesReturn {
   isFavourite: (restaurant: Restaurant) => boolean;
   /** Epoch ms of the last "Let's go!" for this restaurant, or undefined if it was never visited. */
   getLastVisitedAt: (restaurant: Restaurant) => number | undefined;
+  /** How many times "Let's go!" was tapped for this restaurant, or undefined if it is not saved. */
+  getVisitCount: (restaurant: Restaurant) => number | undefined;
   /** Save a restaurant as a favourite. */
   save: (restaurant: Restaurant, savedFrom: FavouriteEntry['savedFrom']) => Promise<void>;
   /** Remove a favourite by ID. Returns the deleted entry (for undo). */
@@ -67,6 +69,14 @@ export const useFavourites = (): UseFavouritesReturn => {
     (restaurant: Restaurant): number | undefined => {
       const id = deriveFavouriteId(restaurant);
       return favourites.find((f) => f.id === id)?.lastVisitedAt;
+    },
+    [favourites],
+  );
+
+  const getVisitCount = useCallback(
+    (restaurant: Restaurant): number | undefined => {
+      const id = deriveFavouriteId(restaurant);
+      return favourites.find((f) => f.id === id)?.visitCount;
     },
     [favourites],
   );
@@ -125,6 +135,7 @@ export const useFavourites = (): UseFavouritesReturn => {
     isLoading,
     isFavourite: isFavouriteCheck,
     getLastVisitedAt,
+    getVisitCount,
     save,
     remove,
     restore,

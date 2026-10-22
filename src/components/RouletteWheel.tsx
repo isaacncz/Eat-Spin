@@ -1,17 +1,13 @@
 import { useState, useRef, useEffect, useMemo, useCallback, useImperativeHandle, type Ref } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Heart, Navigation, Share2, Volume2, VolumeX, RefreshCw } from 'lucide-react';
+import { Loader2, MapPin, Heart, Volume2, VolumeX } from 'lucide-react';
 import gsap from 'gsap';
-import { foodCategories } from '@/data/restaurants';
-import { Button } from '@/components/ui/button';
 import { playSpinTick, playSpinWin, startSpinDrumroll, stopSpinDrumroll, triggerSpinHaptic } from '@/lib/spinAudio';
-import { PhotoCarousel } from '@/components/PhotoCarousel';
-import { RarityRibbon } from '@/components/RarityBadge';
-import { RewardTiles } from '@/components/RewardReveal';
+import { ResultScreen, type ResultVisit } from '@/components/ResultScreen';
 import { LevelUpDialog } from '@/components/LevelUpDialog';
 import { getRarity, type Rarity } from '@/lib/rarity';
 import type { LetsGoReward } from '@/lib/letsGoReward';
-import { getMapsUrl } from '@/lib/maps';
+import { estimateTravelTime } from '@/lib/travelTime';
 
 
 /** What a parent can call on the wheel. Lets a screen own the spin button. */
@@ -68,6 +64,8 @@ interface RouletteWheelProps {
    * the result card shows a rarity ribbon. Rarity is computed from this, never stored.
    */
   getLastVisitedAt?: (restaurant: Restaurant) => number | undefined;
+  /** How many times the player tapped "Let's go!" for a restaurant. Shown on the result screen. */
+  getVisitCount?: (restaurant: Restaurant) => number | undefined;
 }
 
 // Vibrant appetizing color palette
@@ -92,19 +90,6 @@ const WHEEL_COLORS = [
 function getSegmentColor(index: number): string {
   return WHEEL_COLORS[index % WHEEL_COLORS.length];
 }
-
-/** Estimate travel time from straight-line distance using road detour factor. */
-const estimateTravelTime = (straightLineKm: number): string => {
-  const roadKm = straightLineKm * 1.4; // detour factor
-  if (roadKm <= 1.2) {
-    // Walking range
-    const minutes = Math.round((roadKm / 5) * 60); // 5 km/h walk speed
-    return `~${Math.max(1, minutes)} min walk`;
-  }
-  // Driving range — urban avg ~30 km/h
-  const minutes = Math.round((roadKm / 30) * 60);
-  return `~${Math.max(1, minutes)} min drive`;
-};
 
 const compactRestaurantName = (name: string, maxLength: number): string => {
   const normalized = name.trim().replace(/\s+/g, ' ');
@@ -168,8 +153,6 @@ const loadSoundPreference = (): boolean => {
 };
 
 
-import { getSmartHoursLabel } from '@/lib/smartHours';
-
 export function RouletteWheel({
   ref,
   hideSpinButton = false,
@@ -198,6 +181,7 @@ export function RouletteWheel({
   canSpinAgain = false,
   isFavourite,
   getLastVisitedAt,
+  getVisitCount,
 }: RouletteWheelProps) {
   const ANTICIPATION_DURATION_S = 0.5;
   const ANTICIPATION_DEG = 50;
@@ -214,6 +198,12 @@ export function RouletteWheel({
   // Frozen when the wheel stops, so the tier cannot change after "Let's go!" records the visit.
   const [resultRarity, setResultRarity] = useState<Rarity | null>(null);
   const getLastVisitedAtRef = useRef(getLastVisitedAt);
+  const getVisitCountRef = useRef(getVisitCount);
+  // Last visit and visit count when the wheel stopped. Frozen with the rarity, since claiming records a visit.
+  const [resultVisit, setResultVisit] = useState<ResultVisit | null>(null);
+  // The result is a full-screen view. Back closes it and leaves a "Your pick" button under the wheel.
+  const [resultOpen, setResultOpen] = useState(false);
+  const reopenResultRef = useRef<HTMLButtonElement>(null);
   // Reward reveal for the current result. Reset on every spin, so it happens once per result.
   const [claim, setClaim] = useState<{ reward: LetsGoReward | null } | null>(null);
   const claimedResultRef = useRef<Restaurant | null>(null);
@@ -224,11 +214,9 @@ export function RouletteWheel({
   const celebrationTimeoutsRef = useRef<number[]>([]);
   const celebrationElementsRef = useRef<HTMLElement[]>([]);
   const recenterTimeoutRef = useRef<number | null>(null);
-  const resultScrollTimeoutRef = useRef<number | null>(null);
   const lastExternalSpinIdRef = useRef('');
   const [winnerSliceIndex, setWinnerSliceIndex] = useState<number | null>(null);
   const [isWinnerSliceHighlighted, setIsWinnerSliceHighlighted] = useState(false);
-  const resultCardRef = useRef<HTMLDivElement>(null);
   const lastTickSegmentRef = useRef<number | null>(null);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => loadSoundPreference());
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -237,7 +225,8 @@ export function RouletteWheel({
 
   useEffect(() => {
     getLastVisitedAtRef.current = getLastVisitedAt;
-  }, [getLastVisitedAt]);
+    getVisitCountRef.current = getVisitCount;
+  }, [getLastVisitedAt, getVisitCount]);
 
   const syncWheelRotationVar = useCallback((rotation: number) => {
     if (!wheelRef.current) return;
@@ -409,6 +398,8 @@ export function RouletteWheel({
     setIsSpinning(true);
     setSpinResult(null);
     setResultRarity(null);
+    setResultVisit(null);
+    setResultOpen(false);
     setClaim(null);
     setLevelUp(null);
     claimedResultRef.current = null;
@@ -447,7 +438,10 @@ export function RouletteWheel({
         stopSpinDrumroll();
         setIsSpinning(false);
         setSpinResult(result);
-        setResultRarity(getLastVisitedAtRef.current ? getRarity(getLastVisitedAtRef.current(result)) : null);
+        const lastVisitedAt = getLastVisitedAtRef.current?.(result);
+        setResultRarity(getLastVisitedAtRef.current ? getRarity(lastVisitedAt) : null);
+        setResultVisit(getLastVisitedAtRef.current ? { lastVisitedAt, visitCount: getVisitCountRef.current?.(result) } : null);
+        setResultOpen(true);
         setWinnerSliceIndex(selectedIndex);
         setIsWinnerSliceHighlighted(true);
         winnerPulseTimeoutRef.current = window.setTimeout(() => {
@@ -458,22 +452,6 @@ export function RouletteWheel({
           triggerSpinHaptic();
         }
         onSpinComplete(result);
-
-        if (resultScrollTimeoutRef.current !== null) {
-          window.clearTimeout(resultScrollTimeoutRef.current);
-        }
-        resultScrollTimeoutRef.current = window.setTimeout(() => {
-          const resultCard = document.getElementById('spin-result-card');
-          if (resultCard) {
-            const cardRect = resultCard.getBoundingClientRect();
-            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-            const isFullyVisible = cardRect.top >= 0 && cardRect.bottom <= viewportHeight;
-            if (!isFullyVisible) {
-              resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-          }
-          resultScrollTimeoutRef.current = null;
-        }, 100);
       },
     });
   }, [canPlayEffects, onSpinComplete, recenterWheel, restaurants, setIsSpinning, syncWheelRotationVar]);
@@ -507,6 +485,12 @@ export function RouletteWheel({
         }, LEVEL_UP_DELAY_MS);
       }
     }
+  };
+
+  // Radix returns focus to a trigger, and the result view has none. Put it on "Your pick".
+  const handleResultCloseAutoFocus = (event: Event) => {
+    event.preventDefault();
+    reopenResultRef.current?.focus();
   };
 
   const handleSpinClick = () => {
@@ -564,18 +548,9 @@ export function RouletteWheel({
   useEffect(() => {
     if (!spinResult) return;
 
-    // People who prefer reduced motion get the card and rewards with no animation at all.
+    // People who prefer reduced motion get the result and rewards with no animation at all.
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     if (reduceMotion) return;
-
-    const resultCard = document.getElementById('spin-result-card');
-    if (resultCard) {
-      gsap.fromTo(
-        resultCard,
-        { autoAlpha: 0, y: 30, scale: 0.92 },
-        { autoAlpha: 1, y: 0, scale: 1, duration: 0.6, ease: 'elastic.out(1, 0.55)' },
-      );
-    }
 
     triggerCelebration();
   }, [spinResult, triggerCelebration]);
@@ -586,9 +561,6 @@ export function RouletteWheel({
       stopSpinDrumroll();
       if (recenterTimeoutRef.current !== null) {
         window.clearTimeout(recenterTimeoutRef.current);
-      }
-      if (resultScrollTimeoutRef.current !== null) {
-        window.clearTimeout(resultScrollTimeoutRef.current);
       }
       if (winnerPulseTimeoutRef.current !== null) {
         window.clearTimeout(winnerPulseTimeoutRef.current);
@@ -786,6 +758,19 @@ export function RouletteWheel({
         </div>
       </div>
 
+      {/* After Back, the pick stays one tap away. */}
+      {spinResult && !resultOpen && (
+        <button
+          ref={reopenResultRef}
+          type="button"
+          onClick={() => setResultOpen(true)}
+          className="flex min-h-12 w-full max-w-sm items-center justify-center gap-2 rounded-2xl border-[3px] border-brand-ink bg-arcade-pink px-4 py-2 font-heading text-base font-bold text-brand-ink shadow-pop active:translate-y-[3px] active:shadow-none motion-reduce:transition-none"
+        >
+          <span className="shrink-0">Your pick:</span>
+          <span className="truncate">{spinResult.name}</span>
+        </button>
+      )}
+
       {/* Spin Button */}
       {!hideSpinButton && (
       <button
@@ -879,274 +864,30 @@ export function RouletteWheel({
         </div>
       )}
 
-      {/* Result Display */}
+      {/* Result: a full-screen view that opens when the wheel stops. */}
       {spinResult && (
-        <div id="spin-result-card" ref={resultCardRef} className="w-full max-w-md relative z-10">
-          <div className="celebration-ring celebration-ring-sm" />
-          <div className="celebration-ring celebration-ring-lg" />
-
-          <div className="bg-white rounded-2xl text-center relative celebration-result-card overflow-hidden">
-            {/* Branded header strip */}
-            <div className="bg-arcade-pink border-b-4 border-brand-ink px-6 py-3">
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-2.5 h-2.5 bg-brand-ink rounded-full animate-pulse" />
-                <span className="text-sm font-bold text-brand-ink tracking-wide uppercase">EatSpin picked this for you!</span>
-                <div className="w-2.5 h-2.5 bg-brand-ink rounded-full animate-pulse" />
-              </div>
-            </div>
-
-            {resultRarity && <RarityRibbon rarity={resultRarity} />}
-
-            <div className="p-6">
-              <h3 className="font-heading text-2xl sm:text-3xl font-bold text-brand-black mb-3 flex items-center justify-center gap-2">
-                <Trophy size={22} className="celebration-floating-icon text-brand-ink" />
-                {spinResult.name}
-                <Trophy size={22} className="celebration-floating-icon text-brand-ink" />
-              </h3>
-
-              {!isManualResult && (spinResult.photos?.length ?? 0) > 1 ? (
-                <PhotoCarousel
-                  photos={spinResult.photos!}
-                  alt={`Photos of ${spinResult.name}`}
-                  className="mb-4"
-                />
-              ) : !isManualResult && spinResult.image ? (
-                <div className="mb-4 overflow-hidden rounded-xl border-2 border-brand-ink">
-                  <img
-                    src={spinResult.image}
-                    alt={`Photo of ${spinResult.name}`}
-                    className="h-48 w-full object-cover"
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              ) : null}
-              
-              {!isManualResult && (
-                <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                  <MapPin size={16} className="text-brand-orange flex-shrink-0" />
-                  <span>{spinResult.address}</span>
-                </div>
-                
-                <div className="flex items-center justify-center gap-3 text-eatspin-gray-1">
-                  <span className="inline-flex items-center gap-1">
-                    <Star size={16} className="text-[#FFD700] flex-shrink-0" />
-                    <span className="font-semibold text-brand-black">{spinResult.rating}</span>
-                    <span>/5</span>
-                  </span>
-                  <span className="text-eatspin-gray-3">|</span>
-                  <span className="font-semibold text-brand-orange">{spinResult.priceRange}</span>
-                  {spinResult.distance !== undefined && (
-                    <>
-                      <span className="text-eatspin-gray-3">|</span>
-                      <span>{estimateTravelTime(spinResult.distance)}</span>
-                    </>
-                  )}
-                </div>
-
-                {(() => {
-                  const hoursInfo = getSmartHoursLabel(spinResult);
-                  return (
-                    <div className="flex items-center justify-center gap-2">
-                      <Clock3
-                        size={16}
-                        className={
-                          hoursInfo.status === 'closing-soon'
-                            ? 'text-amber-500 flex-shrink-0'
-                            : hoursInfo.status === 'closed'
-                              ? 'text-red-400 flex-shrink-0'
-                              : 'text-brand-orange flex-shrink-0'
-                        }
-                      />
-                      <span
-                        className={
-                          hoursInfo.status === 'closing-soon'
-                            ? 'text-amber-600 font-medium'
-                            : hoursInfo.status === 'closed'
-                              ? 'text-red-400'
-                              : 'text-eatspin-gray-1'
-                        }
-                      >
-                        {hoursInfo.label}
-                      </span>
-                    </div>
-                  );
-                })()}
-                
-                {spinResult.phone && (
-                  <div className="flex items-center justify-center gap-2 text-eatspin-gray-1">
-                    <Phone size={16} className="text-brand-orange flex-shrink-0" />
-                    <a href={`tel:${spinResult.phone}`} className="hover:text-eatspin-orange">
-                      {spinResult.phone}
-                    </a>
-                  </div>
-                )}
-                </div>
-              )}
-              
-              {spinResult.description && (
-                 <p className="mt-3 text-sm text-eatspin-gray-1 leading-relaxed">
-                  {spinResult.description}
-                </p>
-              )}
-              
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-                {spinResult.category.slice(0, 3).map((cat) => {
-                  const categoryConfig = foodCategories.find((c) => c.id === cat);
-                  return (
-                    <span
-                      key={cat}
-                      className="px-3 py-1 rounded-full border-2 border-brand-ink bg-white text-xs font-semibold text-brand-ink"
-                      style={{ boxShadow: `0 2px 0 0 ${categoryConfig?.color || '#FF4D8D'}` }}
-                    >
-                      {categoryConfig?.icon} {categoryConfig?.name}
-                    </span>
-                  );
-                })}
-              </div>
-
-              {/* Service badges */}
-              {(spinResult.delivery || spinResult.takeout || spinResult.dineIn) && (
-                <div className="mt-2 flex flex-wrap justify-center gap-1.5">
-                  {spinResult.dineIn && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      🍽️ Dine-in
-                    </span>
-                  )}
-                  {spinResult.takeout && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                      📦 Takeout
-                    </span>
-                  )}
-                  {spinResult.delivery && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
-                      🛵 Delivery
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Vibe / context tags */}
-              {(spinResult.goodForGroups || spinResult.goodForChildren || spinResult.outdoorSeating) && (
-                <div className="mt-2 flex flex-wrap justify-center gap-1.5">
-                  {spinResult.goodForGroups && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                      👥 Groups
-                    </span>
-                  )}
-                  {spinResult.goodForChildren && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-cyan-50 text-cyan-700 border border-cyan-200">
-                      👶 Kids
-                    </span>
-                  )}
-                  {spinResult.outdoorSeating && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-50 text-green-700 border border-green-200">
-                      🌿 Outdoor
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* AI-generated summary */}
-              {spinResult.generativeSummary && (
-                <p className="mt-3 text-xs italic text-eatspin-gray-1 leading-relaxed px-2">
-                  "{spinResult.generativeSummary}"
-                </p>
-              )}
-
-              {/* Branded footer - visible in screenshots */}
-              <div className="mt-4 pt-3 border-t-2 border-brand-ink/20 flex items-center justify-center gap-2">
-                <span className="text-xs font-bold text-brand-orange">🍴 EatSpin</span>
-                <span className="text-[10px] text-eatspin-gray-2">•</span>
-                <span className="text-[10px] text-eatspin-gray-2">Spin to decide what to eat</span>
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="px-6 pb-6 space-y-2">
-              {/* Persistent live region so screen readers announce the reward when it appears. */}
-              <div role="status" aria-live="polite">
-                {claim?.reward && <RewardTiles reward={claim.reward} animate={!prefersReducedMotion} />}
-              </div>
-
-              {/* Primary action: claim once, then it turns into a plain Maps link. */}
-              {onLetsGo && !claim && (
-                <Button
-                  className="h-12 w-full bg-brand-orange hover:bg-brand-orange/90 text-white font-heading font-bold text-base rounded-xl transition-all"
-                  onClick={handleClaim}
-                >
-                  <Navigation size={18} className="mr-1.5" />
-                  Let's go! Claim reward
-                </Button>
-              )}
-              {onLetsGo && claim && (
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-12 w-full rounded-xl border-brand-ink text-brand-ink hover:bg-arcade-yellow font-heading font-bold text-base"
-                >
-                  <a href={getMapsUrl(spinResult)} target="_blank" rel="noopener noreferrer">
-                    <Navigation size={18} className="mr-1.5" />
-                    Open in Maps
-                  </a>
-                </Button>
-              )}
-
-              {/* Share + Save + Spin Again */}
-              <div className="flex flex-wrap gap-2">
-                {onShareResult && (
-                  <Button
-                    variant="outline"
-                    className="h-11 min-w-[7rem] flex-1 rounded-xl border-brand-orange text-brand-orange hover:bg-brand-orange/10 font-heading font-bold text-base"
-                    onClick={() => {
-                      const cardElement = resultCardRef.current;
-                      if (!cardElement) return;
-                      void onShareResult(spinResult, cardElement);
-                    }}
-                  >
-                    <Share2 size={18} className="mr-1.5" />
-                    Share
-                  </Button>
-                )}
-                {onSaveFavourite && (
-                  <Button
-                    variant={isFavourite?.(spinResult) ? 'default' : 'outline'}
-                    className={`h-11 min-w-[7rem] flex-1 rounded-xl ${isFavourite?.(spinResult)
-                      ? 'bg-arcade-pink hover:bg-arcade-pink/90 text-brand-ink font-heading font-bold'
-                      : 'text-brand-ink hover:bg-arcade-pink/20 font-heading font-bold'
-                    }`}
-                    onClick={() => onSaveFavourite(spinResult)}
-                    disabled={isFavourite?.(spinResult)}
-                  >
-                    <Heart size={15} className={`mr-1 ${isFavourite?.(spinResult) ? 'fill-current' : ''}`} />
-                    {isFavourite?.(spinResult) ? 'Saved!' : 'Save'}
-                  </Button>
-                )}
-                {onSpinAgain && (
-                  <Button
-                    variant="outline"
-                    className="h-11 min-w-[7rem] flex-1 rounded-xl border-brand-ink text-brand-black hover:bg-brand-linen font-heading font-bold"
-                    onClick={() => {
-                      onSpinAgain(spinResult);
-                      handleLocalSpin();
-                    }}
-                    disabled={!canSpinAgain || isSpinning}
-                  >
-                    <RefreshCw size={15} className="mr-1" aria-hidden="true" />
-                    Spin Again
-                  </Button>
-                )}
-                {onEditList && (
-                  <Button variant="outline" className="h-11 min-w-[7rem] flex-1 rounded-xl" onClick={onEditList}>
-                    Edit list
-                  </Button>
-                )}
-              </div>
-
-            </div>
-          </div>
-        </div>
+        <ResultScreen
+          open={resultOpen}
+          onOpenChange={setResultOpen}
+          restaurant={spinResult}
+          isManual={isManualResult}
+          rarity={resultRarity}
+          visit={resultVisit}
+          claim={claim}
+          onClaim={onLetsGo ? handleClaim : undefined}
+          animate={!prefersReducedMotion}
+          onShare={onShareResult ? (cardElement) => onShareResult(spinResult, cardElement) : undefined}
+          onSave={onSaveFavourite ? () => onSaveFavourite(spinResult) : undefined}
+          isSaved={Boolean(isFavourite?.(spinResult))}
+          onSpinAgain={onSpinAgain ? () => {
+            onSpinAgain(spinResult);
+            handleLocalSpin();
+          } : undefined}
+          canSpinAgain={canSpinAgain}
+          isSpinning={isSpinning}
+          onEditList={onEditList}
+          onCloseAutoFocus={handleResultCloseAutoFocus}
+        />
       )}
 
       {levelUp && (

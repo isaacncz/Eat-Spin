@@ -8,6 +8,7 @@ import { useTextSearch } from '@/hooks/useTextSearch';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
+import { usePlacesBudget } from '@/hooks/usePlacesBudget';
 import { useGame } from '@/hooks/useGame';
 import { GameHud } from '@/components/GameHud';
 import { getMealTimeEmoji, getSuggestedManualListName, useManualLists } from '@/hooks/useManualLists';
@@ -282,6 +283,7 @@ function App() {
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
   const { spins, canSpin, recordSpin } = useSpinTracker();
+  const placesBudget = usePlacesBudget();
   const game = useGame();
   const {
     favourites,
@@ -920,6 +922,11 @@ function App() {
 
   // Handle spin attempt
   const handleSpinAttempt = () => {
+    if (activeTab === 'auto' && placesBudget.nearbyBlocked) {
+      trackEvent('spin_blocked', { mode: 'budget' });
+      toast.error('Nearby spins are paused: monthly search budget reached. Try My List, or come back next month.');
+      return false;
+    }
     if (!canSpin(currentMealTime)) {
       trackEvent('spin_blocked', { mode: activeTab });
       setShowSpinLimitWarning(true);
@@ -1544,6 +1551,11 @@ function App() {
           {/* AUTO MODE */}
           {activeTab === 'auto' && (
             <>
+              {placesBudget.nearbyBlocked && (
+                <div role="alert" className="mb-4 rounded-2xl border-2 border-brand-ink bg-brand-yellow px-4 py-3 text-sm font-semibold text-brand-ink">
+                  Nearby spins are paused: the monthly search budget is used up ({placesBudget.nearbyUsed}/{placesBudget.cap}). Your own list still works, and nearby spins return next month.
+                </div>
+              )}
               {!location && (
                 <div className="mb-6">
                   <LocationPermission

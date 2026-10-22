@@ -2,6 +2,7 @@ import type { CategoryConfidence, DailyHours, FoodCategory, PlaceReview, Restaur
 import { calculateDistance } from '@/lib/restaurantUtils';
 import { computeQualityScore } from '@/lib/restaurantUtils';
 import { classifyPlace } from '@/lib/categoryClassifier';
+import { reservePlacesCall } from '@/lib/placesUsage';
 
 const GOOGLE_NEARBY_ENDPOINT = 'https://places.googleapis.com/v1/places:searchNearby';
 export const GOOGLE_PLACE_FIELDS = [
@@ -577,6 +578,9 @@ export const fetchNearbyGoogleRestaurants = async (
   const maxResultCount = Math.max(1, Math.min(options.maxResults ?? DEFAULT_MAX_RESULTS, 20));
   const radiusMeters = Math.max(1, Math.min(Math.round(options.radiusKm * 1000), 50_000));
   const includedTypes = buildIncludedTypes(options.selectedCategories);
+
+  // Count this billable call against the monthly budget (throws PlacesBudgetError when exhausted).
+  await reservePlacesCall('nearby');
 
   const response = await fetch(GOOGLE_NEARBY_ENDPOINT, {
     method: 'POST',

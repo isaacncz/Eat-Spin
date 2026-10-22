@@ -55,7 +55,7 @@ test.describe('Bottom tab bar', () => {
 
     await tab(page, 'Group').click();
     await expect(tab(page, 'Group')).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('heading', { name: /group spin makes deciding effortless/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Group spin', exact: true })).toBeVisible();
 
     await tab(page, 'Me').click();
     await expect(tab(page, 'Me')).toHaveAttribute('aria-current', 'page');

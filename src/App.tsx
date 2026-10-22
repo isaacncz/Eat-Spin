@@ -38,7 +38,7 @@ import { QuickSpinHero, type FoodMood } from '@/sections/QuickSpinHero';
 import { applyServesFilters, SERVES_FILTERS, type ServesFilterId } from '@/lib/servesFilters';
 import { getTimeOfDayFilters } from '@/lib/timeOfDayDefaults';
 import { FilterPanel } from '@/components/FilterPanel';
-import { GroupSpin } from '@/sections/GroupSpin';
+import { GroupScreen } from '@/screens/GroupScreen';
 import { ListScreen } from '@/screens/ListScreen';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1911,7 +1911,7 @@ function App() {
 
         {/* Group screen */}
         {appTab === 'group' && (
-          <GroupSpin
+          <GroupScreen
             isFirebaseConfigured={isFirebaseConfigured}
             firebaseConfigError={firebaseConfigError}
             authLoading={groupAuthLoading}
@@ -1941,6 +1941,11 @@ function App() {
             onSetGoingVote={setGroupGoingVote}
             onClearRoomError={clearGroupRoomError}
             showCompletedListReminder={isGroupRoomActive && !isGroupHost && !isGroupCohost && groupRoomStatus === 'completed' && Boolean(groupCurrentSpin)}
+            roomListCount={displayedManualRestaurantNames.length}
+            latestSpin={groupSpinDisplay && groupCurrentSpin
+              ? { spinId: groupCurrentSpin.spinId, relativeText: groupSpinDisplay.relativeText }
+              : null}
+            onOpenList={() => handleTabChange('list')}
           />
         )}
 

@@ -37,51 +37,45 @@ export interface SmartHoursResult {
  * Uses the restaurant's `hours` data and optionally `isOpen` from Google.
  */
 export function getSmartHoursLabel(restaurant: Restaurant, now: Date = new Date()): SmartHoursResult {
-  const dayIndex = now.getDay(); // 0=Sunday
-  const dayKey = DAY_KEYS[dayIndex];
-  const todayHours = restaurant.hours[dayKey];
-  const dailyHours = restaurant.hours['daily'];
-  const selectedHours = todayHours ?? dailyHours;
-
-  if (!selectedHours || selectedHours.closed || selectedHours.windows.length === 0) {
-    // Closed today — find when they open next
-    const nextOpen = findNextOpenDay(restaurant, now);
-    if (nextOpen) {
-      return { label: `Closed · Opens ${nextOpen}`, status: 'closed' };
-    }
-    return { label: 'Closed today', status: 'closed' };
-  }
-
+  const dayIndex = now.getDay();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const windows = selectedHours.windows;
+  const selectedHours = restaurant.hours[DAY_KEYS[dayIndex]] ?? restaurant.hours.daily;
+  const previousHours = restaurant.hours[DAY_KEYS[(dayIndex + 6) % 7]] ?? restaurant.hours.daily;
 
-  // Check for 24-hour operation
-  if (windows.some((w) => w.open === '00:00' && (w.close === '23:59' || w.close === '00:00'))) {
-    return { label: 'Open 24 hours', status: 'open' };
-  }
-
-  // Find the current or next window
-  for (const window of windows) {
-    const openMin = timeToMinutes(window.open);
-    let closeMin = timeToMinutes(window.close);
-    // Handle overnight hours (e.g., 22:00-02:00)
-    if (closeMin <= openMin) closeMin += 24 * 60;
-
-    if (currentMinutes >= openMin && currentMinutes < closeMin) {
-      // Currently open — how long until closing?
-      const minutesUntilClose = closeMin - currentMinutes;
-      if (minutesUntilClose <= 60) {
-        return {
-          label: `Closes in ${minutesUntilClose} min ⚠️`,
-          status: 'closing-soon',
-        };
-      }
-      return {
-        label: `Open until ${minutesToFriendly(closeMin % (24 * 60))}`,
-        status: 'open',
-      };
+  // Work in minutes relative to today's midnight, including yesterday's carryover.
+  const intervals: Array<{ open: number; close: number }> = [];
+  const addWindows = (hours: typeof selectedHours, offset: number) => {
+    if (!hours || hours.closed) return;
+    for (const window of hours.windows) {
+      const open = timeToMinutes(window.open);
+      let close = timeToMinutes(window.close);
+      if (close <= open) close += 1440;
+      // 23:59 is the existing representation of all-day opening.
+      if (window.open === '00:00' && window.close === '23:59') close = 1440;
+      intervals.push({ open: open + offset, close: close + offset });
     }
+  };
+  addWindows(previousHours, -1440);
+  addWindows(selectedHours, 0);
+  intervals.sort((a, b) => a.open - b.open);
+  const merged: typeof intervals = [];
+  for (const interval of intervals) {
+    const last = merged.at(-1);
+    if (last && interval.open <= last.close) last.close = Math.max(last.close, interval.close);
+    else merged.push({ ...interval });
   }
+  const active = merged.find((window) => currentMinutes >= window.open && currentMinutes < window.close);
+  if (active) {
+    const allDay = selectedHours && !selectedHours.closed && selectedHours.windows.some(
+      (window) => window.open === '00:00' && (window.close === '23:59' || window.close === '00:00'),
+    );
+    if (allDay) return { label: 'Open 24 hours', status: 'open' };
+    const minutesUntilClose = active.close - currentMinutes;
+    return minutesUntilClose <= 60
+      ? { label: `Closes in ${minutesUntilClose} min ⚠️`, status: 'closing-soon' }
+      : { label: `Open until ${minutesToFriendly(active.close % 1440)}`, status: 'open' };
+  }
+  const windows = selectedHours && !selectedHours.closed ? selectedHours.windows : [];
 
   // Not in any window — find the next opening time
   const sortedWindows = [...windows].sort((a, b) => timeToMinutes(a.open) - timeToMinutes(b.open));

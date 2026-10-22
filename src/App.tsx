@@ -14,6 +14,8 @@ import { GameHud } from '@/components/GameHud';
 import { QuestCard } from '@/components/QuestCard';
 import { RarityBadge } from '@/components/RarityBadge';
 import { getRarity, getRarityMultiplier, RARITY_LABEL, type Rarity } from '@/lib/rarity';
+import { buildLetsGoReward, type LetsGoReward } from '@/lib/letsGoReward';
+import { getMapsUrl } from '@/lib/maps';
 import type { QuestEvent } from '@/lib/quests';
 import { getMealTimeEmoji, getSuggestedManualListName, useManualLists } from '@/hooks/useManualLists';
 import { useSpinChallenge } from '@/hooks/useSpinChallenge';
@@ -818,7 +820,7 @@ function App() {
     void leaveChallenge();
   }, [leaveChallenge]);
 
-  const handleLetsGo = useCallback((restaurant: Restaurant, shownRarity?: Rarity) => {
+  const handleLetsGo = useCallback((restaurant: Restaurant, shownRarity?: Rarity): LetsGoReward => {
     trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
 
     // Rarity must be read before the visit is recorded below, which resets it to common.
@@ -828,7 +830,9 @@ function App() {
     void recordVisitAndSave(restaurant);
 
     const reward = game.awardForLetsGo(restaurant.id, getRarityMultiplier(rarity));
-    if (reward.awarded) {
+    // The result card shows reward tiles (and a level-up modal) itself, so only callers that
+    // do not pass a tier, such as craving search, still get the XP toast.
+    if (reward.awarded && shownRarity === undefined) {
       const xpText = reward.multiplier > 1
         ? `+${reward.xp} XP (${RARITY_LABEL[rarity]} ${reward.multiplier}x)`
         : `+${reward.xp} XP`;
@@ -843,22 +847,14 @@ function App() {
     enqueueFeedback({ favouriteId: favId, restaurantName: restaurant.name });
 
     // Open Google Maps navigation — prefer the official URI from the API
-    let mapsUrl: string;
-    if (restaurant.googleMapsUri) {
-      mapsUrl = restaurant.googleMapsUri;
-    } else {
-      const { lat, lng } = restaurant.coordinates;
-      const query = encodeURIComponent(restaurant.name);
-      mapsUrl = lat && lng
-        ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${restaurant.googlePlaceId ?? ''}&query=${query}`
-        : `https://www.google.com/maps/search/?api=1&query=${query}`;
-    }
-    window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+    window.open(getMapsUrl(restaurant), '_blank', 'noopener,noreferrer');
 
     toast.success(`Navigating to ${restaurant.name}!`, {
       description: 'We\'ll ask how it was next time you open the app.',
     });
-  }, [game, getLastVisitedAt, recordVisitAndSave, reportQuestEvent]);
+
+    return buildLetsGoReward(reward, rarity, spinHistorySummary.currentStreak);
+  }, [game, getLastVisitedAt, recordVisitAndSave, reportQuestEvent, spinHistorySummary.currentStreak]);
 
   const handleRemoveFavourite = useCallback((id: string, name: string) => {
     trackEvent('favourite_removed', { favourite_id: id });

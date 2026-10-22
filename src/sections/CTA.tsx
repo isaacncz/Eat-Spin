@@ -7,8 +7,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 gsap.registerPlugin(ScrollTrigger);
 
 interface CTAProps {
-  /** Opens the Spin screen. Without it the button scrolls to the main app section. */
-  onStartSpinning?: () => void;
+  /** Opens the Spin screen. */
+  onStartSpinning: () => void;
 }
 
 export function CTA({ onStartSpinning }: CTAProps) {
@@ -38,15 +38,6 @@ export function CTA({ onStartSpinning }: CTAProps) {
 
     return () => ctx.revert();
   }, []);
-
-  const scrollToApp = () => {
-    if (onStartSpinning) {
-      onStartSpinning();
-      return;
-    }
-    const appSection = document.getElementById('app-main-section');
-    appSection?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   return (
     <section
@@ -99,7 +90,7 @@ export function CTA({ onStartSpinning }: CTAProps) {
           {/* Buttons */}
           <div className="flex flex-col gap-4 justify-center">
             <Button
-              onClick={scrollToApp}
+              onClick={onStartSpinning}
               size="lg"
               className="w-full sm:w-auto bg-brand-ink text-white hover:bg-brand-ink/90 shadow-pop font-heading text-lg font-bold px-8 py-6 rounded-2xl transition-all duration-300 hover:scale-105 group"
             >

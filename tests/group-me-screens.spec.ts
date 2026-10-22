@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
+import { useLunchtimeClock } from './spin-helpers';
+
 const tab = (page: Page, label: 'Spin' | 'My list' | 'Group' | 'Me') =>
   page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: new RegExp(`^${label}`) });
 
@@ -143,4 +145,49 @@ test.describe('Me screen', () => {
 
     await expect(page.getByRole('region', { name: 'Most visited' })).toContainText(/places you visit most/i);
   });
+});
+
+// The landing sections sit behind Me > About EatSpin. Their "start" buttons must open the
+// Spin tab, since the old scroll target (#app-main-section) no longer exists in the shell.
+test.describe('Me screen > About EatSpin start buttons', () => {
+  // Penang: the bundled fallback places are around here, so the wheel has places to show.
+  test.use({
+    geolocation: { latitude: 5.4146, longitude: 100.3296 },
+    permissions: ['geolocation'],
+  });
+
+  const startButtons = [
+    { section: 'How it works', button: 'Try It Now' },
+    { section: 'Ready to Spin', button: 'Start Spinning Now' },
+  ] as const;
+
+  for (const { section, button } of startButtons) {
+    test(`the ${section} "${button}" button lands on the Spin tab`, async ({ page }) => {
+      await useLunchtimeClock(page);
+      await skipOnboarding(page);
+      await page.goto('/');
+      await tab(page, 'Me').click();
+      await expect(tab(page, 'Me')).toHaveAttribute('aria-current', 'page');
+
+      await page.getByRole('button', { name: 'About EatSpin' }).click();
+      const start = page.getByRole('button', { name: new RegExp(button, 'i') });
+      await start.scrollIntoViewIfNeeded();
+      await expect(start).toBeVisible();
+      expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+      await start.click();
+
+      await expect(tab(page, 'Spin')).toHaveAttribute('aria-current', 'page');
+      await expect(tab(page, 'Me')).not.toHaveAttribute('aria-current', 'page');
+      await expect(page.getByRole('heading', { name: 'Me', exact: true })).toHaveCount(0);
+
+      // The shell scrolls to the top on a tab change, so the Spin tab opens at its heading.
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+
+      const shareLocation = page.getByRole('button', { name: /share my location/i });
+      if (await shareLocation.isVisible({ timeout: 3_000 }).catch(() => false)) {
+        await shareLocation.click();
+      }
+      await expect(page.locator('main .aspect-square').first()).toBeVisible({ timeout: 20_000 });
+    });
+  }
 });

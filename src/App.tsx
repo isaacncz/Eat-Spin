@@ -650,8 +650,12 @@ function App() {
     reportQuestEvent({ type: 'spin' });
   }, [currentMealTime, publishDiscoverSpin, recordDailySpin, reportQuestEvent]);
 
+  const favouriteSavesInFlight = useRef(new Set<string>());
   const handleSaveFavourite = useCallback(async (restaurant: Restaurant, mode: 'auto' | 'manual') => {
     trackEvent('favourite_saved', { restaurant_name: restaurant.name, mode });
+    const favouriteId = deriveFavouriteId(restaurant);
+    if (favouriteSavesInFlight.current.has(favouriteId)) return;
+    favouriteSavesInFlight.current.add(favouriteId);
     const isNewFavourite = !isFavouriteCheck(restaurant);
     try {
       await saveFavourite(restaurant, mode === 'auto' ? 'spin-auto' : 'spin-manual');
@@ -661,6 +665,8 @@ function App() {
       if (isNewFavourite) reportQuestEvent({ type: 'favourite-saved' });
     } catch {
       toast.error('Could not save this place. Please try again.');
+    } finally {
+      favouriteSavesInFlight.current.delete(favouriteId);
     }
   }, [isFavouriteCheck, reportQuestEvent, saveFavourite]);
 

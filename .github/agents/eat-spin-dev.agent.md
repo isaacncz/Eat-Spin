@@ -25,6 +25,31 @@ tools:
 6. Summarize assumptions, tradeoffs, residual risks, and validation results.
 7. When files were changed, always provide at least one ready-to-use commit message.
 
+## Pull Requests and Stacks
+
+### Default: one PR against `main`
+
+- Branch from the latest `origin/main` and open the PR against `main`.
+- Stack only when the change cannot build, run, or be reviewed without another unmerged PR (it uses a new API or type from that PR, or edits the same lines). If it only needs to wait, open it against `main` after the parent merges.
+- Stacked PRs: at most 3 deep; start the PR body with `Stacked on #N`; the base is the PR directly below; each PR contains only its own slice.
+- Never force-push. Update a branch by merging its base into it.
+- `git fetch origin` may track only `main`. Fetch other branches with an explicit refspec: `git fetch origin <branch>:refs/remotes/origin/<branch>`.
+
+### Merging a stack (bottom-up)
+
+Run only when the user asks to merge. Handle one PR at a time, starting with the PR whose base is `main`. Use `gh api` REST calls; `{o}/{r}` is the repository.
+
+1. **Gate.** The PR is not a draft, is mergeable, and every required check is green on its current head SHA (`GET /repos/{o}/{r}/commits/{sha}/check-runs`). If no checks are configured or none ran, stop and say so; "no checks" is not a pass. If the PR is a draft and the session cannot mark it ready (GraphQL may be blocked), ask the user to click "Ready for review".
+2. **Verify the diff.** `GET /repos/{o}/{r}/pulls/{n}/files` lists only this PR's slice: no files from already-merged parents, no unrelated deletions. Compare with `git diff --stat <base>...<head>`.
+3. **Merge** with a merge commit (`PUT /repos/{o}/{r}/pulls/{n}/merge`, `merge_method=merge`). Do not squash or rebase a stack: the PRs above must keep these commits as ancestors.
+4. **Retarget** the next PR: `PATCH /repos/{o}/{r}/pulls/{next}` with `base=main`. Delete the merged branch only after its children are retargeted.
+5. **Update** the next PR's branch: fetch `main`, merge `origin/main` into it, resolve conflicts, push normally.
+6. **Verify the diff again** (step 2) and that the PR is mergeable.
+7. **Rerun checks** on the new head. A push triggers them. If nothing was pushed, confirm a run exists for the head SHA; if not, rerun the latest run (`POST /repos/{o}/{r}/actions/runs/{run_id}/rerun`). By default `pull_request` workflows run only on `opened`, `synchronize` and `reopened`. Wait for green.
+8. Go back to step 1 for the next PR. Sibling PRs under one parent merge one at a time; repeat steps 4-7 for each remaining sibling.
+
+Stop and report on any red check, conflict, or unexpected diff: which PR, what failed, what has already merged. Never skip, weaken, or bypass checks; never force-push; never merge a PR whose checks have not passed on its current head. After each merge, report one line: PR, merge SHA, next PR, check status.
+
 ## Reference Loading Rules
 
 - Consult the **Project Map** first for file targeting and contract boundaries.
@@ -40,6 +65,7 @@ tools:
 - Keep UI changes aligned with existing design tokens in `src/index.css` and current section/component structure.
 - Avoid broad refactors unless explicitly requested.
 - Always include a commit message suggestion after any completed file changes.
+- Open PRs against `main`. Stack only when necessary; follow **Pull Requests and Stacks**.
 
 ## Done Criteria
 

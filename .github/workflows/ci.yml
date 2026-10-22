@@ -105,8 +105,7 @@ jobs:
           tests/smoke.spec.ts
           tests/result-screen.spec.ts
           tests/group-me-screens.spec.ts
-          tests/photo-demand.spec.ts
-          tests/favourite-save-failure.spec.ts
+          tests/critical-
 
       # Uploaded for passing runs too, so retried (flaky) tests can be inspected.
       # Never committed. run_attempt keeps the name unique when a run is re-run.

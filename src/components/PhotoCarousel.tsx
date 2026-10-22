@@ -34,7 +34,7 @@ export function PhotoCarousel({ photos, alt, className }: PhotoCarouselProps) {
   // Single photo — no carousel needed
   if (photos.length === 1) {
     return (
-      <div className={cn('overflow-hidden rounded-xl border border-eatspin-peach/60', className)}>
+      <div className={cn('overflow-hidden rounded-xl border-2 border-brand-ink', className)}>
         <img
           src={photos[0]}
           alt={alt}
@@ -51,7 +51,7 @@ export function PhotoCarousel({ photos, alt, className }: PhotoCarouselProps) {
       <Carousel
         opts={{ loop: true, align: 'start' }}
         setApi={setApi}
-        className="overflow-hidden rounded-xl border border-eatspin-peach/60"
+        className="overflow-hidden rounded-xl border-2 border-brand-ink"
       >
         <CarouselContent className="ml-0">
           {photos.map((photo, i) => (

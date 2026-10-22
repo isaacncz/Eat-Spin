@@ -26,7 +26,7 @@ export const ServesFilterPills = memo(function ServesFilterPills({ activeFilters
                         ${
                           isActive
                             ? 'border-[var(--eatspin-orange)] bg-[var(--eatspin-orange)]/10 text-[var(--eatspin-orange)] shadow-sm'
-                            : 'border-[var(--eatspin-gray-3)] bg-white text-[var(--eatspin-gray-1)] hover:border-[var(--eatspin-peach)]'
+                            : 'border-brand-ink bg-white text-[var(--eatspin-gray-1)] hover:border-brand-ink'
                         }`}
           >
             <span className="text-sm leading-none">{emoji}</span>

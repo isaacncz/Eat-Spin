@@ -165,8 +165,8 @@ export function RestaurantDetailDrawer({
                   return (
                     <span
                       key={cat}
-                      className="px-2.5 py-1 rounded-full text-xs font-medium text-white"
-                      style={{ backgroundColor: cfg?.color || '#F54703' }}
+                      className="px-2.5 py-1 rounded-full border-2 border-brand-ink bg-white text-xs font-semibold text-brand-ink"
+                      style={{ boxShadow: `0 2px 0 0 ${cfg?.color || '#FF4D8D'}` }}
                     >
                       {cfg?.icon} {cfg?.name}
                     </span>
@@ -184,7 +184,7 @@ export function RestaurantDetailDrawer({
 
             {/* AI Summary */}
             {restaurant.generativeSummary && (
-              <p className="text-sm italic text-eatspin-gray-1 leading-relaxed bg-eatspin-peach/10 rounded-lg p-3">
+              <p className="text-sm italic text-eatspin-gray-1 leading-relaxed bg-arcade-yellow/30 rounded-lg p-3">
                 "{restaurant.generativeSummary}"
               </p>
             )}

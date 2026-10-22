@@ -84,7 +84,7 @@ export const CravingSearch = memo(function CravingSearch({
           onFocus={() => setIsFocused(true)}
           onBlur={() => setTimeout(() => setIsFocused(false), 200)}
           placeholder="chicken rice, coffee, bubble tea..."
-          className="h-12 w-full rounded-xl border border-eatspin-gray-3 bg-white pl-10 pr-10
+          className="h-12 w-full rounded-xl border-2 border-brand-ink bg-white pl-10 pr-10
                      text-sm text-brand-black placeholder:text-eatspin-gray-2
                      focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange/30
                      transition-all"
@@ -110,7 +110,7 @@ export const CravingSearch = memo(function CravingSearch({
 
       {/* ── Recent searches dropdown ──────────────────────────── */}
       {showSuggestions && (
-        <div className="rounded-xl border border-eatspin-gray-3 bg-white p-3 shadow-lg">
+        <div className="rounded-xl border-2 border-brand-ink bg-white p-3 shadow-lg">
           <p className="mb-2 text-xs font-medium text-eatspin-gray-2">Recent</p>
           <div className="flex flex-wrap gap-2">
             {recentSearches.map((s) => (
@@ -118,8 +118,8 @@ export const CravingSearch = memo(function CravingSearch({
                 key={s}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => onSearch(s)}
-                className="rounded-full border border-eatspin-gray-3 px-3.5 py-2 text-xs
-                           min-h-[44px] text-eatspin-gray-1 hover:border-brand-orange hover:text-brand-orange
+                className="rounded-full border-2 border-brand-ink px-3.5 py-2 text-xs
+                           min-h-[44px] text-eatspin-gray-1 hover:border-brand-ink hover:text-brand-orange
                            transition-all"
               >
                 {s}
@@ -138,9 +138,9 @@ export const CravingSearch = memo(function CravingSearch({
               <button
                 key={chip.query}
                 onClick={() => onSearch(chip.query)}
-                className="rounded-full border border-eatspin-gray-3 bg-white px-3.5 py-2.5
+                className="rounded-full border-2 border-brand-ink bg-white px-3.5 py-2.5
                            min-h-[44px] text-xs font-semibold text-eatspin-gray-1
-                           hover:border-brand-orange hover:text-brand-orange
+                           hover:border-brand-ink hover:text-brand-orange
                            hover:scale-[1.04] active:scale-[0.97] transition-all"
               >
                 {chip.label}
@@ -188,7 +188,7 @@ export const CravingSearch = memo(function CravingSearch({
           {results.map((r, i) => (
             <div
               key={r.id}
-              className="animate-fade-in-up flex items-start gap-3 rounded-xl border border-eatspin-gray-3
+              className="animate-fade-in-up flex items-start gap-3 rounded-xl border-2 border-brand-ink
                          bg-white p-3 shadow-sm hover:shadow-md transition-shadow
                          hover:scale-[1.01] active:scale-[0.99]"
               style={{ animationDelay: `${i * 60}ms` }}
@@ -242,7 +242,7 @@ export const CravingSearch = memo(function CravingSearch({
                   size="sm"
                   onClick={() => onLetsGo(r)}
                   className="mt-2 h-8 rounded-lg bg-brand-orange px-3 text-xs font-bold
-                             text-white hover:bg-brand-orange/90 shadow-sm"
+                             text-white hover:bg-brand-orange/90"
                 >
                   <Navigation size={12} className="mr-1" />
                   Let's go!

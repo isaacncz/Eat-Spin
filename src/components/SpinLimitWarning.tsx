@@ -17,7 +17,7 @@ export function SpinLimitWarning({ mealTime, onUpgrade, onClose }: SpinLimitWarn
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-eatspin-peach p-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <div className="bg-white rounded-2xl shadow-pop border-2 border-brand-ink p-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-eatspin-orange/10 rounded-full flex items-center justify-center">

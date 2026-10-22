@@ -99,7 +99,7 @@ export default function SpinStatsPanel({
   const hasSpins = totalSpins > 0;
 
   return (
-    <section className="mb-6 rounded-2xl border border-eatspin-peach/60 bg-gradient-to-br from-white to-brand-linen/50 p-4 sm:p-5">
+    <section className="mb-6 rounded-2xl border-2 border-brand-ink bg-white shadow-pop p-4 sm:p-5">
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -173,13 +173,13 @@ export default function SpinStatsPanel({
           </p>
 
           {/* ── Recent spins timeline ──────────────────────────── */}
-          <div className="mt-2 rounded-xl border border-eatspin-peach/50 bg-white">
+          <div className="mt-2 rounded-xl border-2 border-brand-ink bg-white">
             <div className="flex items-center justify-between px-3 py-2 text-xs text-eatspin-gray-1">
               <span className="font-medium">📜 Recent Spins</span>
               <span>{recentSpins.length} shown</span>
             </div>
 
-            <ul className="max-h-56 divide-y divide-eatspin-peach/30 overflow-y-auto px-3 pb-2">
+            <ul className="max-h-56 divide-y divide-brand-ink/15 overflow-y-auto px-3 pb-2">
               {recentSpins.length === 0 ? (
                 <li className="py-3 text-sm text-eatspin-gray-1">
                   No spins yet. Spin now to build your history.
@@ -215,7 +215,7 @@ export default function SpinStatsPanel({
             <Button
               type="button"
               variant="outline"
-              className="gap-2 border-brand-orange/50 text-brand-orange hover:bg-brand-orange/10"
+              className="gap-2 border-brand-ink text-brand-orange hover:bg-brand-orange/10"
               onClick={onShareWrapped}
             >
               <Share2 className="size-4" />

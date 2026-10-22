@@ -38,8 +38,8 @@ export function SubscriptionModal({ isOpen, onClose, onSubscribe }: Subscription
 
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse-ring">
-            <Crown size={40} className="text-white" />
+          <div className="w-20 h-20 bg-arcade-yellow border-4 border-brand-ink shadow-pop rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse-ring">
+            <Crown size={40} className="text-brand-ink" />
           </div>
           <h2 className="font-heading text-2xl font-bold text-brand-black mb-2">
             Go Premium
@@ -86,7 +86,7 @@ export function SubscriptionModal({ isOpen, onClose, onSubscribe }: Subscription
           <Button
             onClick={onClose}
             variant="outline"
-            className="w-full border-eatspin-gray-3 text-eatspin-gray-1 hover:bg-eatspin-gray-3"
+            className="w-full border-brand-ink text-eatspin-gray-1 hover:bg-eatspin-gray-3"
           >
             Maybe Later
           </Button>

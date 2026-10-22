@@ -103,12 +103,12 @@ export const FoodCategorySelector = memo(function FoodCategorySelector({
               key={category.id}
               onClick={() => handleCategoryToggle(category.id)}
               disabled={isDisabled}
-              className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all duration-200 hover:scale-105 ${
+              className={`flex flex-col items-center justify-center p-3 min-h-11 rounded-2xl border-2 border-brand-ink shadow-pop transition-all duration-200 hover:scale-105 ${
                 isSelected
-                  ? 'ring-2 ring-offset-2'
+                  ? 'ring-2 ring-offset-2 ring-brand-ink'
                   : isDisabled
                   ? 'opacity-40 cursor-not-allowed'
-                  : 'hover:shadow-lg'
+                  : 'hover:shadow-pop-lg'
               }`}
               style={{
                 backgroundColor: isSelected ? category.color : '#fff',
@@ -120,7 +120,7 @@ export const FoodCategorySelector = memo(function FoodCategorySelector({
               <span className="text-2xl mb-1">{category.icon}</span>
               <span
                 className={`text-xs font-medium text-center ${
-                  isSelected ? 'text-white' : 'text-brand-black'
+                  'text-brand-ink'
                 }`}
               >
                 {category.name}

@@ -69,7 +69,7 @@ export function AppNavbar({
   return (
     <>
       <nav
-        className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b select-none"
+        className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b-4 border-brand-ink select-none"
         style={{
           height: undefined, // height driven by content + padding
           borderColor: 'rgba(254, 228, 199, 0.3)',
@@ -89,7 +89,7 @@ export function AppNavbar({
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
             >
-              <div className="w-8 h-8 bg-brand-orange rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+              <div className="w-8 h-8 bg-brand-orange border-2 border-brand-ink rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
                 <span className="text-white font-heading text-sm font-bold leading-none">
                   ES
                 </span>
@@ -109,7 +109,7 @@ export function AppNavbar({
                 type="button"
                 onClick={handleGroupSpin}
                 className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
-                           text-brand-black/80 hover:bg-[var(--eatspin-peach)]/40 hover:text-brand-black
+                           text-brand-black/80 hover:bg-arcade-yellow/60 hover:text-brand-black
                            transition-colors duration-150 relative"
               >
                 <Users size={16} />
@@ -137,7 +137,7 @@ export function AppNavbar({
                 type="button"
                 onClick={() => setMobileMenuOpen((o) => !o)}
                 className="md:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg
-                           text-brand-black/70 hover:bg-[var(--eatspin-peach)]/40
+                           text-brand-black/70 hover:bg-arcade-yellow/60
                            transition-colors duration-150 relative"
                 aria-label="Menu"
               >
@@ -161,7 +161,7 @@ export function AppNavbar({
               type="button"
               onClick={handleGroupSpin}
               className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium
-                         text-brand-black/80 hover:bg-[var(--eatspin-peach)]/40 active:bg-[var(--eatspin-peach)]/60
+                         text-brand-black/80 hover:bg-arcade-yellow/60 active:bg-arcade-yellow
                          transition-colors duration-150 relative"
             >
               <Users size={18} />
@@ -192,7 +192,7 @@ export function AppNavbar({
               type="button"
               onClick={handleAbout}
               className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium
-                         text-brand-black/80 hover:bg-[var(--eatspin-peach)]/40 active:bg-[var(--eatspin-peach)]/60
+                         text-brand-black/80 hover:bg-arcade-yellow/60 active:bg-arcade-yellow
                          transition-colors duration-150"
             >
               <Info size={18} />
@@ -231,7 +231,7 @@ function TabToggle({
     >
       {/* Sliding pill indicator */}
       <span
-        className="absolute top-0.5 bottom-0.5 rounded-full bg-brand-orange shadow-sm transition-all duration-200 ease-out"
+        className="absolute top-0.5 bottom-0.5 rounded-full bg-brand-orange border-2 border-brand-ink transition-all duration-200 ease-out"
         style={{
           width: 'calc(50% - 2px)',
           left: isAuto ? '2px' : 'calc(50% + 0px)',

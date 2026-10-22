@@ -91,7 +91,7 @@ export function Features() {
     <section
       ref={sectionRef}
       id="features"
-      className="py-20 px-4 sm:px-6 lg:px-8 bg-eatspin-linen"
+      className="py-20 px-4 sm:px-6 lg:px-8 bg-arcade-yellow"
     >
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
@@ -110,10 +110,10 @@ export function Features() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="group bg-white rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer"
+              className="group bg-white rounded-2xl border-2 border-brand-ink shadow-pop p-6 transition-all duration-300 hover:shadow-pop-lg hover:-translate-y-1 cursor-pointer"
             >
-              <div className="w-12 h-12 bg-eatspin-peach rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
-                <feature.icon size={24} className="text-eatspin-orange" />
+              <div className="w-12 h-12 bg-arcade-yellow border-2 border-brand-ink rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+                <feature.icon size={24} className="text-brand-ink" />
               </div>
 
               <h3 className="font-heading text-lg font-bold text-brand-black mb-2">

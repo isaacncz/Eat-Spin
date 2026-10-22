@@ -20,6 +20,7 @@ export const PLACES_USAGE_KINDS: PlacesUsageKind[] = ['nearby', 'text'];
 
 const DEFAULT_MONTHLY_CAP = 1000;
 const DEFAULT_BLOCK_AT_PERCENT = 90;
+const localUsageListeners = new Set<() => void>();
 const LOCAL_KEY_PREFIX = 'eatspin:places-usage:';
 
 const readNumberEnv = (value: unknown, fallback: number): number => {
@@ -67,6 +68,7 @@ const reserveLocally = (kind: PlacesUsageKind): void => {
   if (current >= PLACES_BLOCK_THRESHOLD) throw new PlacesBudgetError();
   try {
     window.localStorage.setItem(key, String(current + 1));
+    localUsageListeners.forEach((notify) => notify());
   } catch {
     // Best effort.
   }
@@ -104,49 +106,70 @@ const emptySnapshot = (): PlacesUsageSnapshot => ({
 
 /** Live view of this month's counters for the UI. Returns an unsubscribe function. */
 export function subscribePlacesUsage(onChange: (snapshot: PlacesUsageSnapshot) => void): () => void {
-  if (!firebaseDb) {
-    const snapshot = emptySnapshot();
-    for (const kind of PLACES_USAGE_KINDS) {
-      try {
-        const raw = window.localStorage.getItem(`${LOCAL_KEY_PREFIX}${getUsageMonthKey()}:${kind}`);
-        snapshot.used[kind] = Number(raw) || 0;
-      } catch {
-        snapshot.used[kind] = 0;
-      }
-      snapshot.blocked[kind] = snapshot.used[kind] >= PLACES_BLOCK_THRESHOLD;
-    }
-    onChange(snapshot);
-    return () => {};
-  }
-
   let unsubscribes: Array<() => void> = [];
   let cancelled = false;
-  const snapshot = emptySnapshot();
+  let activeMonth = '';
+  let generation = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
 
-  void ensureAnonymousAuthUser()
-    .then(() => {
-      if (cancelled || !firebaseDb) return;
+  const refresh = () => {
+    const month = getUsageMonthKey();
+    if (cancelled || (firebaseDb && month === activeMonth)) return;
+    activeMonth = month;
+    const currentGeneration = ++generation;
+    unsubscribes.forEach((off) => off());
+    unsubscribes = [];
+    const snapshot = emptySnapshot();
+    onChange(snapshot);
+
+    if (!firebaseDb) {
+      for (const kind of PLACES_USAGE_KINDS) {
+        try {
+          snapshot.used[kind] = Number(window.localStorage.getItem(`${LOCAL_KEY_PREFIX}${month}:${kind}`)) || 0;
+        } catch { snapshot.used[kind] = 0; }
+        snapshot.blocked[kind] = snapshot.used[kind] >= PLACES_BLOCK_THRESHOLD;
+      }
+      onChange(snapshot);
+      return;
+    }
+    void ensureAnonymousAuthUser().then(() => {
+      if (cancelled || generation !== currentGeneration || !firebaseDb) return;
       unsubscribes = PLACES_USAGE_KINDS.map((kind) =>
-        onValue(
-          ref(firebaseDb!, usagePath(kind)),
-          (value) => {
-            const used = typeof value.val() === 'number' ? (value.val() as number) : 0;
-            snapshot.used = { ...snapshot.used, [kind]: used };
-            snapshot.blocked = { ...snapshot.blocked, [kind]: used >= PLACES_BLOCK_THRESHOLD };
-            onChange({ used: { ...snapshot.used }, blocked: { ...snapshot.blocked } });
-          },
-          () => {
-            // Read denied or offline: leave state unchanged (not blocked).
-          },
-        ),
+        onValue(ref(firebaseDb!, usagePath(kind, month)), (value) => {
+          if (cancelled || generation !== currentGeneration) return;
+          const used = typeof value.val() === 'number' ? value.val() as number : 0;
+          snapshot.used = { ...snapshot.used, [kind]: used };
+          snapshot.blocked = { ...snapshot.blocked, [kind]: used >= PLACES_BLOCK_THRESHOLD };
+          onChange({ used: { ...snapshot.used }, blocked: { ...snapshot.blocked } });
+        }, () => {}),
       );
-    })
-    .catch(() => {
-      // Auth unavailable: leave state unchanged.
+    }).catch(() => {
+      // Retry authentication on resume instead of permanently pinning this month.
+      if (generation === currentGeneration) activeMonth = '';
     });
+  };
 
+  const tick = () => {
+    refresh();
+    const now = new Date();
+    const boundary = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
+    // Cap delays: browser timers cannot represent a whole month reliably.
+    timer = setTimeout(tick, Math.min(60_000, Math.max(1, boundary - now.getTime())));
+  };
+  const resume = () => refresh();
+  localUsageListeners.add(refresh);
+  window.addEventListener?.('focus', resume);
+  window.addEventListener?.('storage', resume);
+  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', resume);
+  tick();
   return () => {
     cancelled = true;
+    generation += 1;
+    if (timer !== undefined) clearTimeout(timer);
+    localUsageListeners.delete(refresh);
     unsubscribes.forEach((off) => off());
+    window.removeEventListener?.('focus', resume);
+    window.removeEventListener?.('storage', resume);
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', resume);
   };
 }

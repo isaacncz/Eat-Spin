@@ -25,7 +25,7 @@ env:
   NODE_VERSION: 22
 
 jobs:
-  # tsc, eslint and the unit script. No browser needed.
+  # Typecheck and the full Vitest suite are required. Legacy lint/cache debt stays advisory.
   static:
     name: Typecheck, lint, unit tests
     runs-on: ubuntu-latest
@@ -45,6 +45,9 @@ jobs:
       - name: tsc -b
         run: npx tsc -b
 
+      - name: Unit tests (Vitest)
+        run: npm run test:unit
+
       # ADVISORY until main is clean. `eslint .` reports 19 errors and 2 warnings
       # on main at 09054ae (src/ and tests/), so a blocking step would turn every
       # PR red. The failure is surfaced as a warning annotation below instead.
@@ -60,8 +63,8 @@ jobs:
       # src/lib/restaurantUtils.ts drops it and the second assertion sees 0
       # results instead of 1.
       # TODO: delete `continue-on-error` once the script passes on main.
-      - name: Unit tests (test:cache)
-        id: unit
+      - name: Legacy cache script (advisory)
+        id: legacy_cache
         continue-on-error: true
         run: npm run test:cache
 
@@ -69,18 +72,16 @@ jobs:
         if: ${{ steps.eslint.outcome == 'failure' }}
         run: echo "::warning title=ESLint is advisory::eslint reported problems. It is non-blocking until main is lint-clean (19 errors, 2 warnings at 09054ae). See the eslint step log."
 
-      - name: Flag advisory unit test failure
-        if: ${{ steps.unit.outcome == 'failure' }}
-        run: echo "::warning title=Unit tests are advisory::npm run test:cache failed. It is non-blocking until main passes it (stale fixture at 09054ae). See the unit test step log."
+      - name: Flag advisory legacy cache failure
+        if: ${{ steps.legacy_cache.outcome == 'failure' }}
+        run: echo "::warning title=Legacy cache script is advisory::npm run test:cache failed. It is non-blocking until main passes it (stale fixture at 09054ae). See the unit test step log."
 
-  # Playwright smoke. The `webServer` block in playwright.config.ts starts
-  # `npm run dev` on :5173, so no build step is needed. The config runs the
-  # smoke file on both projects (chromium = Desktop Chrome, mobile = Pixel 7);
-  # both are Chromium based, so only Chromium is installed.
+  # Required browser coverage on desktop Chromium and Pixel 7. The Group/Me
+  # specs cover pre-join screens; live multi-client Firebase coverage is separate.
   smoke:
     name: Playwright smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
         with:
@@ -97,9 +98,13 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       # GitHub sets CI=true, which the config uses for retries: 2, workers: 1
-      # and forbidOnly. No VITE_* env vars are needed for the smoke file.
-      - name: Playwright smoke tests
-        run: npm run test:e2e -- tests/smoke.spec.ts
+      # and forbidOnly. These specs use bundled fallback places without API keys.
+      - name: Playwright critical flows
+        run: >-
+          npm run test:e2e --
+          tests/smoke.spec.ts
+          tests/result-screen.spec.ts
+          tests/group-me-screens.spec.ts
 
       # Uploaded for passing runs too, so retried (flaky) tests can be inspected.
       # Never committed. run_attempt keeps the name unique when a run is re-run.
@@ -127,8 +132,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Fail if a required job failed or was cancelled
-        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+      - name: Require all blocking jobs to succeed
+        env:
+          STATIC_RESULT: ${{ needs.static.result }}
+          BROWSER_RESULT: ${{ needs.smoke.result }}
         run: |
-          echo "One or more required jobs did not succeed."
-          exit 1
+          if [ "$STATIC_RESULT" != "success" ] || [ "$BROWSER_RESULT" != "success" ]; then
+            echo "Required jobs did not succeed: static=$STATIC_RESULT browser=$BROWSER_RESULT"
+            exit 1
+          fi

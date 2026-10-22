@@ -228,3 +228,23 @@ describe('subscribePlacesUsage (localStorage fallback)', () => {
     expect(readUsage(mod).used).toEqual({ nearby: 0, text: 0 });
   });
 });
+
+describe('mounted budget subscription', () => {
+  it('rolls to the next UTC month without remounting and stops after cleanup', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-31T23:59:30Z'));
+    const mod = await loadPlacesUsage('1', '100');
+    await mod.reservePlacesCall('nearby');
+    const snapshots: boolean[] = [];
+    const stop = mod.subscribePlacesUsage((snapshot) => snapshots.push(snapshot.blocked.nearby));
+    expect(snapshots.at(-1)).toBe(true);
+    await vi.advanceTimersByTimeAsync(30_001);
+    expect(snapshots.at(-1)).toBe(false);
+    await mod.reservePlacesCall('nearby');
+    expect(snapshots.at(-1)).toBe(true);
+    stop();
+    const count = snapshots.length;
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(snapshots).toHaveLength(count);
+  });
+});

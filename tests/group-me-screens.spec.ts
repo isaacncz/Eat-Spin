@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 
-import { useLunchtimeClock } from './spin-helpers';
+import { setLunchtimeClock } from './spin-helpers';
 
 const tab = (page: Page, label: 'Spin' | 'My list' | 'Group' | 'Me') =>
   page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: new RegExp(`^${label}`) });
@@ -163,7 +163,7 @@ test.describe('Me screen > About EatSpin start buttons', () => {
 
   for (const { section, button } of startButtons) {
     test(`the ${section} "${button}" button lands on the Spin tab`, async ({ page }) => {
-      await useLunchtimeClock(page);
+      await setLunchtimeClock(page);
       await skipOnboarding(page);
       await page.goto('/');
       await tab(page, 'Me').click();

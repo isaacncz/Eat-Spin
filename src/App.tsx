@@ -650,14 +650,18 @@ function App() {
     reportQuestEvent({ type: 'spin' });
   }, [currentMealTime, publishDiscoverSpin, recordDailySpin, reportQuestEvent]);
 
-  const handleSaveFavourite = useCallback((restaurant: Restaurant, mode: 'auto' | 'manual') => {
+  const handleSaveFavourite = useCallback(async (restaurant: Restaurant, mode: 'auto' | 'manual') => {
     trackEvent('favourite_saved', { restaurant_name: restaurant.name, mode });
     const isNewFavourite = !isFavouriteCheck(restaurant);
-    void saveFavourite(restaurant, mode === 'auto' ? 'spin-auto' : 'spin-manual');
-    toast.success(`${restaurant.name} saved to favourites!`, {
-      description: 'Find it in the "I Know Where" tab under My Favourites.',
-    });
-    if (isNewFavourite) reportQuestEvent({ type: 'favourite-saved' });
+    try {
+      await saveFavourite(restaurant, mode === 'auto' ? 'spin-auto' : 'spin-manual');
+      toast.success(`${restaurant.name} saved to favourites!`, {
+        description: 'Find it in My list → Favourites.',
+      });
+      if (isNewFavourite) reportQuestEvent({ type: 'favourite-saved' });
+    } catch {
+      toast.error('Could not save this place. Please try again.');
+    }
   }, [isFavouriteCheck, reportQuestEvent, saveFavourite]);
 
   const handleShareResult = useCallback(async (restaurant: Restaurant, cardElement: HTMLElement) => {

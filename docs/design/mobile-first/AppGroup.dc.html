@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Group</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFD93D; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+<header style="padding: 48px 20px 0">
+<h1 style="margin: 0; font-size: 30px; font-weight: 700; line-height: 1.1">Group spin</h1>
+<div style="margin-top: 2px; font-size: 15px; font-weight: 500; color: #4B4A7A">Everyone sees the same wheel</div>
+</header>
+<div style="padding: 16px 20px 0; flex-grow: 1; display: flex; flex-direction: column; gap: 14px">
+<section aria-label="Room code" style="box-sizing: border-box; border: 4px solid #1E1B4B; border-radius: 24px; background: #FFFFFF; box-shadow: 0 6px 0 #1E1B4B; padding: 16px 20px; text-align: center">
+<div style="font-size: 14px; font-weight: 600; color: #4B4A7A">Room code</div>
+<div style="font-size: 48px; font-weight: 700; letter-spacing: 0.18em; line-height: 1.1">K7QX</div>
+<div style="margin-top: 10px; display: flex; gap: 10px">
+<button type="button" style="flex: 1; height: 48px; border: 3px solid #1E1B4B; border-radius: 14px; background: #22D3EE; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 16px; font-weight: 700; cursor: pointer">Copy link</button>
+<button type="button" style="flex: 1; height: 48px; border: 3px solid #1E1B4B; border-radius: 14px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 16px; font-weight: 700; cursor: pointer">Share</button>
+</div>
+</section>
+<section aria-label="Who is in the room">
+<div style="margin-bottom: 8px; font-size: 14px; font-weight: 600; color: #4B4A7A">In the room &middot; 3</div>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+<li style="display: flex; align-items: center; gap: 12px; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 16px; background: #FFFFFF; padding: 8px 12px">
+<span aria-hidden="true" style="width: 36px; height: 36px; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 18px; background: #FF4D8D; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700">I</span>
+<span style="flex-grow: 1; font-size: 17px; font-weight: 600">Isaac (you)</span>
+<span style="border: 3px solid #1E1B4B; border-radius: 10px; background: #FFD93D; padding: 2px 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em">Host</span>
+</li>
+<li style="display: flex; align-items: center; gap: 12px; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 16px; background: #FFFFFF; padding: 8px 12px">
+<span aria-hidden="true" style="width: 36px; height: 36px; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 18px; background: #22D3EE; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700">A</span>
+<span style="flex-grow: 1; font-size: 17px; font-weight: 600">Aina</span>
+<span style="border: 3px solid #1E1B4B; border-radius: 10px; background: #A3E635; padding: 2px 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em">Ready</span>
+</li>
+<li style="display: flex; align-items: center; gap: 12px; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 16px; background: #FFFFFF; padding: 8px 12px">
+<span aria-hidden="true" style="width: 36px; height: 36px; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 18px; background: #C4B5FD; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700">W</span>
+<span style="flex-grow: 1; font-size: 17px; font-weight: 600">Wei Jie</span>
+<span style="border: 3px solid #1E1B4B; border-radius: 10px; background: #FFFFFF; padding: 2px 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em">Joining</span>
+</li>
+</ul>
+</section>
+</div>
+<div style="padding: 0 20px 12px; display: flex; flex-direction: column; gap: 10px">
+<a href="AppSpin.dc.html" style="height: 60px; box-sizing: border-box; border: 4px solid #1E1B4B; border-radius: 20px; background: #FF4D8D; box-shadow: 0 6px 0 #1E1B4B; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center">Start spin for everyone</a>
+<button type="button" style="height: 48px; border: 3px solid #1E1B4B; border-radius: 16px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 16px; font-weight: 600; cursor: pointer">Leave room</button>
+</div>
+<nav aria-label="Main" style="padding: 8px 12px 26px; border-top: 3px solid #1E1B4B; background: #FFFFFF; display: flex; gap: 6px">
+<a href="AppSpin.dc.html" style="flex: 1; min-height: 52px; box-sizing: border-box; border: 3px solid transparent; border-radius: 14px; font-size: 13px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3v6.5M20 16l-5.6-3.3M4 16l5.6-3.3"/></svg>Spin</a>
+<a href="AppList.dc.html" style="flex: 1; min-height: 52px; box-sizing: border-box; border: 3px solid transparent; border-radius: 14px; font-size: 13px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>My list</a>
+<a href="AppGroup.dc.html" aria-current="page" style="flex: 1; min-height: 52px; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 14px; background: #FF4D8D; font-size: 13px; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.2c2.6.2 4.5 2 4.5 5"/></svg>Group</a>
+<a href="AppMe.dc.html" style="flex: 1; min-height: 52px; box-sizing: border-box; border: 3px solid transparent; border-radius: 14px; font-size: 13px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>Me</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

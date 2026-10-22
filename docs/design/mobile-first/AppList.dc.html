@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>My list</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFD93D; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+<header style="padding: 48px 20px 0">
+<h1 style="margin: 0; font-size: 30px; font-weight: 700; line-height: 1.1">My list</h1>
+<div style="margin-top: 2px; font-size: 15px; font-weight: 500; color: #4B4A7A">8 places &middot; spin any time</div>
+</header>
+<div style="padding: 12px 20px 0; display: flex; gap: 8px; overflow: hidden">
+<button type="button" aria-pressed="true" style="flex-shrink: 0; height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FF4D8D; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 700; cursor: pointer">Lunch &middot; 8</button>
+<button type="button" style="flex-shrink: 0; height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">Date night &middot; 3</button>
+<button type="button" style="flex-shrink: 0; height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">+ New list</button>
+</div>
+<ul style="list-style: none; margin: 0; padding: 14px 20px 0; flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; gap: 10px">
+<li style="display: flex; align-items: center; gap: 12px; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 18px; background: #FFFFFF; box-shadow: 0 3px 0 #1E1B4B; padding: 10px 10px 10px 12px">
+<span aria-hidden="true" style="width: 40px; height: 40px; flex-shrink: 0; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 12px; background: #FF4D8D; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700">N</span>
+<div style="flex-grow: 1; min-width: 0"><div style="font-size: 17px; font-weight: 600">Nasi Kandar Pelita</div><div style="font-size: 13px; font-weight: 500; color: #4B4A7A">9 visits &middot; Rice</div></div>
+<button type="button" aria-label="Remove Nasi Kandar Pelita" style="width: 44px; height: 44px; flex-shrink: 0; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E1B4B" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</li>
+<li style="display: flex; align-items: center; gap: 12px; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 18px; background: #FFFFFF; box-shadow: 0 3px 0 #1E1B4B; padding: 10px 10px 10px 12px">
+<span aria-hidden="true" style="width: 40px; height: 40px; flex-shrink: 0; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 12px; background: #22D3EE; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700">C</span>
+<div style="flex-grow: 1; min-width: 0"><div style="font-size: 17px; font-weight: 600">CKT Stall, Lorong 3</div><div style="font-size: 13px; font-weight: 500; color: #4B4A7A">6 visits &middot; Noodles</div></div>
+<button type="button" aria-label="Remove CKT Stall, Lorong 3" style="width: 44px; height: 44px; flex-shrink: 0; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E1B4B" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</li>
+<li style="display: flex; align-items: center; gap: 12px; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 18px; background: #FFFFFF; box-shadow: 0 3px 0 #1E1B4B; padding: 10px 10px 10px 12px">
+<span aria-hidden="true" style="width: 40px; height: 40px; flex-shrink: 0; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 12px; background: #A3E635; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700">K</span>
+<div style="flex-grow: 1; min-width: 0"><div style="font-size: 17px; font-weight: 600">Kheng Cafe</div><div style="font-size: 13px; font-weight: 500; color: #4B4A7A">3 visits &middot; Cafe</div></div>
+<button type="button" aria-label="Remove Kheng Cafe" style="width: 44px; height: 44px; flex-shrink: 0; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E1B4B" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</li>
+<li style="display: flex; align-items: center; gap: 12px; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 18px; background: #FFFFFF; box-shadow: 0 3px 0 #1E1B4B; padding: 10px 10px 10px 12px">
+<span aria-hidden="true" style="width: 40px; height: 40px; flex-shrink: 0; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 12px; background: #FB923C; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700">S</span>
+<div style="flex-grow: 1; min-width: 0"><div style="font-size: 17px; font-weight: 600">Sup Tulang Pak Mat</div><div style="font-size: 13px; font-weight: 500; color: #4B4A7A">2 visits &middot; Soup</div></div>
+<button type="button" aria-label="Remove Sup Tulang Pak Mat" style="width: 44px; height: 44px; flex-shrink: 0; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E1B4B" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</li>
+<li style="display: flex; align-items: center; gap: 12px; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 18px; background: #FFFFFF; box-shadow: 0 3px 0 #1E1B4B; padding: 10px 10px 10px 12px">
+<span aria-hidden="true" style="width: 40px; height: 40px; flex-shrink: 0; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 12px; background: #C4B5FD; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700">M</span>
+<div style="flex-grow: 1; min-width: 0"><div style="font-size: 17px; font-weight: 600">Mee Hoon Corner</div><div style="font-size: 13px; font-weight: 500; color: #4B4A7A">1 visit &middot; Noodles</div></div>
+<button type="button" aria-label="Remove Mee Hoon Corner" style="width: 44px; height: 44px; flex-shrink: 0; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E1B4B" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</li>
+</ul>
+<div style="padding: 10px 20px 10px; display: flex; gap: 8px">
+<label style="flex-grow: 1; display: block">
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Add a place</span>
+<input type="text" placeholder="Add a place..." style="width: 100%; height: 52px; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 16px; background: #FFFFFF; padding: 0 14px; font-family: 'Fredoka', system-ui, sans-serif; font-size: 16px; font-weight: 500; color: #1E1B4B; outline: none">
+</label>
+<button type="button" style="height: 52px; padding: 0 20px; border: 4px solid #1E1B4B; border-radius: 16px; background: #FF4D8D; box-shadow: 0 4px 0 #1E1B4B; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 17px; font-weight: 700; cursor: pointer">Add</button>
+</div>
+<nav aria-label="Main" style="padding: 8px 12px 26px; border-top: 3px solid #1E1B4B; background: #FFFFFF; display: flex; gap: 6px">
+<a href="AppSpin.dc.html" style="flex: 1; min-height: 52px; box-sizing: border-box; border: 3px solid transparent; border-radius: 14px; font-size: 13px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3v6.5M20 16l-5.6-3.3M4 16l5.6-3.3"/></svg>Spin</a>
+<a href="AppList.dc.html" aria-current="page" style="flex: 1; min-height: 52px; box-sizing: border-box; border: 3px solid #1E1B4B; border-radius: 14px; background: #FF4D8D; font-size: 13px; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>My list</a>
+<a href="AppGroup.dc.html" style="flex: 1; min-height: 52px; box-sizing: border-box; border: 3px solid transparent; border-radius: 14px; font-size: 13px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.2c2.6.2 4.5 2 4.5 5"/></svg>Group</a>
+<a href="AppMe.dc.html" style="flex: 1; min-height: 52px; box-sizing: border-box; border: 3px solid transparent; border-radius: 14px; font-size: 13px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>Me</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

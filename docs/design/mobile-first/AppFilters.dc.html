@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Filters</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; background: #FFD93D; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; overflow: hidden">
+<div aria-hidden="true" style="position: absolute; left: 20px; right: 20px; top: 56px; height: 28px; border-radius: 14px; background: #FFFFFF; border: 3px solid #1E1B4B; box-sizing: border-box"></div>
+<div aria-hidden="true" style="position: absolute; left: 20px; top: 110px; width: 220px; height: 34px; border-radius: 8px; background: #1E1B4B"></div>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(30, 27, 75, 0.6)"></div>
+<section role="dialog" aria-label="Filters" style="position: absolute; left: 0; right: 0; bottom: 0; height: 690px; box-sizing: border-box; border: 4px solid #1E1B4B; border-bottom: 0; border-radius: 28px 28px 0 0; background: #FFFFFF; display: flex; flex-direction: column">
+<div style="padding: 10px 20px 0; display: flex; flex-direction: column; align-items: center">
+<div aria-hidden="true" style="width: 48px; height: 6px; border-radius: 3px; background: #1E1B4B"></div>
+</div>
+<header style="padding: 10px 20px 8px; display: flex; align-items: center; justify-content: space-between">
+<h1 style="margin: 0; font-size: 26px; font-weight: 700">Filters</h1>
+<button type="button" style="min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: #B01B58; font-family: 'Fredoka', system-ui, sans-serif; font-size: 16px; font-weight: 600; text-decoration: underline; cursor: pointer">Reset</button>
+</header>
+<div style="flex-grow: 1; overflow: hidden; padding: 0 20px; display: flex; flex-direction: column; gap: 14px">
+<div>
+<div style="margin-bottom: 6px; font-size: 14px; font-weight: 600; color: #4B4A7A">How far?</div>
+<div style="display: flex; gap: 8px">
+<button type="button" style="flex: 1; height: 48px; border: 3px solid #1E1B4B; border-radius: 14px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">Walk</button>
+<button type="button" aria-pressed="true" style="flex: 1; height: 48px; border: 3px solid #1E1B4B; border-radius: 14px; background: #FF4D8D; box-shadow: 0 3px 0 #1E1B4B; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 700; cursor: pointer">Drive 10</button>
+<button type="button" style="flex: 1; height: 48px; border: 3px solid #1E1B4B; border-radius: 14px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">Drive 20</button>
+</div>
+</div>
+<div>
+<div style="margin-bottom: 6px; font-size: 14px; font-weight: 600; color: #4B4A7A">Price</div>
+<div style="display: flex; gap: 8px">
+<button type="button" style="flex: 1; height: 44px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">$</button>
+<button type="button" aria-pressed="true" style="flex: 1; height: 44px; border: 3px solid #1E1B4B; border-radius: 22px; background: #A3E635; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 700; cursor: pointer">$$</button>
+<button type="button" style="flex: 1; height: 44px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">$$$</button>
+<button type="button" style="flex: 1; height: 44px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">$$$$</button>
+</div>
+</div>
+<div>
+<div style="margin-bottom: 6px; font-size: 14px; font-weight: 600; color: #4B4A7A">Food type</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" style="height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">Rice</button>
+<button type="button" aria-pressed="true" style="height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #22D3EE; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 700; cursor: pointer">Noodles</button>
+<button type="button" style="height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">Soup</button>
+<button type="button" style="height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">Chicken</button>
+<button type="button" style="height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">Western</button>
+<button type="button" aria-pressed="true" style="height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #22D3EE; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 700; cursor: pointer">Japanese</button>
+<button type="button" style="height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">Korean</button>
+<button type="button" style="height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">Cafe</button>
+<button type="button" style="height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">Street food</button>
+</div>
+</div>
+<div>
+<div style="margin-bottom: 6px; font-size: 14px; font-weight: 600; color: #4B4A7A">Also serves</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" style="height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">Coffee</button>
+<button type="button" style="height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">Dessert</button>
+<button type="button" style="height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">Vegetarian</button>
+<button type="button" style="height: 44px; padding: 0 16px; border: 3px solid #1E1B4B; border-radius: 22px; background: #FFFFFF; color: #1E1B4B; font-family: 'Fredoka', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer">Takeout</button>
+</div>
+</div>
+</div>
+<div style="padding: 12px 20px 28px; border-top: 3px solid #1E1B4B">
+<a href="AppSpin.dc.html" style="height: 56px; box-sizing: border-box; border: 4px solid #1E1B4B; border-radius: 18px; background: #FF4D8D; box-shadow: 0 5px 0 #1E1B4B; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center">Show 9 places</a>
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

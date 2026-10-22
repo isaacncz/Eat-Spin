@@ -58,7 +58,7 @@ export function useTextSearch({ location, radiusKm }: UseTextSearchOptions): Use
   const executeSearch = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || !location) return;
+      if (!trimmed || !location) { setIsLoading(false); return; }
 
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -102,6 +102,9 @@ export function useTextSearch({ location, radiusKm }: UseTextSearchOptions): Use
     (text: string) => {
       setQuery(text);
       if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = null;
+      abortRef.current?.abort();
+      setIsLoading(false);
       if (!text.trim()) {
         setResults([]);
         setError(null);
@@ -113,6 +116,9 @@ export function useTextSearch({ location, radiusKm }: UseTextSearchOptions): Use
   );
 
   const clearResults = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    setIsLoading(false);
     setQuery('');
     setResults([]);
     setError(null);

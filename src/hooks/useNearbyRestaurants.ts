@@ -141,7 +141,7 @@ export function useNearbyRestaurants({
         console.error('Failed to read nearby cache', cacheError);
       }
 
-      if (requestIdRef.current !== requestId) return;
+      if (requestIdRef.current !== requestId || abortController.signal.aborted) return;
 
       if (cachedResult && cachedResult.restaurants.length >= cacheConfig.minResults) {
         const rankedCached = rankNearbyRestaurants(
@@ -168,7 +168,7 @@ export function useNearbyRestaurants({
           selectedCategories,
         });
 
-        if (requestIdRef.current !== requestId) return;
+        if (requestIdRef.current !== requestId || abortController.signal.aborted) return;
 
         const rankedLive = rankNearbyRestaurants(
           liveResult,
@@ -180,7 +180,8 @@ export function useNearbyRestaurants({
         const fetchedAtMs = Date.now();
 
         if (rankedLive.length > 0) {
-          await saveNearbyRestaurantsSnapshot({
+          try {
+            await saveNearbyRestaurantsSnapshot({
             location,
             restaurants: rankedLive,
             searchRadiusKm: effectiveRadiusKm,
@@ -190,10 +191,13 @@ export function useNearbyRestaurants({
             ttlMs: cacheConfig.ttlMs,
             fetchedAtMs,
             categoriesKey,
-          });
+            });
+          } catch (cacheError) {
+            console.warn('Nearby results could not be cached', cacheError);
+          }
         }
 
-        if (requestIdRef.current !== requestId) return;
+        if (requestIdRef.current !== requestId || abortController.signal.aborted) return;
 
         if (rankedLive.length === 0 && cachedResult && cachedResult.restaurants.length > 0) {
           const rankedCached = rankNearbyRestaurants(
@@ -216,7 +220,7 @@ export function useNearbyRestaurants({
         setLastSyncedAt(fetchedAtMs);
         setShouldUseLocalFallback(false);
       } catch (fetchError) {
-        if (requestIdRef.current !== requestId) return;
+        if (requestIdRef.current !== requestId || abortController.signal.aborted) return;
         if (fetchError instanceof DOMException && fetchError.name === 'AbortError') return;
 
         const errorMessage = fetchError instanceof Error

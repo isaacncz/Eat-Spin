@@ -8,6 +8,9 @@ import { useTextSearch } from '@/hooks/useTextSearch';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom } from '@/hooks/useFirebaseGroupRoom';
 import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
+import { usePlacesBudget } from '@/hooks/usePlacesBudget';
+import { useGame } from '@/hooks/useGame';
+import { GameHud } from '@/components/GameHud';
 import { getMealTimeEmoji, getSuggestedManualListName, useManualLists } from '@/hooks/useManualLists';
 import { useSpinChallenge } from '@/hooks/useSpinChallenge';
 import { useDiscoverFeed } from '@/hooks/useDiscoverFeed';
@@ -280,6 +283,8 @@ function App() {
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
   const { spins, canSpin, recordSpin } = useSpinTracker();
+  const placesBudget = usePlacesBudget();
+  const game = useGame();
   const {
     favourites,
     isFavourite: isFavouriteCheck,
@@ -796,6 +801,13 @@ function App() {
     trackEvent('lets_go_tapped', { restaurant_name: restaurant.name });
     void recordVisitAndSave(restaurant);
 
+    const reward = game.awardForLetsGo(restaurant.id);
+    if (reward.awarded) {
+      toast.success(`+${reward.xp} XP, +${reward.coins} coins`, {
+        description: reward.leveledUp ? `Level up! You are now level ${game.level + 1}.` : undefined,
+      });
+    }
+
     // Enqueue feedback for next app open
     const favId = deriveFavouriteId(restaurant);
     enqueueFeedback({ favouriteId: favId, restaurantName: restaurant.name });
@@ -816,7 +828,7 @@ function App() {
     toast.success(`Navigating to ${restaurant.name}!`, {
       description: 'We\'ll ask how it was next time you open the app.',
     });
-  }, [recordVisitAndSave]);
+  }, [game, recordVisitAndSave]);
 
   const handleRemoveFavourite = useCallback((id: string, name: string) => {
     trackEvent('favourite_removed', { favourite_id: id });
@@ -910,6 +922,11 @@ function App() {
 
   // Handle spin attempt
   const handleSpinAttempt = () => {
+    if (activeTab === 'auto' && placesBudget.nearbyBlocked) {
+      trackEvent('spin_blocked', { mode: 'budget' });
+      toast.error('Nearby spins are paused: monthly search budget reached. Try My List, or come back next month.');
+      return false;
+    }
     if (!canSpin(currentMealTime)) {
       trackEvent('spin_blocked', { mode: activeTab });
       setShowSpinLimitWarning(true);
@@ -1450,7 +1467,7 @@ function App() {
 
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-brand-linen">
+    <div className="min-h-screen overflow-x-clip bg-arcade-yellow">
       {/* App-style navbar with built-in tab toggle */}
       <AppNavbar
         activeTab={activeTab}
@@ -1459,6 +1476,14 @@ function App() {
         onGroupSpin={() => scrollToSection('group-spin')}
         onAbout={() => setShowAboutSections(prev => !prev)}
         onLeaveRoom={isGroupRoomActive ? handleLeaveGroupRoom : undefined}
+      />
+
+      <GameHud
+        level={game.level}
+        xpIntoLevel={game.xpIntoLevel}
+        xpPerLevel={game.xpPerLevel}
+        coins={game.coins}
+        streak={spinHistorySummary.currentStreak}
       />
 
       {/* QuickSpinHero - only in auto (discovery) mode */}
@@ -1494,7 +1519,7 @@ function App() {
 
           {/* PWA Install Banner */}
           {showPwaInstallBanner && isPwaPromptReady && (
-            <div className="mb-4 rounded-2xl border border-brand-orange/40 bg-brand-linen px-4 py-3 shadow-sm">
+            <div className="mb-4 rounded-2xl border-2 border-brand-ink bg-white px-4 py-3 shadow-pop">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="font-heading text-base font-bold text-brand-black">Install EatSpin for faster lunch decisions</p>
@@ -1513,7 +1538,7 @@ function App() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="border-brand-orange/50 text-brand-black hover:bg-brand-linen"
+                    className="border-brand-ink text-brand-black hover:bg-brand-linen"
                     onClick={handleDismissPwaBanner}
                   >
                     Later
@@ -1526,6 +1551,11 @@ function App() {
           {/* AUTO MODE */}
           {activeTab === 'auto' && (
             <>
+              {placesBudget.nearbyBlocked && (
+                <div role="alert" className="mb-4 rounded-2xl border-2 border-brand-ink bg-brand-yellow px-4 py-3 text-sm font-semibold text-brand-ink">
+                  Nearby spins are paused: the monthly search budget is used up ({placesBudget.nearbyUsed}/{placesBudget.cap}). Your own list still works, and nearby spins return next month.
+                </div>
+              )}
               {!location && (
                 <div className="mb-6">
                   <LocationPermission
@@ -1559,7 +1589,7 @@ function App() {
 
               {/* Empty state */}
               {location && filteredRestaurants.length === 0 && !nearbyRestaurantsLoading && autoSourceRestaurants.length > 0 && (
-                <div className="mb-5 mt-4 rounded-2xl border border-eatspin-peach/60 bg-white p-5 text-center">
+                <div className="mb-5 mt-4 rounded-2xl border-2 border-brand-ink bg-white p-5 text-center">
                   <p className="text-2xl">
                     {activeServesFilters.length > 0 ? '🔍' : '😕'}
                   </p>
@@ -1614,7 +1644,7 @@ function App() {
 
               {/* Review section */}
               {location && roundRestaurants.length > 0 && (
-                <div className="mb-8 rounded-2xl border border-eatspin-peach/60 bg-white p-4 sm:p-5">
+                <div className="mb-8 rounded-2xl border-2 border-brand-ink bg-white p-4 sm:p-5">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <button
@@ -1648,8 +1678,8 @@ function App() {
                             <p className="font-medium text-brand-black">
                               {restaurant.name}
                               {isFavouriteCheck(restaurant) && (
-                                <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-pink-100 px-1.5 py-0.5 text-[10px] font-semibold text-pink-600 align-middle">
-                                  <Heart size={10} className="fill-pink-500 text-pink-500" /> Fave
+                                <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full border-2 border-brand-ink bg-arcade-pink px-1.5 py-0.5 text-[10px] font-semibold text-brand-ink align-middle">
+                                  <Heart size={10} className="fill-arcade-pink text-brand-ink" /> Fave
                                 </span>
                               )}
                             </p>
@@ -1668,16 +1698,16 @@ function App() {
                           <div className="flex items-center gap-1.5 flex-shrink-0">
                             {isFavouriteCheck(restaurant) ? (
                               <span
-                                className="inline-flex items-center gap-1 rounded-full bg-pink-50 border border-pink-200 px-2.5 py-1 text-xs font-medium text-pink-500"
+                                className="inline-flex items-center gap-1 rounded-full bg-arcade-pink/30 border-2 border-brand-ink px-2.5 py-1 text-xs font-semibold text-brand-ink"
                                 title="Already in My Favourites"
                               >
-                                <Heart size={12} className="fill-pink-500 text-pink-500" /> Saved
+                                <Heart size={12} className="fill-arcade-pink text-brand-ink" /> Saved
                               </span>
                             ) : (
                               <button
                                 type="button"
                                 onClick={() => handleSaveFavourite(restaurant, 'auto')}
-                                className="inline-flex items-center gap-1 rounded-full border border-pink-200 bg-white px-2.5 py-1 text-xs font-medium text-pink-500 hover:bg-pink-50"
+                                className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-white px-2.5 py-1 text-xs font-semibold text-brand-ink hover:bg-arcade-pink/20"
                                 aria-label={`Save ${restaurant.name} to favourites`}
                               >
                                 <Heart size={12} /> Save
@@ -1701,7 +1731,7 @@ function App() {
                           <button
                             type="button"
                             onClick={() => setShowAllRoundRestaurants((prev) => !prev)}
-                            className="rounded-full border border-eatspin-peach/80 bg-white px-3 py-1.5 text-xs font-medium text-eatspin-gray-1 hover:bg-brand-linen"
+                            className="rounded-full border-2 border-brand-ink bg-white px-3 py-1.5 text-xs font-medium text-eatspin-gray-1 hover:bg-brand-linen"
                           >
                             {showAllRoundRestaurants
                               ? `Show first ${REVIEW_PREVIEW_COUNT}`
@@ -1727,7 +1757,7 @@ function App() {
               {/* Premium badge */}
               {isPremium && (
                 <div className="text-center">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full text-sm font-medium">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-arcade-yellow text-brand-ink border-2 border-brand-ink shadow-pop rounded-full text-sm font-semibold">
                     <Crown size={16} />
                     Premium Member - Unlimited Spins
                   </div>
@@ -1740,7 +1770,7 @@ function App() {
           {activeTab === 'manual' && (
             <div id="wheel" className="py-4 pb-14 sm:pb-8">
               {isGroupRoomActive && (
-                <div className="mb-4 rounded-xl border border-brand-orange/30 bg-brand-linen px-4 py-3 text-sm text-eatspin-gray-1">
+                <div className="mb-4 rounded-xl border-2 border-brand-ink bg-brand-linen px-4 py-3 text-sm text-eatspin-gray-1">
                   <p className="font-semibold text-brand-black">
                     Room {groupRoomId} {isGroupHost ? '(Host)' : isGroupCohost ? '(Co-host)' : '(Participant)'}
                   </p>
@@ -1772,7 +1802,7 @@ function App() {
                           variant="outline"
                           onClick={handleSaveRoomListToManualLists}
                           disabled={displayedManualRestaurantNames.length === 0}
-                          className="h-9 border-brand-orange/40 bg-white px-3 text-xs font-semibold text-brand-black hover:bg-brand-linen"
+                          className="h-9 border-brand-ink bg-white px-3 text-xs font-semibold text-brand-black hover:bg-brand-linen"
                         >
                           Add to my list
                         </Button>
@@ -1781,7 +1811,7 @@ function App() {
                           onClick={() => {
                             void handleLeaveGroupRoom();
                           }}
-                          className="inline-flex items-center rounded-full border border-brand-orange/40 bg-white px-3 py-1.5 text-xs font-semibold text-brand-black hover:bg-brand-linen"
+                          className="inline-flex items-center rounded-full border-2 border-brand-ink bg-white px-3 py-1.5 text-xs font-semibold text-brand-black hover:bg-brand-linen"
                         >
                           Leave room to spin on your own
                         </button>
@@ -1791,7 +1821,7 @@ function App() {
                 </div>
               )}
               {/* ── Saved Lists: chip-based selector ── */}
-              <div className="mb-6 max-w-2xl mx-auto rounded-2xl border border-eatspin-peach/60 bg-white p-4 shadow-sm">
+              <div className="mb-6 max-w-2xl mx-auto rounded-2xl border-2 border-brand-ink bg-white p-4 shadow-pop">
                 <div className="flex flex-col gap-3">
                   {/* Header */}
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-eatspin-gray-1">Saved lists</p>
@@ -1816,7 +1846,7 @@ function App() {
                             className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
                               isSelected
                                 ? 'bg-brand-orange text-white shadow-sm'
-                                : 'border border-eatspin-peach/70 bg-white text-brand-black hover:border-brand-orange/40 hover:bg-brand-linen'
+                                : 'border-2 border-brand-ink bg-white text-brand-black hover:border-brand-ink hover:bg-brand-linen'
                             } disabled:opacity-40`}
                           >
                             {emoji && <span>{emoji}</span>}
@@ -1824,7 +1854,7 @@ function App() {
                             <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-xs tabular-nums ${
                               isSelected
                                 ? list.restaurants.length === 0 ? 'bg-white/20 text-white/90' : 'bg-white/25 text-white'
-                                : list.restaurants.length === 0 ? 'bg-eatspin-peach/50 text-eatspin-gray-1' : 'bg-eatspin-peach/70 text-brand-black'
+                                : list.restaurants.length === 0 ? 'bg-arcade-yellow/30 text-eatspin-gray-1' : 'bg-arcade-yellow/30 text-brand-black'
                             }`}>
                               {list.restaurants.length}
                             </span>
@@ -1836,7 +1866,7 @@ function App() {
                         type="button"
                         onClick={handleCreateManualList}
                         disabled={isManualListReadOnly}
-                        className="flex shrink-0 items-center gap-1 rounded-full border border-dashed border-eatspin-peach px-3 py-2 text-sm font-medium text-eatspin-gray-1 transition hover:border-brand-orange/50 hover:text-brand-orange disabled:opacity-40"
+                        className="flex shrink-0 items-center gap-1 rounded-full border-2 border-dashed border-brand-ink/40 px-3 py-2 text-sm font-medium text-eatspin-gray-1 transition hover:border-brand-ink hover:text-brand-orange disabled:opacity-40"
                         aria-label="Create new list"
                       >
                         <Plus size={14} />
@@ -1856,7 +1886,7 @@ function App() {
                         type="button"
                         onClick={() => setIsEditingListDetails(true)}
                         disabled={isManualListReadOnly}
-                        className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-eatspin-gray-1 transition hover:bg-eatspin-peach/30 hover:text-brand-black disabled:opacity-40"
+                        className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-eatspin-gray-1 transition hover:bg-arcade-yellow/60 hover:text-brand-black disabled:opacity-40"
                         aria-label="Edit list name and meal time"
                       >
                         <PencilLine size={13} />
@@ -1879,7 +1909,7 @@ function App() {
 
                   {/* Edit mode (inline expansion) */}
                   {isEditingListDetails && (
-                    <div className="space-y-3 rounded-lg border border-eatspin-peach/50 bg-brand-linen/50 p-3">
+                    <div className="space-y-3 rounded-lg border-2 border-brand-ink bg-brand-linen/50 p-3">
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-1">
                           <label className="text-xs font-medium text-eatspin-gray-1" htmlFor="saved-manual-name">List name</label>
@@ -1905,7 +1935,7 @@ function App() {
                                 }
                                 setListMealTimeInput(null);
                               }}
-                              className="preset-select h-10 w-full rounded-md border border-eatspin-peach/70 bg-white px-3 pr-10 text-sm text-brand-black"
+                              className="preset-select h-10 w-full rounded-md border-2 border-brand-ink bg-white px-3 pr-10 text-sm text-brand-black"
                             >
                               <option value="">🕒 No meal time</option>
                               <option value="breakfast">🌅 Breakfast</option>
@@ -2017,7 +2047,7 @@ function App() {
                                   <button
                                     type="button"
                                     onClick={() => handleAddFavouriteToManualList(nf.restaurantName)}
-                                    className="inline-flex items-center gap-1 rounded-full border border-brand-orange/40 bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
+                                    className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
                                     aria-label={`Add ${nf.restaurantName} to spin list`}
                                   >
                                     <Plus size={12} /> Add
@@ -2038,10 +2068,10 @@ function App() {
                 {/* My Favourites Section */}
                 {favourites.length > 0 && (
                   <div className="mt-6 max-w-xl mx-auto">
-                    <div className="bg-white rounded-xl border border-pink-200/60 p-4">
+                    <div className="bg-white rounded-xl border-2 border-brand-ink shadow-pop p-4">
                       <div className="flex justify-between items-center mb-3">
                         <h4 className="font-heading font-semibold text-brand-black flex items-center gap-2">
-                          <Heart size={16} className="text-pink-500 fill-pink-500" />
+                          <Heart size={16} className="text-brand-ink fill-arcade-pink" />
                           My Favourites ({favourites.length})
                         </h4>
                       </div>
@@ -2078,7 +2108,7 @@ function App() {
                                     <button
                                       type="button"
                                       onClick={() => handleAddFavouriteToManualList(fav.restaurant.name)}
-                                      className="inline-flex items-center gap-1 rounded-full border border-brand-orange/40 bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
+                                      className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-white px-2.5 py-1 text-xs font-medium text-brand-orange hover:bg-brand-orange/10"
                                       aria-label={`Add ${fav.restaurant.name} to spin list`}
                                     >
                                       <Plus size={12} /> Add
@@ -2110,7 +2140,7 @@ function App() {
                 )}
 
                 <div id="manual-input" className="mt-8 max-w-xl mx-auto">
-                  <div className="sticky bottom-3 z-30 rounded-2xl border border-eatspin-peach/60 bg-white/95 p-3 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-white/85">
+                  <div className="sticky bottom-3 z-30 rounded-2xl border-2 border-brand-ink bg-white/95 p-3 shadow-pop backdrop-blur supports-[backdrop-filter]:bg-white/85">
                   <div className="flex flex-col sm:flex-row gap-2">
                   <Input
                       value={manualInput}
@@ -2131,7 +2161,7 @@ function App() {
                   </div>
                 </div>
 
-                <div className="mt-4 bg-white rounded-xl border border-eatspin-peach/60 p-4">
+                <div className="mt-4 bg-white rounded-xl border-2 border-brand-ink p-4">
                   <div className="flex justify-between items-center mb-3">
                     <h4 className="font-heading font-semibold text-brand-black">Restaurant list ({displayedManualRestaurants.length})</h4>
                     {displayedManualRestaurants.length > 0 && (
@@ -2158,7 +2188,7 @@ function App() {
                               onClick={() => {
                                 addManualRestaurantByName(suggestion);
                               }}
-                              className="inline-flex items-center gap-1 rounded-full border border-eatspin-peach/80 bg-brand-linen px-3 py-1.5 text-xs font-medium text-brand-black hover:border-brand-orange hover:text-brand-orange"
+                              className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-brand-linen px-3 py-1.5 text-xs font-medium text-brand-black hover:border-brand-ink hover:text-brand-orange"
                             >
                               <CheckCircle2 size={12} /> {suggestion}
                             </button>
@@ -2194,7 +2224,7 @@ function App() {
 
       {/* Wheel section for auto mode */}
       {activeTab === 'auto' && showWheelSection && location && roundRestaurants.length > 0 && (
-        <section id="wheel" className="py-10 sm:py-12 px-4 sm:px-6 lg:px-8 bg-brand-linen">
+        <section id="wheel" className="py-10 sm:py-12 px-4 sm:px-6 lg:px-8 bg-arcade-yellow">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-5 sm:mb-6">
               <h2 className="font-heading text-xl sm:text-2xl font-bold text-brand-black mb-1.5">
@@ -2280,9 +2310,9 @@ function App() {
 
       {/* Challenge + Discover Feed (feature-flagged) */}
       {APP_FEATURES.spinChallenge && (
-        <section className="py-6 px-4 sm:px-6 lg:px-8 bg-brand-linen">
+        <section className="py-6 px-4 sm:px-6 lg:px-8 bg-arcade-yellow">
           <div className="max-w-4xl mx-auto">
-            <div className="rounded-2xl border border-brand-orange/35 bg-white p-4 sm:p-5">
+            <div className="rounded-2xl border-2 border-brand-ink bg-white p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="font-heading text-lg font-bold text-brand-black">7-Day Challenge a Friend</h3>
@@ -2318,7 +2348,7 @@ function App() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="border-brand-orange/40 text-brand-black hover:bg-brand-linen"
+                  className="border-brand-ink text-brand-black hover:bg-brand-linen"
                   disabled={challengeBusy || !challengeJoinInput.trim()}
                   onClick={handleJoinChallenge}
                 >
@@ -2331,7 +2361,7 @@ function App() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="border-brand-orange/40 text-brand-orange hover:bg-brand-orange/10"
+                    className="border-brand-ink text-brand-orange hover:bg-brand-orange/10"
                     onClick={() => { void handleCopyChallengeLink(); }}
                   >
                     Copy invite link
@@ -2351,7 +2381,7 @@ function App() {
                   )}
                 </div>
 
-                <div className="rounded-xl border border-eatspin-peach/50 bg-brand-linen/60 px-3 py-2">
+                <div className="rounded-xl border-2 border-brand-ink bg-brand-linen/60 px-3 py-2">
                   <p className="text-xs text-eatspin-gray-1">
                     Your completed days: <strong className="text-brand-black">{myChallengeParticipant?.completedDayKeys.length ?? 0}</strong>/7
                   </p>
@@ -2361,7 +2391,7 @@ function App() {
                   {challengeLeaderboard.map((participant) => (
                     <li
                       key={participant.uid}
-                      className="flex items-center justify-between rounded-lg border border-eatspin-peach/50 bg-brand-linen px-3 py-2 text-sm"
+                      className="flex items-center justify-between rounded-lg border-2 border-brand-ink bg-brand-linen px-3 py-2 text-sm"
                     >
                       <span className="font-medium text-brand-black">
                         {participant.name} {participant.uid === groupAuthUid ? '(You)' : ''}
@@ -2380,7 +2410,7 @@ function App() {
       {APP_FEATURES.discoverFeed && (
         <section className="py-6 px-4 sm:px-6 lg:px-8 bg-white">
           <div className="max-w-4xl mx-auto">
-            <div className="rounded-2xl border border-eatspin-peach/60 bg-brand-linen/70 p-4 sm:p-5">
+            <div className="rounded-2xl border-2 border-brand-ink bg-brand-linen/70 p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="font-heading text-lg font-bold text-brand-black">Discover Feed</h3>
@@ -2419,7 +2449,7 @@ function App() {
       )}
 
       {/* About Sections (collapsible) */}
-      <div className="border-t border-eatspin-peach/30">
+      <div className="border-t-2 border-brand-ink/20">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <button
             type="button"

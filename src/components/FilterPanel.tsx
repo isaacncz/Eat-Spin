@@ -83,7 +83,7 @@ export const FilterPanel = memo(function FilterPanel({
           : null;
 
   return (
-    <div className="rounded-2xl border border-eatspin-peach/60 bg-white/80 p-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/80">
+    <div className="rounded-2xl border-2 border-brand-ink bg-white/80 p-4 shadow-pop backdrop-blur supports-[backdrop-filter]:bg-white/80">
       {/* ── Status bar ─────────────────────────────────────────────── */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <div className="inline-flex items-center gap-2">
@@ -125,8 +125,8 @@ export const FilterPanel = memo(function FilterPanel({
               onClick={() => onRangeModeChange(opt.id)}
               className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 ${
                 active
-                  ? 'bg-brand-orange text-white shadow-md'
-                  : 'border border-gray-200 bg-white text-brand-black hover:border-brand-orange hover:text-brand-orange'
+                  ? 'bg-brand-orange text-white border-2 border-brand-ink shadow-pop'
+                  : 'border-2 border-brand-ink bg-white text-brand-black hover:border-brand-ink hover:text-brand-orange'
               }`}
               title={opt.helper}
             >
@@ -147,8 +147,8 @@ export const FilterPanel = memo(function FilterPanel({
               onClick={() => onTogglePriceRange(price)}
               className={`rounded-full px-3 py-1 text-sm font-medium transition-all duration-200 ${
                 active
-                  ? 'bg-brand-orange text-white shadow-md'
-                  : 'border border-gray-200 bg-white text-brand-black hover:border-brand-orange hover:text-brand-orange'
+                  ? 'bg-brand-orange text-white border-2 border-brand-ink shadow-pop'
+                  : 'border-2 border-brand-ink bg-white text-brand-black hover:border-brand-ink hover:text-brand-orange'
               }`}
             >
               {price}

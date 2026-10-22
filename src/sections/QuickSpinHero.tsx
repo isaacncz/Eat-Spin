@@ -117,7 +117,7 @@ export function QuickSpinHero({
   return (
     <section
       className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden
-                 bg-gradient-to-b from-[var(--eatspin-linen)] to-white"
+                 bg-arcade-yellow"
       style={{ paddingTop: 'var(--navbar-height, 72px)' }}
     >
       {/* ── Floating food emoji decorations ─────────────────────────── */}
@@ -144,7 +144,7 @@ export function QuickSpinHero({
         <button
           onClick={handleGroupSpin}
           className="absolute right-5 top-0 flex items-center gap-1.5 rounded-full border
-                     border-[var(--eatspin-gray-3)] bg-white/80 px-3 py-1.5 text-xs font-medium
+                     border-brand-ink bg-white/80 px-3 py-1.5 text-xs font-medium
                      text-[var(--eatspin-gray-1)] shadow-xs backdrop-blur transition-colors
                      hover:border-[var(--eatspin-orange)] hover:text-[var(--eatspin-orange)]
                      sm:right-6 hero-enter hero-enter-delay-1"
@@ -178,15 +178,15 @@ export function QuickSpinHero({
                             text-left transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]
                             ${
                               isSelected
-                                ? 'border-[var(--eatspin-orange)] bg-[var(--eatspin-orange)]/[0.07] shadow-md'
-                                : 'border-[var(--eatspin-gray-3)] bg-white hover:border-[var(--eatspin-peach)] hover:shadow-sm'
+                                ? 'border-brand-ink bg-arcade-pink shadow-pop'
+                                : 'border-brand-ink bg-white hover:bg-arcade-yellow/40 shadow-pop'
                             }`}
                 aria-pressed={isSelected}
               >
                 <span className="text-2xl leading-none">{emoji}</span>
                 <span
                   className={`text-sm font-semibold sm:text-base ${
-                    isSelected ? 'text-[var(--eatspin-orange)]' : 'text-[var(--eatspin-black)]'
+                    'text-brand-ink'
                   }`}
                 >
                   {label}
@@ -206,7 +206,7 @@ export function QuickSpinHero({
               </p>
             ) : restaurantCount === 0 && totalNearbyCount > 0 && closedNowCount >= totalNearbyCount ? (
               /* Every single nearby place is closed */
-              <div className="rounded-xl border border-[var(--eatspin-gray-3)] bg-white/80 px-4 py-3 text-center">
+              <div className="rounded-xl border-2 border-brand-ink bg-white/80 px-4 py-3 text-center">
                 <p className="flex items-center justify-center gap-1.5 text-sm font-medium text-[var(--eatspin-black)]">
                   <Moon className="size-4 text-[var(--eatspin-gray-1)]" />
                   {closedNowCount} place{closedNowCount === 1 ? '' : 's'} nearby — all closed now
@@ -217,7 +217,7 @@ export function QuickSpinHero({
               </div>
             ) : restaurantCount === 0 && totalNearbyCount > 0 ? (
               /* Some combination of filters + closures → 0 results */
-              <div className="rounded-xl border border-[var(--eatspin-peach)]/60 bg-white/80 px-4 py-3 text-center">
+              <div className="rounded-xl border-2 border-brand-ink bg-white/80 px-4 py-3 text-center">
                 <p className="text-sm font-medium text-[var(--eatspin-black)]">
                   😕 No restaurants match right now
                 </p>
@@ -274,7 +274,7 @@ export function QuickSpinHero({
                 onClick={handleSpin}
                 disabled={isSpinning || restaurantCount === 0}
                 className={`group relative h-16 w-full rounded-2xl text-lg font-bold
-                            text-white shadow-lg transition-all duration-300
+                            text-white border-4 border-brand-ink shadow-pop-lg transition-all duration-300
                             disabled:opacity-70 disabled:hover:scale-100
                             sm:h-[72px] sm:text-xl font-heading
                             ${restaurantCount > 0
@@ -325,7 +325,7 @@ export function QuickSpinHero({
           ) : (
             /* ── Location request card ──────────────────────────────── */
             <div className="flex w-full flex-col items-center gap-3 rounded-2xl border
-                            border-[var(--eatspin-gray-3)] bg-white p-5 shadow-sm">
+                            border-brand-ink bg-white p-5 shadow-sm">
               <MapPin className="size-8 text-brand-orange" />
               <p className="text-center text-sm text-[var(--eatspin-black)] sm:text-base">
                 Enable location to find restaurants around you
@@ -344,7 +344,7 @@ export function QuickSpinHero({
                 }}
                 disabled={isLocationLoading}
                 className="h-12 w-full rounded-xl bg-brand-orange font-heading text-base font-bold
-                           text-white shadow-md transition-all hover:scale-105 hover:shadow-lg
+                           text-white transition-all hover:scale-105
                            disabled:opacity-70 disabled:hover:scale-100"
               >
                 {isLocationLoading ? (

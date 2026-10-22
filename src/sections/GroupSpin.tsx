@@ -184,10 +184,10 @@ export function GroupSpin({
   };
 
   return (
-    <section id="group-spin" className="bg-brand-linen px-4 py-16 sm:px-6 lg:px-8">
+    <section id="group-spin" className="bg-arcade-yellow px-4 py-16 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-12 text-center">
-          <Badge className="mb-4 border border-brand-orange/30 bg-brand-orange/10 text-brand-orange">
+          <Badge className="mb-4 border-2 border-brand-ink bg-white text-brand-ink">
             Flagship Feature
           </Badge>
           <h2 className="mb-4 font-heading text-3xl font-bold text-brand-black sm:text-4xl">
@@ -214,7 +214,7 @@ export function GroupSpin({
         )}
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="border-eatspin-peach/60 shadow-lg">
+          <Card className="border-brand-ink shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl font-heading text-brand-black">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-orange/10">
@@ -232,7 +232,7 @@ export function GroupSpin({
               >
                 {isBusy ? 'Working...' : 'Create room link'}
               </Button>
-              <div className="rounded-xl border border-dashed border-brand-orange/30 bg-white/70 px-4 py-3 text-sm text-eatspin-gray-1">
+              <div className="rounded-xl border border-dashed border-brand-ink bg-white/70 px-4 py-3 text-sm text-eatspin-gray-1">
                 {hasRoom ? (
                   <div className="space-y-2">
                     <p className="text-xs uppercase tracking-wide text-brand-black/60">Room code</p>
@@ -264,7 +264,7 @@ export function GroupSpin({
             </CardContent>
           </Card>
 
-          <Card className="border-eatspin-peach/60 shadow-lg">
+          <Card className="border-brand-ink shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl font-heading text-brand-black">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-orange/10">
@@ -278,7 +278,7 @@ export function GroupSpin({
               <Input
                 placeholder="Your name"
                 maxLength={GROUP_ROOM_NAME_MAX_LENGTH}
-                className="h-12 rounded-xl border-eatspin-peach/60 bg-white"
+                className="h-12 rounded-xl border-brand-ink bg-white"
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
                 disabled={!canInteract || isBusy}
@@ -286,7 +286,7 @@ export function GroupSpin({
               <Input
                 placeholder="Paste room link or enter code"
                 id="group-room-join-input"
-                className="h-12 rounded-xl border-eatspin-peach/60 bg-white"
+                className="h-12 rounded-xl border-brand-ink bg-white"
                 value={joinValue}
                 onChange={(event) => setJoinValue(event.target.value)}
                 onKeyDown={(event) => {
@@ -309,7 +309,7 @@ export function GroupSpin({
         </div>
 
         {hasRoom && (
-          <div className="mt-10 rounded-2xl border border-brand-orange/30 bg-white px-6 py-5 shadow-sm">
+          <div className="mt-10 rounded-2xl border-2 border-brand-ink bg-white px-6 py-5 shadow-sm">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-wide text-brand-black/60">Joined room</p>
@@ -361,7 +361,7 @@ export function GroupSpin({
             </div>
 
             {showCompletedListReminder && (
-              <div className="mt-4 rounded-xl border border-brand-orange/30 bg-brand-orange/10 px-4 py-3 text-sm text-brand-black">
+              <div className="mt-4 rounded-xl border-2 border-brand-ink bg-brand-orange/10 px-4 py-3 text-sm text-brand-black">
                 <p className="font-semibold">The room spin is finished.</p>
                 <p className="mt-1 text-brand-black/80">
                   You're still viewing this room's shared restaurant list. Leave the room when you want to go back to your own saved personal list.
@@ -376,7 +376,7 @@ export function GroupSpin({
                 participants.map((participant) => (
                   <div
                     key={participant.uid}
-                    className="flex items-center justify-between rounded-lg border border-eatspin-peach/60 bg-brand-linen/50 px-3 py-2"
+                    className="flex items-center justify-between rounded-lg border-2 border-brand-ink bg-brand-linen/50 px-3 py-2"
                   >
                     <div className="flex flex-col">
                       <span className="text-sm font-medium text-brand-black">
@@ -403,7 +403,7 @@ export function GroupSpin({
               )}
             </div>
 
-            <div className="relative mt-4 rounded-xl border border-eatspin-peach/60 bg-brand-linen/50 px-4 py-3">
+            <div className="relative mt-4 rounded-xl border-2 border-brand-ink bg-brand-linen/50 px-4 py-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-brand-black">Reactions</p>
                 <p className="text-xs text-eatspin-gray-1">Tap to react in real time</p>
@@ -413,7 +413,7 @@ export function GroupSpin({
                   <button
                     key={emoji}
                     type="button"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-orange/35 bg-white text-lg hover:bg-brand-orange/10"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-brand-ink bg-white text-lg hover:bg-brand-orange/10"
                     onClick={() => { void handleSendReaction(emoji); }}
                   >
                     {emoji}
@@ -439,7 +439,7 @@ export function GroupSpin({
               )}
             </div>
 
-            <div className="mt-4 rounded-xl border border-eatspin-peach/60 bg-brand-linen/50 px-4 py-3">
+            <div className="mt-4 rounded-xl border-2 border-brand-ink bg-brand-linen/50 px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-brand-black">Who's in?</p>
                 <p className="text-xs text-eatspin-gray-1">
@@ -450,7 +450,7 @@ export function GroupSpin({
                 <Button
                   type="button"
                   size="sm"
-                  className={`h-8 ${myVote?.going ? 'bg-brand-orange text-white' : 'bg-white text-brand-black border border-brand-orange/40 hover:bg-brand-orange/10'}`}
+                  className={`h-8 ${myVote?.going ? 'bg-brand-orange text-white' : 'bg-white text-brand-black border-2 border-brand-ink hover:bg-brand-orange/10'}`}
                   disabled={votePending}
                   onClick={() => { void handleSetGoingVote(true); }}
                 >
@@ -489,7 +489,7 @@ export function GroupSpin({
               copy: 'One committed result drives every client, so no one gets a different outcome.',
             },
           ].map((item) => (
-            <div key={item.title} className="rounded-2xl border border-eatspin-peach/50 bg-white px-5 py-4 shadow-sm">
+            <div key={item.title} className="rounded-2xl border-2 border-brand-ink bg-white px-5 py-4 shadow-pop">
               <div className="mb-2 flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-orange/10">{item.icon}</span>
                 <p className="font-heading font-semibold text-brand-black">{item.title}</p>

@@ -46,7 +46,7 @@ export function ReviewSnippets({
     <div className={cn('mt-3', className)}>
       <div className="text-left space-y-2.5">
         {visibleReviews.map((review, i) => (
-          <div key={i} className="bg-eatspin-peach/20 rounded-lg px-3 py-2">
+          <div key={i} className="bg-arcade-yellow/30 rounded-lg px-3 py-2">
             <div className="flex items-center gap-2 mb-1">
               {review.authorPhotoUri ? (
                 <img

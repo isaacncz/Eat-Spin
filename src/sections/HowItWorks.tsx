@@ -11,21 +11,21 @@ const steps = [
     title: 'Create or Join a Group Room',
     description:
       'Start with Group Spin: everyone joins one room, builds one shared restaurant list, and the host/co-host keeps the session moving.',
-    color: '#F54703',
+    color: '#FF4D8D',
   },
   {
     icon: RefreshCw,
     title: 'Spin Once, Sync for Everyone',
     description:
       'When the host or co-host spins, everyone sees the same synchronized winner instantly across devices and browsers.',
-    color: '#E74C3C',
+    color: '#22D3EE',
   },
   {
     icon: Utensils,
     title: 'Head Out Together',
     description:
       'Celebrate the final pick, open the restaurant details, and go eat with confidence—no more back-and-forth debates.',
-    color: '#F39C12',
+    color: '#A3E635',
   },
 ];
 
@@ -85,16 +85,16 @@ export function HowItWorks() {
               key={index}
               className="relative group text-center"
             >
-              <div className="bg-eatspin-linen rounded-3xl p-8 h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-2 flex flex-col items-center">
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center font-heading font-bold text-brand-orange">
+              <div className="bg-white rounded-3xl border-4 border-brand-ink shadow-pop p-8 h-full transition-all duration-300 hover:shadow-pop-lg hover:-translate-y-2 flex flex-col items-center">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-10 h-10 bg-arcade-yellow border-2 border-brand-ink rounded-full shadow-pop flex items-center justify-center font-heading font-bold text-brand-ink">
                   {index + 1}
                 </div>
 
                 <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-300 group-hover:scale-110"
-                  style={{ backgroundColor: `${step.color}20` }}
+                  className="w-16 h-16 rounded-2xl border-2 border-brand-ink shadow-pop flex items-center justify-center mb-6 transition-transform duration-300 group-hover:scale-110"
+                  style={{ backgroundColor: step.color }}
                 >
-                  <step.icon size={32} style={{ color: step.color }} />
+                  <step.icon size={32} className="text-brand-ink" />
                 </div>
 
                 <h3 className="font-heading text-xl font-bold text-brand-black mb-3 text-center">
@@ -106,8 +106,8 @@ export function HowItWorks() {
               </div>
 
               {index < steps.length - 1 && (
-                <div className="hidden md:block absolute top-1/2 -right-4 w-8 h-0.5 bg-eatspin-peach">
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[8px] border-l-eatspin-peach" />
+                <div className="hidden md:block absolute top-1/2 -right-4 w-8 h-1 bg-brand-ink">
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[8px] border-l-brand-ink" />
                 </div>
               )}
             </div>
@@ -123,7 +123,7 @@ export function HowItWorks() {
               const appSection = document.getElementById('app-main-section');
               appSection?.scrollIntoView({ behavior: 'smooth' });
             }}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-brand-orange text-white font-heading font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+            className="inline-flex items-center gap-2 px-6 py-3 min-h-11 bg-brand-orange text-white font-heading font-bold rounded-full border-2 border-brand-ink shadow-pop active:translate-y-[3px] active:shadow-none transition-all duration-300 hover:scale-105"
           >
             Try It Now
             <span className="text-xl">🎯</span>

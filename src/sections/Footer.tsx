@@ -24,14 +24,14 @@ export function Footer() {
   };
 
   return (
-    <footer className="bg-[#181818] text-white py-16 px-4 sm:px-6 lg:px-8">
+    <footer className="bg-brand-ink border-t-4 border-brand-black text-white py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12 mb-12">
           {/* Brand Column */}
           <div className="lg:col-span-2">
             {/* Logo */}
             <div className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 bg-brand-orange rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-brand-orange border-2 border-white rounded-xl flex items-center justify-center">
                 <span className="text-white font-heading text-lg font-bold">ES</span>
               </div>
               <span className="font-heading text-xl font-bold text-white">
@@ -39,7 +39,7 @@ export function Footer() {
               </span>
             </div>
 
-            <p className="text-eatspin-gray-2 text-sm leading-relaxed mb-6 max-w-sm">
+            <p className="text-white/80 text-sm leading-relaxed mb-6 max-w-sm">
               The fun way to decide what to eat! Discover amazing restaurants with our roulette wheel and skip the "where to eat" debate.
             </p>
 
@@ -54,7 +54,7 @@ export function Footer() {
                 <li key={link.label}>
                   <button
                     onClick={() => scrollToSection(link.href)}
-                    className="text-sm text-eatspin-gray-2 hover:text-white transition-colors"
+                    className="text-sm text-white/80 hover:text-white transition-colors"
                   >
                     {link.label}
                   </button>
@@ -66,10 +66,10 @@ export function Footer() {
         </div>
 
         {/* Divider */}
-        <div className="border-t border-eatspin-gray-1/20 pt-8">
+        <div className="border-t-2 border-white/20 pt-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             {/* Copyright */}
-            <p className="text-sm text-eatspin-gray-2">
+            <p className="text-sm text-white/80">
               © {new Date().getFullYear()} EatSpin. All rights reserved.
             </p>
 
@@ -80,7 +80,7 @@ export function Footer() {
                   key={social.label}
                   href={social.href}
                   aria-label={social.label}
-                  className="w-10 h-10 rounded-full bg-eatspin-gray-1/20 flex items-center justify-center hover:bg-eatspin-orange transition-colors"
+                  className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center hover:bg-eatspin-orange transition-colors"
                 >
                   <social.icon size={18} className="text-white" />
                 </a>

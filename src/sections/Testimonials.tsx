@@ -130,7 +130,7 @@ export function Testimonials() {
                   size={20}
                   className={
                     i < currentTestimonial.rating
-                      ? 'text-yellow-400 fill-yellow-400'
+                      ? 'text-arcade-orange fill-arcade-yellow'
                       : 'text-eatspin-gray-3'
                   }
                 />
@@ -161,7 +161,7 @@ export function Testimonials() {
           </div>
 
           {/* Navigation */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-eatspin-peach">
+          <div className="flex items-center justify-between mt-8 pt-6 border-t-2 border-brand-ink/20">
             {/* Dots */}
             <div className="flex items-center gap-2">
               {testimonials.map((_, index) => (
@@ -182,14 +182,14 @@ export function Testimonials() {
               <button
                 onClick={prevTestimonial}
                 disabled={isAnimating}
-                className="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-eatspin-peach transition-colors disabled:opacity-50"
+                className="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-arcade-yellow/60 transition-colors disabled:opacity-50"
               >
                 <ChevronLeft size={20} className="text-brand-black" />
               </button>
               <button
                 onClick={nextTestimonial}
                 disabled={isAnimating}
-                className="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-eatspin-peach transition-colors disabled:opacity-50"
+                className="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-arcade-yellow/60 transition-colors disabled:opacity-50"
               >
                 <ChevronRight size={20} className="text-brand-black" />
               </button>

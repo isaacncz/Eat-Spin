@@ -47,37 +47,37 @@ export function FeedbackPrompt({
         <div className="grid grid-cols-2 gap-3 mt-4">
           <Button
             variant="outline"
-            className="h-auto flex-col gap-2 py-4 border-green-200 hover:bg-green-50 hover:border-green-400"
+            className="h-auto flex-col gap-2 py-4 hover:bg-arcade-lime/40"
             onClick={() => onRate('suggest')}
           >
-            <ThumbsUp size={24} className="text-green-600" />
-            <span className="text-sm font-semibold text-green-700">Suggest again</span>
+            <ThumbsUp size={24} className="text-brand-ink" />
+            <span className="text-sm font-semibold text-brand-ink">Suggest again</span>
             <span className="text-xs text-eatspin-gray-1">I'd go back!</span>
           </Button>
 
           <Button
             variant="outline"
-            className="h-auto flex-col gap-2 py-4 border-yellow-200 hover:bg-yellow-50 hover:border-yellow-400"
+            className="h-auto flex-col gap-2 py-4 hover:bg-arcade-yellow/50"
             onClick={() => onRate('neutral')}
           >
-            <Meh size={24} className="text-yellow-600" />
-            <span className="text-sm font-semibold text-yellow-700">It was okay</span>
+            <Meh size={24} className="text-brand-ink" />
+            <span className="text-sm font-semibold text-brand-ink">It was okay</span>
             <span className="text-xs text-eatspin-gray-1">No preference</span>
           </Button>
 
           <Button
             variant="outline"
-            className="h-auto flex-col gap-2 py-4 border-red-200 hover:bg-red-50 hover:border-red-400"
+            className="h-auto flex-col gap-2 py-4 hover:bg-arcade-pink/20"
             onClick={() => onRate('avoid')}
           >
-            <ThumbsDown size={24} className="text-red-500" />
-            <span className="text-sm font-semibold text-red-600">Don't suggest</span>
+            <ThumbsDown size={24} className="text-brand-ink" />
+            <span className="text-sm font-semibold text-brand-ink">Don't suggest</span>
             <span className="text-xs text-eatspin-gray-1">Not for me</span>
           </Button>
 
           <Button
             variant="outline"
-            className="h-auto flex-col gap-2 py-4 border-gray-200 hover:bg-gray-50 hover:border-gray-400"
+            className="h-auto flex-col gap-2 py-4 hover:bg-arcade-violet/40"
             onClick={onDidntGo}
           >
             <HelpCircle size={24} className="text-eatspin-gray-1" />

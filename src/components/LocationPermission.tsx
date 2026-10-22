@@ -27,8 +27,8 @@ export function LocationPermission({
   }
 
   return (
-    <div className="flex flex-col items-center gap-4 p-6 bg-white rounded-2xl shadow-lg border border-eatspin-peach">
-      <div className="w-16 h-16 bg-eatspin-peach rounded-full flex items-center justify-center">
+    <div className="flex flex-col items-center gap-4 p-6 bg-white rounded-2xl shadow-pop border-2 border-brand-ink">
+      <div className="w-16 h-16 bg-arcade-yellow border-2 border-brand-ink rounded-full flex items-center justify-center">
         <MapPin size={32} className="text-eatspin-orange" />
       </div>
 

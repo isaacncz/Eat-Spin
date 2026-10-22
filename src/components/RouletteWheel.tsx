@@ -43,21 +43,22 @@ interface RouletteWheelProps {
 }
 
 // Vibrant appetizing color palette
+// Bright arcade palette. Labels use ink (#1E1B4B), which passes 4.5:1 on every colour here.
 const WHEEL_COLORS = [
-  '#FF6B6B', // Juicy tomato red
-  '#FF9F43', // Orange spice
-  '#F4C430', // Sunny yellow (slightly darker for white text)
-  '#6BCB77', // Fresh green
-  '#4D96FF', // Appetizing blue
-  '#A45EE5', // Vibrant purple
-  '#FF6B6B', // Juicy tomato red
-  '#FF9F43', // Orange spice
-  '#F4C430', // Sunny yellow (slightly darker for white text)
-  '#6BCB77', // Fresh green
-  '#4D96FF', // Appetizing blue
-  '#A45EE5', // Vibrant purple
-  '#FF6B6B', // Juicy tomato red
-  '#FF9F43', // Orange spice
+  '#FF4D8D', // Pink
+  '#22D3EE', // Cyan
+  '#A3E635', // Lime
+  '#FB923C', // Orange
+  '#C4B5FD', // Violet
+  '#FFD93D', // Yellow
+  '#FF4D8D',
+  '#22D3EE',
+  '#A3E635',
+  '#FB923C',
+  '#C4B5FD',
+  '#FFD93D',
+  '#FF4D8D',
+  '#22D3EE',
 ];
 
 function getSegmentColor(index: number): string {
@@ -685,7 +686,7 @@ export function RouletteWheel({
             })}
 
             {/* Center Circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full shadow-xl flex items-center justify-center z-20 border-[3px] border-eatspin-peach" style={{ boxShadow: '0 14px 28px rgba(0,0,0,0.2), 0 0 20px rgba(245, 71, 3, 0.3)' }}>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center z-20 border-4 border-brand-ink shadow-pop">
               <span className="text-base sm:text-lg font-heading text-eatspin-orange font-bold">SPIN</span>
             </div>
             
@@ -695,7 +696,7 @@ export function RouletteWheel({
 
           {/* Decorative outer rings */}
           <div className="absolute inset-0 rounded-full border-6 border-white/20 pointer-events-none shadow-inner" />
-          <div className="absolute inset-0 rounded-full border-[3px] border-eatspin-peach/60 pointer-events-none" />
+          <div className="absolute inset-0 rounded-full border-4 border-brand-ink pointer-events-none" />
         </div>
       </div>
 
@@ -703,8 +704,7 @@ export function RouletteWheel({
       <button
         onClick={handleSpinClick}
         disabled={isSpinning || !canSpin || (Boolean(onRequestSpin) && !canRequestSpin)}
-        className="sticky bottom-3 sm:static z-30 relative overflow-hidden w-full max-w-sm px-8 sm:px-12 py-6 sm:py-7 bg-brand-orange text-white font-heading text-2xl sm:text-[1.7rem] font-bold rounded-2xl shadow-xl animate-cta-pulse transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
-        style={{ boxShadow: '0 18px 35px rgba(0,0,0,0.24), 0 0 28px rgba(245, 71, 3, 0.5)' }}
+        className="sticky bottom-3 sm:static z-30 relative overflow-hidden w-full max-w-sm px-8 sm:px-12 py-6 sm:py-7 bg-brand-orange text-white font-heading text-2xl sm:text-[1.7rem] font-bold rounded-2xl border-4 border-brand-ink shadow-pop-lg active:translate-y-[3px] animate-cta-pulse transition-all duration-300 hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
       >
         {isSpinning ? (
           <span className="inline-flex flex-col items-center justify-center gap-1" aria-live="polite">
@@ -725,7 +725,7 @@ export function RouletteWheel({
       <button
         type="button"
         onClick={() => setSoundEnabled((previous) => !previous)}
-        className="inline-flex items-center gap-1.5 rounded-full border border-eatspin-peach/70 bg-white px-3 py-1.5 text-xs font-semibold text-eatspin-gray-1 hover:border-brand-orange hover:text-brand-orange"
+        className="inline-flex items-center gap-1.5 rounded-full border-2 border-brand-ink bg-white px-3 py-1.5 text-xs font-semibold text-eatspin-gray-1 hover:border-brand-ink hover:text-brand-orange"
       >
         {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
         {soundEnabled ? 'Sound on' : 'Sound off'}
@@ -754,8 +754,8 @@ export function RouletteWheel({
       {/* Distance legend – compact list of restaurants sorted by proximity */}
       {restaurants.some((r) => r.distance !== undefined) && (
         <div className="w-full max-w-md">
-          <details className="group rounded-xl border border-eatspin-peach/50 bg-white/80 backdrop-blur-sm overflow-hidden">
-            <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold text-brand-black select-none hover:bg-eatspin-peach/10 transition-colors">
+          <details className="group rounded-xl border-2 border-brand-ink bg-white/80 backdrop-blur-sm overflow-hidden">
+            <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold text-brand-black select-none hover:bg-arcade-yellow/60 transition-colors">
               <span className="inline-flex items-center gap-2">
                 <MapPin size={15} className="text-brand-orange" />
                 Distance Guide
@@ -763,7 +763,7 @@ export function RouletteWheel({
               <span className="text-xs text-eatspin-gray-1 group-open:hidden">tap to expand</span>
               <span className="text-xs text-eatspin-gray-1 hidden group-open:inline">tap to collapse</span>
             </summary>
-            <ul className="divide-y divide-eatspin-peach/30 px-4 pb-3">
+            <ul className="divide-y divide-brand-ink/15 px-4 pb-3">
               {[...restaurants]
                 .filter((r) => r.distance !== undefined)
                 .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
@@ -777,7 +777,7 @@ export function RouletteWheel({
                       <span className="truncate text-brand-black">
                         {r.name}
                         {isFavourite?.(r) && (
-                          <Heart size={10} className="inline ml-1 fill-pink-500 text-pink-500" />
+                          <Heart size={10} className="inline ml-1 fill-arcade-pink text-brand-ink" />
                         )}
                       </span>
                     </span>
@@ -797,21 +797,21 @@ export function RouletteWheel({
           <div className="celebration-ring celebration-ring-sm" />
           <div className="celebration-ring celebration-ring-lg" />
 
-          <div className="bg-white rounded-2xl shadow-xl border text-center relative celebration-result-card overflow-hidden">
+          <div className="bg-white rounded-2xl text-center relative celebration-result-card overflow-hidden">
             {/* Branded header strip */}
-            <div className="bg-gradient-to-r from-brand-orange via-[#FF8A3D] to-[#FFB347] px-6 py-3">
+            <div className="bg-arcade-pink border-b-4 border-brand-ink px-6 py-3">
               <div className="flex items-center justify-center gap-2">
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                <span className="text-sm font-bold text-white tracking-wide uppercase">EatSpin picked this for you!</span>
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                <div className="w-2.5 h-2.5 bg-brand-ink rounded-full animate-pulse" />
+                <span className="text-sm font-bold text-brand-ink tracking-wide uppercase">EatSpin picked this for you!</span>
+                <div className="w-2.5 h-2.5 bg-brand-ink rounded-full animate-pulse" />
               </div>
             </div>
 
             <div className="p-6">
               <h3 className="font-heading text-2xl sm:text-3xl font-bold text-brand-black mb-3 flex items-center justify-center gap-2">
-                <Trophy size={22} className="celebration-floating-icon text-[#F4C430]" />
+                <Trophy size={22} className="celebration-floating-icon text-brand-ink" />
                 {spinResult.name}
-                <Trophy size={22} className="celebration-floating-icon text-[#FFD700]" />
+                <Trophy size={22} className="celebration-floating-icon text-brand-ink" />
               </h3>
 
               {!isManualResult && (spinResult.photos?.length ?? 0) > 1 ? (
@@ -821,7 +821,7 @@ export function RouletteWheel({
                   className="mb-4"
                 />
               ) : !isManualResult && spinResult.image ? (
-                <div className="mb-4 overflow-hidden rounded-xl border border-eatspin-peach/60">
+                <div className="mb-4 overflow-hidden rounded-xl border-2 border-brand-ink">
                   <img
                     src={spinResult.image}
                     alt={`Photo of ${spinResult.name}`}
@@ -907,8 +907,8 @@ export function RouletteWheel({
                   return (
                     <span
                       key={cat}
-                      className="px-3 py-1 rounded-full text-xs font-medium text-white"
-                      style={{ backgroundColor: categoryConfig?.color || '#F54703' }}
+                      className="px-3 py-1 rounded-full border-2 border-brand-ink bg-white text-xs font-semibold text-brand-ink"
+                      style={{ boxShadow: `0 2px 0 0 ${categoryConfig?.color || '#FF4D8D'}` }}
                     >
                       {categoryConfig?.icon} {categoryConfig?.name}
                     </span>
@@ -966,7 +966,7 @@ export function RouletteWheel({
               )}
 
               {/* Branded footer - visible in screenshots */}
-              <div className="mt-4 pt-3 border-t border-eatspin-peach/40 flex items-center justify-center gap-2">
+              <div className="mt-4 pt-3 border-t-2 border-brand-ink/20 flex items-center justify-center gap-2">
                 <span className="text-xs font-bold text-brand-orange">🍴 EatSpin</span>
                 <span className="text-[10px] text-eatspin-gray-2">•</span>
                 <span className="text-[10px] text-eatspin-gray-2">Spin to decide what to eat</span>
@@ -979,7 +979,7 @@ export function RouletteWheel({
               <div className="flex gap-2">
                 {onLetsGo && (
                   <Button
-                    className="flex-1 h-12 bg-brand-orange hover:bg-brand-orange/90 text-white font-heading font-bold text-base rounded-xl shadow-md hover:shadow-lg transition-all"
+                    className="flex-1 h-12 bg-brand-orange hover:bg-brand-orange/90 text-white font-heading font-bold text-base rounded-xl transition-all"
                     onClick={() => onLetsGo(spinResult)}
                   >
                     <Navigation size={18} className="mr-1.5" />
@@ -1007,9 +1007,9 @@ export function RouletteWheel({
                 {onSaveFavourite && (
                   <Button
                     variant={isFavourite?.(spinResult) ? 'default' : 'outline'}
-                    className={`flex-1 h-10 rounded-xl ${isFavourite?.(spinResult)
-                      ? 'bg-pink-500 hover:bg-pink-600 text-white font-heading font-bold'
-                      : 'border-pink-300 text-pink-500 hover:bg-pink-50 font-heading font-bold'
+                    className={`flex-1 h-11 rounded-xl ${isFavourite?.(spinResult)
+                      ? 'bg-arcade-pink hover:bg-arcade-pink/90 text-brand-ink font-heading font-bold'
+                      : 'text-brand-ink hover:bg-arcade-pink/20 font-heading font-bold'
                     }`}
                     onClick={() => onSaveFavourite(spinResult)}
                     disabled={isFavourite?.(spinResult)}
@@ -1021,7 +1021,7 @@ export function RouletteWheel({
                 {onSpinAgain && (
                   <Button
                     variant="outline"
-                    className="flex-1 h-10 rounded-xl border-brand-orange/50 text-brand-black hover:bg-brand-linen font-heading font-bold"
+                    className="flex-1 h-10 rounded-xl border-brand-ink text-brand-black hover:bg-brand-linen font-heading font-bold"
                     onClick={() => {
                       onSpinAgain(spinResult);
                       handleLocalSpin();

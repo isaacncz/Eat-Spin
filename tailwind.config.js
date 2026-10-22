@@ -5,6 +5,34 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Bright arcade palette
+        arcade: {
+          yellow: "#FFD93D",
+          pink: "#FF4D8D",
+          cyan: "#22D3EE",
+          lime: "#A3E635",
+          violet: "#C4B5FD",
+          orange: "#FB923C",
+        },
+        brand: {
+          ink: "#1E1B4B",
+          yellow: "#FFD93D",
+          // Primary action colour. White text on it passes 4.5:1.
+          orange: "#D6246E",
+          linen: "#FFF3B0",
+          black: "#1E1B4B",
+        },
+        eatspin: {
+          orange: "#D6246E",
+          linen: "#FFF3B0",
+          peach: "#F2C230",
+          black: "#1E1B4B",
+          "gray-1": "#4B4A7A",
+          "gray-2": "#5C5B8C",
+          "gray-3": "#C9C7E8",
+          success: "#15803D",
+          error: "#E11D48",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -58,6 +86,8 @@ module.exports = {
       },
       boxShadow: {
         xs: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        pop: "0 4px 0 #1E1B4B",
+        "pop-lg": "0 6px 0 #1E1B4B",
       },
       keyframes: {
         "accordion-down": {

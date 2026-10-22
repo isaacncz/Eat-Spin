@@ -5,6 +5,7 @@ import {
   normalizeGooglePlace,
   type GooglePlace,
 } from '@/lib/googlePlacesRestaurants';
+import { reservePlacesCall } from '@/lib/placesUsage';
 
 const GOOGLE_TEXT_SEARCH_ENDPOINT =
   'https://places.googleapis.com/v1/places:searchText';
@@ -34,6 +35,9 @@ export async function searchPlacesByText(
   const apiKey = getGoogleApiKey();
   const radiusMeters = Math.round((options.radiusKm ?? 2) * 1000);
   const maxResultCount = Math.min(options.maxResults ?? 10, 20);
+
+  // Count this billable call against the monthly budget (throws PlacesBudgetError when exhausted).
+  await reservePlacesCall('text');
 
   const response = await fetch(GOOGLE_TEXT_SEARCH_ENDPOINT, {
     method: 'POST',

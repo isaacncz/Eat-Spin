@@ -57,7 +57,7 @@ export function FirstRunOnboarding({
 
   return (
     <div className="fixed inset-0 z-[120] flex items-end justify-center bg-brand-black/50 px-4 pb-6 pt-20 sm:items-center sm:py-10">
-      <div className="w-full max-w-lg rounded-2xl border border-eatspin-peach/70 bg-white p-5 shadow-2xl">
+      <div className="w-full max-w-lg rounded-2xl border-2 border-brand-ink bg-white p-5 shadow-pop">
         <p className="text-xs font-semibold uppercase tracking-wide text-brand-orange">First run guide</p>
         <h3 className="mt-1 font-heading text-2xl font-bold text-brand-black">{step.title}</h3>
         <p className="mt-2 text-sm text-eatspin-gray-1">{step.description}</p>
@@ -78,7 +78,7 @@ export function FirstRunOnboarding({
             <Button
               type="button"
               variant="outline"
-              className="flex-1 border-brand-orange/40 text-brand-black hover:bg-brand-linen"
+              className="flex-1 border-brand-ink text-brand-black hover:bg-brand-linen"
               onClick={() => setStepIndex((previous) => Math.max(0, previous - 1))}
             >
               Back

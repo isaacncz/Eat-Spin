@@ -28,22 +28,24 @@ import {
   findNearbyFavourites,
 } from '@/lib/restaurantUtils';
 import { getCurrentMealTime } from '@/lib/utils';
-import { RouletteWheel } from '@/components/RouletteWheel';
-import { LocationPermission } from '@/components/LocationPermission';
+import { RouletteWheel, type RouletteWheelHandle } from '@/components/RouletteWheel';
+import { SpinScreen } from '@/components/SpinScreen';
+import { RoundReview } from '@/components/RoundReview';
+import { PwaInstallBanner } from '@/components/PwaInstallBanner';
 import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { SpinLimitWarning } from '@/components/SpinLimitWarning';
 import { BottomNav } from '@/components/BottomNav';
 import { AboutEatSpin } from '@/sections/AboutEatSpin';
 import { getInitialAppTab, getSpinMode, getTabAnalyticsName, type AppTab } from '@/lib/appTabs';
-import { QuickSpinHero, type FoodMood } from '@/sections/QuickSpinHero';
+import type { FoodMood } from '@/lib/foodMoods';
+import { SPIN_SCREEN_WHEEL_SIZE } from '@/lib/spinLayout';
 import { applyServesFilters, SERVES_FILTERS, type ServesFilterId } from '@/lib/servesFilters';
 import { getTimeOfDayFilters } from '@/lib/timeOfDayDefaults';
-import { FilterPanel } from '@/components/FilterPanel';
 import { GroupSpin } from '@/sections/GroupSpin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
-import { RotateCcw, Crown, MapPin, Utensils, PencilLine, Plus, X, Trash2, ChevronDown, CheckCircle2, Heart } from 'lucide-react';
+import { MapPin, PencilLine, Plus, X, Trash2, ChevronDown, CheckCircle2, Heart } from 'lucide-react';
 import { useFavourites } from '@/hooks/useFavourites';
 import { useFeedbackPrompt } from '@/hooks/useFeedbackPrompt';
 import { enqueueFeedback } from '@/lib/feedbackStore';
@@ -197,7 +199,8 @@ function App() {
   const [showSpinLimitWarning, setShowSpinLimitWarning] = useState(false);
   const [currentMealTime, setCurrentMealTime] = useState<MealTime>('none');
   const [isPremium, setIsPremium] = useState(false);
-  const [showWheelSection, setShowWheelSection] = useState(false);
+  const wheelRef = useRef<RouletteWheelHandle>(null);
+  const seededWheelKeyRef = useRef('');
   const [wheelRestaurants, setWheelRestaurants] = useState<Restaurant[]>([]);
   const [roundRemovedRestaurantIds, setRoundRemovedRestaurantIds] = useState<string[]>([]);
   const [pendingAutoRemovalId, setPendingAutoRemovalId] = useState<string | null>(null);
@@ -207,7 +210,6 @@ function App() {
   // Spin runs on nearby places ('auto'); My list, Group and Me work from the manual or room list.
   const activeTab: SpinTab = getSpinMode(appTab);
   const [autoWheelKey, setAutoWheelKey] = useState(0);
-  const [isReviewExpanded, setIsReviewExpanded] = useState(false);
   const [showAllRoundRestaurants, setShowAllRoundRestaurants] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -962,7 +964,6 @@ function App() {
     setShowSpinLimitWarning(false);
     setRoundRemovedRestaurantIds([]);
     setPendingAutoRemovalId(null);
-    setShowWheelSection(false);
     setWheelRestaurants([]);
     setAutoWheelKey((prev) => prev + 1);
   };
@@ -975,36 +976,57 @@ function App() {
     resetAutoWheel();
   };
 
+  // Filters sheet "Reset": no cuisine, price or serves filter, and the default range.
+  const handleResetFilters = () => {
+    setSelectedCategories([]);
+    setSelectedPriceRanges([]);
+    setActiveServesFilters([]);
+    setShowAllRoundRestaurants(false);
+    handleAutoRangeModeChange(DEFAULT_AUTO_RANGE_MODE);
+  };
+
+  // The pinned Spin button runs the wheel through here. The first spin of a round goes
+  // through the budget guard; spinning again after a result does not, as it did before.
+  const handleWheelSpinStart = () => {
+    if (!pendingAutoRemovalId && !handleSpinAttempt()) return [];
+    return handleAutoSpinStart();
+  };
+
+  // Pick up to 12 of this round's places for the wheel, nearest first.
+  const sampleWheelRestaurants = () => {
+    const shuffled = [...roundRestaurants].sort(() => Math.random() - 0.5);
+    const sliced = shuffled.slice(0, 12);
+    return location
+      ? [...sliced].sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
+      : sliced;
+  };
+
   // Shuffle wheel restaurants
   const shuffleWheel = () => {
     trackEvent('shuffle_wheel', { restaurant_count: roundRestaurants.length });
-    const shuffled = [...roundRestaurants].sort(() => Math.random() - 0.5);
-    const sliced = shuffled.slice(0, 12);
-    const sortedByDistance = location
-      ? [...sliced].sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
-      : sliced;
-    setWheelRestaurants(sortedByDistance);
+    setWheelRestaurants(sampleWheelRestaurants());
   };
 
-  const handleQuickSpin = useCallback(() => {
-    trackEvent('quick_spin_tapped');
-    if (!location) {
-      requestLocation();
-      return;
-    }
-
-    setAppTab('spin');
-
-    if (roundRestaurants.length > 0 && handleSpinAttempt()) {
-      shuffleWheel();
-      setShowWheelSection(true);
-      setTimeout(() => {
-        const wheelSection = document.getElementById('wheel');
-        wheelSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
-    }
+  // The Spin screen always shows a wheel. Fill it as soon as there are places, and fill it
+  // again when the range, filters or the nearby results change what can be on it. A winner
+  // waiting to be dropped belongs to the old wheel, so a refill starts a fresh round.
+  const wheelSeedKey = [
+    rangeMode,
+    selectedCategories.join(','),
+    selectedPriceRanges.join(','),
+    activeServesFilters.join(','),
+    autoSourceRestaurants.length,
+  ].join('|');
+  useEffect(() => {
+    if (appTab !== 'spin' || !location || isSpinning || roundRestaurants.length === 0) return;
+    const roundIds = new Set(roundRestaurants.map((restaurant) => restaurant.id));
+    const isStale = wheelRestaurants.length === 0 || wheelRestaurants.some((restaurant) => !roundIds.has(restaurant.id));
+    if (!isStale && seededWheelKeyRef.current === wheelSeedKey) return;
+    seededWheelKeyRef.current = wheelSeedKey;
+    setPendingAutoRemovalId(null);
+    setWheelRestaurants(sampleWheelRestaurants());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location, requestLocation, roundRestaurants.length]);
+  }, [appTab, isSpinning, location, roundRestaurants, wheelRestaurants, wheelSeedKey]);
 
   const handleTabChange = (tab: AppTab) => {
     if (tab === appTab) {
@@ -1016,7 +1038,6 @@ function App() {
     setAppTab(tab);
     if (tab === 'spin') {
       setWheelRestaurants([]);
-      setShowWheelSection(false);
       setRoundRemovedRestaurantIds([]);
       setPendingAutoRemovalId(null);
       setAutoWheelKey((prev) => prev + 1);
@@ -1465,6 +1486,22 @@ function App() {
     };
   }, [currentMealTime, isGroupRoomActive, selectDeterministicManualList]);
 
+  // Why the Spin screen has nothing to spin although places were found nearby.
+  const autoEmptyState = autoSourceRestaurants.length === 0
+    ? null
+    : filteredRestaurants.length > 0
+      ? {
+          title: 'Every place was removed from this round.',
+          subtitle: 'Reset the round to bring them back.',
+          action: { label: 'Reset round', onClick: resetAutoWheel },
+        }
+      : {
+          title: closingSoonExcludedCount > 0 || closedNowExcludedCount > 0
+            ? 'No open spots left for the wheel right now.'
+            : 'No matches — try clearing a filter.',
+          subtitle: autoEmptyStateSubtitle,
+        };
+
   return (
     <div
       className="mx-auto min-h-dvh w-full max-w-[480px] overflow-x-clip bg-arcade-yellow"
@@ -1478,8 +1515,8 @@ function App() {
           </div>
         )}
 
-        {/* Level, streak, coins and today's quest - Spin and Me screens */}
-        {(appTab === 'spin' || appTab === 'me') && (
+        {/* Level, streak, coins and today's quest - Me screen (Spin has its own compact HUD) */}
+        {appTab === 'me' && (
           <>
             <GameHud
               level={game.level}
@@ -1498,285 +1535,134 @@ function App() {
           </>
         )}
 
-        {/* QuickSpinHero - Spin screen only */}
-        {activeTab === 'auto' && (
-          <QuickSpinHero
-            currentMealTime={currentMealTime}
-            onQuickSpin={handleQuickSpin}
+        {/* Spin screen */}
+        {appTab === 'spin' && (
+          <SpinScreen
+            hud={{
+              level: game.level,
+              xpIntoLevel: game.xpIntoLevel,
+              xpPerLevel: game.xpPerLevel,
+              coins: game.coins,
+              streak: spinHistorySummary.currentStreak,
+            }}
+            quest={{
+              title: game.quest.quest.title,
+              rewardXp: game.quest.quest.rewardXp,
+              progress: game.quest.progress,
+              target: game.quest.quest.target,
+              completed: game.quest.completed,
+            }}
+            mealTime={currentMealTime}
             onMoodSelect={handleMoodSelect}
-            isSpinning={isSpinning}
             hasLocation={Boolean(location)}
-            onRequestLocation={requestLocation}
             isLocationLoading={locationLoading}
             locationError={locationError}
-            restaurantCount={roundRestaurants.length}
-            onGroupSpin={() => handleTabChange('group')}
-            isLoadingRestaurants={nearbyRestaurantsLoading}
-            totalNearbyCount={autoSourceRestaurants.length}
-            closedNowCount={closedNowExcludedCount}
-            searchQuery={textSearch.query}
-            onSearch={textSearch.search}
-            searchResults={textSearch.results}
-            isSearching={textSearch.isLoading}
-            searchError={textSearch.error}
-            recentSearches={textSearch.recentSearches}
-            onLetsGo={handleLetsGo}
-            onClearSearch={textSearch.clearResults}
+            onRequestLocation={requestLocation}
+            filters={{
+              rangeMode,
+              onRangeModeChange: handleAutoRangeModeChange,
+              selectedPriceRanges,
+              onTogglePriceRange: togglePriceRange,
+              selectedCategories,
+              onCategoryChange: handleCategoryChange,
+              activeServesFilters,
+              onToggleServesFilter: handleToggleServesFilter,
+              onReset: handleResetFilters,
+              favouriteCategoryCounts,
+              dataSourceLabel: autoDataSourceLabel,
+              nearbyError: nearbyRestaurantsError,
+              closingSoonCount: closingSoonExcludedCount,
+              closedNowCount: closedNowExcludedCount,
+            }}
+            placeCount={roundRestaurants.length}
+            isLoadingPlaces={nearbyRestaurantsLoading}
+            emptyState={autoEmptyState}
+            budgetBlocked={placesBudget.nearbyBlocked ? { used: placesBudget.nearbyUsed, cap: placesBudget.cap } : null}
+            canSpin={wheelRestaurants.length >= 2}
+            isSpinning={isSpinning}
+            onSpin={() => wheelRef.current?.spin()}
+            wheel={(
+              <RouletteWheel
+                ref={wheelRef}
+                key={`auto-${autoWheelKey}`}
+                hideSpinButton
+                scrollOnSpin={false}
+                wheelMaxSize={SPIN_SCREEN_WHEEL_SIZE}
+                restaurants={wheelRestaurants}
+                totalCount={roundRestaurants.length}
+                onSpinComplete={handleSpinComplete}
+                isSpinning={isSpinning}
+                setIsSpinning={setIsSpinning}
+                onShuffle={shuffleWheel}
+                onSpinStart={handleWheelSpinStart}
+                onSaveFavourite={(r) => handleSaveFavourite(r, 'auto')}
+                onLetsGo={handleLetsGo}
+                onShareResult={handleShareResult}
+                onSpinAgain={handleAutoSpinAgain}
+                canSpinAgain={wheelRestaurants.length >= 2}
+                isFavourite={isFavouriteCheck}
+                getLastVisitedAt={getLastVisitedAt}
+                helperText={autoAvailabilityHelperText || undefined}
+                emptyStateTitle="No open restaurants ready to spin"
+                emptyStateSubtitle={autoEmptyStateSubtitle}
+              />
+            )}
+            limitWarning={showSpinLimitWarning && currentMealTime !== 'none' ? (
+              <SpinLimitWarning
+                mealTime={currentMealTime}
+                onUpgrade={() => setShowSubscription(true)}
+                onClose={() => setShowSpinLimitWarning(false)}
+              />
+            ) : null}
+            isPremium={isPremium}
+            roundReview={(
+              <RoundReview
+                remainingCount={roundRestaurants.length}
+                restaurants={displayedRoundRestaurants}
+                previewCount={REVIEW_PREVIEW_COUNT}
+                showAll={showAllRoundRestaurants}
+                onToggleShowAll={() => setShowAllRoundRestaurants((prev) => !prev)}
+                isFavourite={isFavouriteCheck}
+                onSave={(restaurant) => handleSaveFavourite(restaurant, 'auto')}
+                onRemove={removeRestaurantForRound}
+                onResetRound={resetAutoWheel}
+                formatTravel={estimateTravelTime}
+              />
+            )}
+            pwaBanner={showPwaInstallBanner && isPwaPromptReady ? (
+              <PwaInstallBanner
+                spinCount={spins.length}
+                onInstall={() => { void handlePwaInstall(); }}
+                onDismiss={handleDismissPwaBanner}
+              />
+            ) : null}
+            search={{
+              query: textSearch.query,
+              onSearch: textSearch.search,
+              results: textSearch.results,
+              isLoading: textSearch.isLoading,
+              error: textSearch.error,
+              recentSearches: textSearch.recentSearches,
+              onLetsGo: handleLetsGo,
+              onClear: textSearch.clearResults,
+            }}
           />
         )}
 
-        {/* Main app section - Spin (nearby places) and My list (manual list) */}
-        {(appTab === 'spin' || appTab === 'list') && (
+        {/* My list screen (the Spin screen has its own layout above) */}
+        {appTab === 'list' && (
           <section id="app-main-section" className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 bg-white">
             <div className="max-w-4xl mx-auto">
 
               {/* PWA Install Banner */}
               {showPwaInstallBanner && isPwaPromptReady && (
-                <div className="mb-4 rounded-2xl border-2 border-brand-ink bg-white px-4 py-3 shadow-pop">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-heading text-base font-bold text-brand-black">Install EatSpin for faster lunch decisions</p>
-                      <p className="text-sm text-eatspin-gray-1">
-                        You have spun {spins.length} times. Add EatSpin to your home screen for one-tap access.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        className="bg-brand-orange text-white hover:bg-brand-orange/90"
-                        onClick={() => { void handlePwaInstall(); }}
-                      >
-                        Install App
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="border-brand-ink text-brand-black hover:bg-brand-linen"
-                        onClick={handleDismissPwaBanner}
-                      >
-                        Later
-                      </Button>
-                    </div>
-                  </div>
+                <div className="mb-4">
+                  <PwaInstallBanner
+                    spinCount={spins.length}
+                    onInstall={() => { void handlePwaInstall(); }}
+                    onDismiss={handleDismissPwaBanner}
+                  />
                 </div>
-              )}
-
-              {/* AUTO MODE */}
-              {activeTab === 'auto' && (
-                <>
-                  {placesBudget.nearbyBlocked && (
-                    <div role="alert" className="mb-4 rounded-2xl border-2 border-brand-ink bg-brand-yellow px-4 py-3 text-sm font-semibold text-brand-ink">
-                      Nearby spins are paused: the monthly search budget is used up ({placesBudget.nearbyUsed}/{placesBudget.cap}). Your own list still works, and nearby spins return next month.
-                    </div>
-                  )}
-                  {!location && (
-                    <div className="mb-6">
-                      <LocationPermission
-                        isLoading={locationLoading}
-                        error={locationError}
-                        onRequestLocation={requestLocation}
-                        location={location}
-                      />
-                    </div>
-                  )}
-
-                  {location && (
-                    <FilterPanel
-                      rangeMode={rangeMode}
-                      onRangeModeChange={handleAutoRangeModeChange}
-                      selectedPriceRanges={selectedPriceRanges}
-                      onTogglePriceRange={togglePriceRange}
-                      selectedCategories={selectedCategories}
-                      onCategoryChange={handleCategoryChange}
-                      restaurantCount={roundRestaurants.length}
-                      isLoading={nearbyRestaurantsLoading}
-                      dataSourceLabel={autoDataSourceLabel}
-                      nearbyError={nearbyRestaurantsError}
-                      closingSoonCount={closingSoonExcludedCount}
-                      closedNowCount={closedNowExcludedCount}
-                      favouriteCategoryCounts={favouriteCategoryCounts}
-                      activeServesFilters={activeServesFilters}
-                      onToggleServesFilter={handleToggleServesFilter}
-                    />
-                  )}
-
-                  {/* Empty state */}
-                  {location && filteredRestaurants.length === 0 && !nearbyRestaurantsLoading && autoSourceRestaurants.length > 0 && (
-                    <div className="mb-5 mt-4 rounded-2xl border-2 border-brand-ink bg-white p-5 text-center">
-                      <p className="text-2xl">
-                        {activeServesFilters.length > 0 ? '🔍' : '😕'}
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-brand-black">
-                        {closingSoonExcludedCount > 0 || closedNowExcludedCount > 0
-                          ? 'No open spots left for the wheel right now.'
-                          : 'No matches — try clearing a filter.'}
-                      </p>
-                      <p className="mt-1 text-xs text-eatspin-gray-1">
-                        {autoEmptyStateSubtitle}
-                      </p>
-                      {selectedPriceRanges.length > 0 && (
-                        <p className="mt-1 text-xs text-eatspin-gray-1">
-                          Price filter is active.
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Spin + Reset (compact - hero has the primary CTA) */}
-                  {location && roundRestaurants.length > 0 && (
-                    <div className="mb-4 mt-3 flex items-center gap-2 justify-center">
-                      <Button
-                        onClick={() => {
-                          if (handleSpinAttempt()) {
-                            shuffleWheel();
-                            setShowWheelSection(true);
-                            setTimeout(() => {
-                              const wheelSection = document.getElementById('wheel');
-                              wheelSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }, 100);
-                          }
-                        }}
-                        disabled={isSpinning || roundRestaurants.length === 0}
-                        className="bg-brand-orange hover:bg-brand-orange/90 text-white font-heading text-sm sm:text-base font-bold px-5 sm:px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-70"
-                      >
-                        <Utensils size={16} className="mr-1.5" />
-                        Spin for {currentMealTime !== 'none' ? currentMealTime : 'Food'}
-                      </Button>
-
-                      <Button
-                        onClick={resetAutoWheel}
-                        variant="outline"
-                        size="sm"
-                        className="border-eatspin-orange/50 text-eatspin-orange hover:bg-eatspin-orange/10 font-medium px-3 py-3 rounded-xl"
-                      >
-                        <RotateCcw size={14} className="mr-1" />
-                        Reset
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Review section */}
-                  {location && roundRestaurants.length > 0 && (
-                    <div className="mb-8 rounded-2xl border-2 border-brand-ink bg-white p-4 sm:p-5">
-                      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setIsReviewExpanded(!isReviewExpanded)}
-                            className="flex items-center gap-2"
-                          >
-                            <ChevronDown
-                              size={20}
-                              className={`text-eatspin-gray-1 transition-transform duration-200 ${
-                                isReviewExpanded ? 'rotate-180' : ''
-                              }`}
-                            />
-                            <h3 className="font-heading text-lg font-semibold text-brand-black">Review this round</h3>
-                          </button>
-                        </div>
-                        <p className="text-sm font-medium text-brand-black">
-                          {roundRestaurants.length} restaurants remaining
-                        </p>
-                      </div>
-
-                      <div
-                        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
-                          isReviewExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                        }`}
-                      >
-                          <ul className="max-h-72 overflow-y-auto overscroll-contain space-y-2 pr-1">
-                          {displayedRoundRestaurants.map((restaurant) => (
-                            <li key={restaurant.id} className="flex items-center justify-between gap-3 rounded-xl bg-brand-linen px-3 py-2">
-                              <div>
-                                <p className="font-medium text-brand-black">
-                                  {restaurant.name}
-                                  {isFavouriteCheck(restaurant) && (
-                                    <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full border-2 border-brand-ink bg-arcade-pink px-1.5 py-0.5 text-[10px] font-semibold text-brand-ink align-middle">
-                                      <Heart size={10} className="fill-arcade-pink text-brand-ink" /> Fave
-                                    </span>
-                                  )}
-                                </p>
-                                <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-eatspin-gray-1">
-                                  {restaurant.category.slice(0, 2).map((tag) => (
-                                    <span key={`${restaurant.id}-${tag}`} className="rounded-full bg-white px-2 py-0.5 capitalize">
-                                      {tag}
-                                    </span>
-                                  ))}
-                                  <span className="rounded-full bg-white px-2 py-0.5">{restaurant.priceRange}</span>
-                                  {restaurant.distance !== undefined && (
-                                    <span className="rounded-full bg-white px-2 py-0.5">{estimateTravelTime(restaurant.distance)}</span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1.5 flex-shrink-0">
-                                {isFavouriteCheck(restaurant) ? (
-                                  <span
-                                    className="inline-flex items-center gap-1 rounded-full bg-arcade-pink/30 border-2 border-brand-ink px-2.5 py-1 text-xs font-semibold text-brand-ink"
-                                    title="Already in My Favourites"
-                                  >
-                                    <Heart size={12} className="fill-arcade-pink text-brand-ink" /> Saved
-                                  </span>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSaveFavourite(restaurant, 'auto')}
-                                    className="inline-flex items-center gap-1 rounded-full border-2 border-brand-ink bg-white px-2.5 py-1 text-xs font-semibold text-brand-ink hover:bg-arcade-pink/20"
-                                    aria-label={`Save ${restaurant.name} to favourites`}
-                                  >
-                                    <Heart size={12} /> Save
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => removeRestaurantForRound(restaurant.id)}
-                                  className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
-                                  aria-label={`Remove ${restaurant.name} for this round`}
-                                >
-                                  <X size={14} /> Remove
-                                </button>
-                              </div>
-                            </li>
-                          ))}
-
-                          </ul>
-                          {roundRestaurants.length > REVIEW_PREVIEW_COUNT && (
-                            <div className="mt-3 flex justify-center">
-                              <button
-                                type="button"
-                                onClick={() => setShowAllRoundRestaurants((prev) => !prev)}
-                                className="rounded-full border-2 border-brand-ink bg-white px-3 py-1.5 text-xs font-medium text-eatspin-gray-1 hover:bg-brand-linen"
-                              >
-                                {showAllRoundRestaurants
-                                  ? `Show first ${REVIEW_PREVIEW_COUNT}`
-                                  : `Show all ${roundRestaurants.length}`}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                  {/* Spin limit warning */}
-                  {showSpinLimitWarning && currentMealTime !== 'none' && (
-                    <div className="mb-6">
-                      <SpinLimitWarning
-                        mealTime={currentMealTime}
-                        onUpgrade={() => setShowSubscription(true)}
-                        onClose={() => setShowSpinLimitWarning(false)}
-                      />
-                    </div>
-                  )}
-
-                  {/* Premium badge */}
-                  {isPremium && (
-                    <div className="text-center">
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-arcade-yellow text-brand-ink border-2 border-brand-ink shadow-pop rounded-full text-sm font-semibold">
-                        <Crown size={16} />
-                        Premium Member - Unlimited Spins
-                      </div>
-                    </div>
-                  )}
-                </>
               )}
 
               {/* MANUAL MODE */}
@@ -2237,43 +2123,6 @@ function App() {
                     </div>
                 </div>
               )}
-            </div>
-          </section>
-        )}
-
-        {/* Wheel section for auto mode */}
-        {activeTab === 'auto' && showWheelSection && location && roundRestaurants.length > 0 && (
-          <section id="wheel" className="py-10 sm:py-12 px-4 sm:px-6 lg:px-8 bg-arcade-yellow">
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-5 sm:mb-6">
-                <h2 className="font-heading text-xl sm:text-2xl font-bold text-brand-black mb-1.5">
-                  Spin the Wheel!
-                </h2>
-                <p className="text-sm sm:text-base text-eatspin-gray-1">
-                  {roundRestaurants.length} restaurants ready for this round
-                </p>
-              </div>
-
-              <RouletteWheel
-                key={`auto-${autoWheelKey}`}
-                restaurants={wheelRestaurants}
-                totalCount={roundRestaurants.length}
-                onSpinComplete={handleSpinComplete}
-                isSpinning={isSpinning}
-                setIsSpinning={setIsSpinning}
-                onShuffle={shuffleWheel}
-                onSpinStart={handleAutoSpinStart}
-                onSaveFavourite={(r) => handleSaveFavourite(r, 'auto')}
-                onLetsGo={handleLetsGo}
-                onShareResult={handleShareResult}
-                onSpinAgain={handleAutoSpinAgain}
-                canSpinAgain={wheelRestaurants.length >= 2}
-                isFavourite={isFavouriteCheck}
-                getLastVisitedAt={getLastVisitedAt}
-                helperText={autoAvailabilityHelperText || undefined}
-                emptyStateTitle="No open restaurants ready to spin"
-                emptyStateSubtitle={autoEmptyStateSubtitle}
-              />
             </div>
           </section>
         )}

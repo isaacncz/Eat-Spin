@@ -8,7 +8,7 @@ import {
   parsePlaceCount,
   pinnedSpinButton,
   sheetCta,
-  useLunchtimeClock,
+  setLunchtimeClock,
 } from './spin-helpers';
 
 // Penang: the bundled fallback places are around here, so there is something to spin
@@ -29,7 +29,7 @@ const settledSheetCount = async (page: Page): Promise<number | null> => {
 
 test.describe('Spin screen', () => {
   test.beforeEach(async ({ page }) => {
-    await useLunchtimeClock(page);
+    await setLunchtimeClock(page);
   });
 
   test('shows the heading, quick picks, one-line Filters button and a pinned Spin button', async ({ page }) => {
@@ -91,7 +91,7 @@ test.describe('Spin screen', () => {
   });
 
   test('spinning from the pinned button shows a result', async ({ page }) => {
-    await useLunchtimeClock(page);
+    await setLunchtimeClock(page);
     await openSpinScreenWithLocation(page);
     const spin = page.getByRole('button', { name: /^spin!$/i });
     test.skip(
@@ -107,7 +107,7 @@ test.describe('Spin screen', () => {
 
 test.describe('Filters sheet', () => {
   test.beforeEach(async ({ page }) => {
-    await useLunchtimeClock(page);
+    await setLunchtimeClock(page);
     await openSpinScreenWithLocation(page);
   });
 
@@ -216,7 +216,7 @@ for (const viewport of [
     test.use({ viewport });
 
     test.beforeEach(async ({ page }) => {
-      await useLunchtimeClock(page);
+      await setLunchtimeClock(page);
       await openSpinScreenWithLocation(page);
     });
 
@@ -270,7 +270,7 @@ test.describe('Spin screen on a 360x640 phone', () => {
   test.use({ viewport: { width: 360, height: 640 } });
 
   test('the wheel and the Spin button are visible together without scrolling', async ({ page }) => {
-    await useLunchtimeClock(page);
+    await setLunchtimeClock(page);
     await openSpinScreenWithLocation(page);
     const spin = page.getByRole('button', { name: /^spin!$/i });
     test.skip(

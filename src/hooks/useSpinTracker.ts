@@ -1,106 +1,40 @@
-import { useState, useCallback, useEffect } from 'react';
-import type { SpinResult, MealTime, Restaurant } from '@/types';
-
-interface SpinTrackerState {
-  spins: SpinResult[];
-  spinsToday: number;
-  canSpin: (mealTime: MealTime) => boolean;
-  recordSpin: (restaurant: Restaurant, mealTime: MealTime) => void;
-  getSpinsForMeal: (mealTime: MealTime) => SpinResult[];
+import { useState, useCallback, useRef, useEffect } from 'react';
+import type { MealTime, Restaurant } from '@/types';
+import { appendSpinHistory, parseSpinHistory, SPIN_STORAGE_KEY } from '@/lib/spinHistory';
+function loadHistory() {
+  try { return parseSpinHistory(localStorage.getItem(SPIN_STORAGE_KEY)); } catch { return []; }
 }
-
-const SPIN_STORAGE_KEY = 'eatspin_spins';
-// const FREE_SPINS_PER_MEAL = 1;
-
-// export function useSpinTracker(isPremium: boolean = false): SpinTrackerState {
-export function useSpinTracker(): SpinTrackerState {
-  const [spins, setSpins] = useState<SpinResult[]>([]);
-
-  // Load spins from localStorage on mount
-  useEffect(() => {
-    const savedSpins = localStorage.getItem(SPIN_STORAGE_KEY);
-    if (savedSpins) {
-      try {
-        const parsed = JSON.parse(savedSpins);
-        // Convert date strings back to Date objects
-        const spinsWithDates = parsed.map((spin: any) => ({
-          ...spin,
-          timestamp: new Date(spin.timestamp),
-        }));
-        setSpins(spinsWithDates);
-      } catch (error) {
-        console.error('Failed to parse spins from storage:', error);
-      }
+export function useSpinTracker() {
+  const [spins, setSpins] = useState(loadHistory);
+  const current = useRef(spins);
+  const recordSpin = useCallback((restaurant: Restaurant, mealTime: MealTime, eventId?: string, timestamp?: number) => {
+    const stored = loadHistory();
+    // A persisted group event is the durable idempotency key after reload.
+    const base = stored.length >= current.current.length ? stored : current.current;
+    const next = appendSpinHistory(base, restaurant, mealTime, eventId, timestamp);
+    current.current = next;
+    if (next === base) return;
+    try { localStorage.setItem(SPIN_STORAGE_KEY, JSON.stringify(next)); } catch {
+      // Preserve this session's history even when persistence is unavailable.
     }
+    setSpins(next);
   }, []);
-
-  // Save spins to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem(SPIN_STORAGE_KEY, JSON.stringify(spins));
-  }, [spins]);
-
-  const getTodaySpins = useCallback((): SpinResult[] => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    return spins.filter((spin) => {
-      const spinDate = new Date(spin.timestamp);
-      spinDate.setHours(0, 0, 0, 0);
-      return spinDate.getTime() === today.getTime();
-    });
-  }, [spins]);
-
-  const spinsToday = getTodaySpins().length;
-  // Temporary: Allow unlimited spins for all users
-  const canSpin = useCallback(
-    (_mealTime: MealTime): boolean => {
-      return true;
-    },
-    []
-  );
-  // const canSpin = useCallback(
-  //   (mealTime: MealTime): boolean => {
-  //     if (mealTime === 'none') return false;
-      
-  //     if (isPremium) {
-  //       return true; // Premium users can spin unlimited times
-  //     }
-
-  //     // Check spins for this specific meal time today
-  //     const todayMealSpins = getTodaySpins().filter(
-  //       (spin) => spin.mealTime === mealTime
-  //     );
-
-  //     return todayMealSpins.length < FREE_SPINS_PER_MEAL;
-  //   },
-  //   [isPremium, getTodaySpins]
-  // );
-
-  const recordSpin = useCallback(
-    (restaurant: Restaurant, mealTime: MealTime) => {
-      const newSpin: SpinResult = {
-        restaurant,
-        timestamp: new Date(),
-        mealTime,
-      };
-
-      setSpins((prev) => [...prev, newSpin]);
-    },
-    []
-  );
-
-  const getSpinsForMeal = useCallback(
-    (mealTime: MealTime): SpinResult[] => {
-      return getTodaySpins().filter((spin) => spin.mealTime === mealTime);
-    },
-    [getTodaySpins]
-  );
-
+    const reload = (event: StorageEvent) => {
+      if (event.key !== SPIN_STORAGE_KEY) return;
+      current.current = loadHistory();
+      setSpins(current.current);
+    };
+    window.addEventListener('storage', reload);
+    return () => window.removeEventListener('storage', reload);
+  }, []);
+  const today = new Date().toDateString();
+  const todaySpins = spins.filter((spin) => new Date(spin.timestamp).toDateString() === today);
   return {
     spins,
-    spinsToday,
-    canSpin,
+    spinsToday: todaySpins.length,
+    canSpin: (_mealTime: MealTime) => true,
     recordSpin,
-    getSpinsForMeal,
+    getSpinsForMeal: (mealTime: MealTime) => todaySpins.filter((spin) => spin.mealTime === mealTime),
   };
 }

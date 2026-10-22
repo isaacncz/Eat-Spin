@@ -645,10 +645,11 @@ function App() {
   const handleManualSpinComplete = useCallback((restaurant: Restaurant) => {
     trackEvent('spin_complete', { mode: 'manual', restaurant_name: restaurant.name });
     setManualSpinResult(restaurant);
+    if (!isGroupRoomActive) recordSpin(restaurant, currentMealTime);
     void recordDailySpin();
     void publishDiscoverSpin(restaurant.name, currentMealTime);
     reportQuestEvent({ type: 'spin' });
-  }, [currentMealTime, publishDiscoverSpin, recordDailySpin, reportQuestEvent]);
+  }, [currentMealTime, isGroupRoomActive, recordSpin, publishDiscoverSpin, recordDailySpin, reportQuestEvent]);
 
   const handleSaveFavourite = useCallback((restaurant: Restaurant, mode: 'auto' | 'manual') => {
     trackEvent('favourite_saved', { restaurant_name: restaurant.name, mode });
@@ -1330,7 +1331,7 @@ function App() {
   }, [displayedManualRestaurants, isManualListReadOnly, setDisplayedManualRestaurants, syncGroupListFromRestaurants]);
 
   const manualExternalSpin = useMemo(() => {
-    if (!isGroupRoomActive || !groupCurrentSpin || !groupSpinDisplay?.shouldReplay) return null;
+    if (!isGroupRoomActive || !groupCurrentSpin) return null;
 
     const normalizedWinner = groupCurrentSpin.winnerName.trim().toLowerCase();
     const winnerIndexFromName = displayedManualRestaurants.findIndex(
@@ -1339,7 +1340,9 @@ function App() {
 
     return {
       spinId: groupCurrentSpin.spinId,
-      winnerIndex: winnerIndexFromName >= 0 ? winnerIndexFromName : groupCurrentSpin.winnerIndex,
+      winnerIndex: winnerIndexFromName >= 0 ? winnerIndexFromName : displayedManualRestaurants.length,
+      restaurant: winnerIndexFromName >= 0 ? displayedManualRestaurants[winnerIndexFromName] : createManualRestaurant(groupCurrentSpin.winnerName),
+      animate: Boolean(groupSpinDisplay?.shouldReplay && winnerIndexFromName >= 0),
     };
   }, [displayedManualRestaurants, groupCurrentSpin, groupSpinDisplay?.shouldReplay, isGroupRoomActive]);
 
@@ -1354,6 +1357,13 @@ function App() {
       window.clearInterval(intervalId);
     };
   }, [groupCurrentSpin, isGroupRoomActive]);
+
+  // Record the committed room event even when its wheel is not mounted.
+  useEffect(() => {
+    if (!isGroupRoomActive || !groupCurrentSpin || !groupRoomId) return;
+    const restaurant = createManualRestaurant(groupCurrentSpin.winnerName);
+    recordSpin(restaurant, currentMealTime, `group:${groupRoomId}:${groupCurrentSpin.spinId}`, groupCurrentSpin.startedAt);
+  }, [currentMealTime, groupCurrentSpin, groupRoomId, isGroupRoomActive, recordSpin]);
 
   const handleRequestGroupSpin = useCallback(async () => {
     if (!isGroupRoomActive) return;
@@ -1686,7 +1696,9 @@ function App() {
             wheel={(
               <RouletteWheel
                 key={isGroupRoomActive ? `manual-room-${groupRoomId || 'none'}` : `manual-${manualWheelKey}-${displayedManualRestaurants.length}`}
-                restaurants={displayedManualRestaurants}
+                restaurants={manualExternalSpin && !displayedManualRestaurants.some((place) => place.id === manualExternalSpin.restaurant.id)
+                  ? [...displayedManualRestaurants, manualExternalSpin.restaurant]
+                  : displayedManualRestaurants}
                 totalCount={displayedManualRestaurants.length}
                 onSpinComplete={handleManualSpinComplete}
                 isSpinning={isSpinning}

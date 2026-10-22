@@ -39,7 +39,7 @@ test.describe('Smoke tests', () => {
     await expect(twitterCard).toHaveAttribute('content', 'summary');
   });
 
-  test('"I know where" tab hides hero and shows wheel section', async ({ page }) => {
+  test('"My list" tab hides hero and shows wheel section', async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem('eatspin:first-run-onboarding-seen', '1');
     });
@@ -49,8 +49,8 @@ test.describe('Smoke tests', () => {
     const heading = page.locator('text=/What.*for/i').first();
     await expect(heading).toBeVisible({ timeout: 10_000 });
 
-    // Switch to manual mode
-    const manualTab = page.getByRole('tab', { name: /i know where|my list/i });
+    // Switch to My list in the bottom tab bar
+    const manualTab = page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /my list/i });
     await manualTab.click();
 
     // Hero should disappear

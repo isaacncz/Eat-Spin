@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback, useImperativeHandle, type Ref } from 'react';
 import type { Restaurant } from '@/types';
 import { Loader2, MapPin, Clock3, Star, Phone, Trophy, Heart, Navigation, Share2, Volume2, VolumeX, RefreshCw } from 'lucide-react';
 import gsap from 'gsap';
@@ -14,7 +14,20 @@ import type { LetsGoReward } from '@/lib/letsGoReward';
 import { getMapsUrl } from '@/lib/maps';
 
 
+/** What a parent can call on the wheel. Lets a screen own the spin button. */
+export interface RouletteWheelHandle {
+  /** Same as tapping the built-in spin button (the host's guards and limits still apply). */
+  spin: () => void;
+}
+
 interface RouletteWheelProps {
+  ref?: Ref<RouletteWheelHandle>;
+  /** Hide the built-in spin button when the host screen renders its own and calls `ref.spin()`. */
+  hideSpinButton?: boolean;
+  /** CSS length that caps the wheel's diameter (default 32.5rem). */
+  wheelMaxSize?: string;
+  /** Scroll the wheel to the top of the screen when a spin starts (default true). */
+  scrollOnSpin?: boolean;
   restaurants: Restaurant[];
   totalCount: number;
   onSpinComplete: (restaurant: Restaurant) => void;
@@ -158,6 +171,10 @@ const loadSoundPreference = (): boolean => {
 import { getSmartHoursLabel } from '@/lib/smartHours';
 
 export function RouletteWheel({
+  ref,
+  hideSpinButton = false,
+  wheelMaxSize = '32.5rem',
+  scrollOnSpin = true,
   restaurants,
   totalCount,
   onSpinComplete,
@@ -338,6 +355,7 @@ export function RouletteWheel({
   }, []);
 
   const recenterWheel = useCallback(() => {
+    if (!scrollOnSpin) return;
     // First pass: smooth scroll for expected UX.
     scrollWheelIntoView('smooth');
     window.requestAnimationFrame(() => {
@@ -352,7 +370,7 @@ export function RouletteWheel({
       scrollWheelIntoView('auto');
       recenterTimeoutRef.current = null;
     }, 180);
-  }, [scrollWheelIntoView]);
+  }, [scrollOnSpin, scrollWheelIntoView]);
 
   const animateSpinToIndex = useCallback((index: number, sourceRestaurants?: Restaurant[]) => {
     const targetRestaurants = sourceRestaurants ?? restaurants;
@@ -500,6 +518,8 @@ export function RouletteWheel({
     }
     handleLocalSpin();
   };
+
+  useImperativeHandle(ref, () => ({ spin: handleSpinClick }));
 
   // Reset wheel position when restaurants change
   useEffect(() => {
@@ -671,12 +691,12 @@ export function RouletteWheel({
         <div
           ref={wheelContainerRef}
           className="relative mx-auto w-full aspect-square"
-          style={{ maxWidth: '32.5rem' }}
+          style={{ maxWidth: wheelMaxSize }}
         >
           {/* Wheel */}
           <div
             ref={wheelRef}
-            className="w-full h-full rounded-full shadow-2xl relative overflow-hidden"
+            className={`w-full h-full rounded-full relative overflow-hidden ${hideSpinButton ? '' : 'shadow-2xl'}`}
             style={{
               background: wheelBackground,
               ['--wheel-rotation' as string]: '0deg',
@@ -725,10 +745,9 @@ export function RouletteWheel({
                   <div
                     className="text-center leading-[1.05]"
                     style={{
-                      color: '#FFFFFF',
+                      color: '#1E1B4B',
                       fontSize: `${fontSize}px`,
                       fontWeight: 700,
-                      textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 1px 1px rgba(0,0,0,0.8)',
                     }}
                   >
                     {lines.map((line, lineIndex) => (
@@ -741,9 +760,8 @@ export function RouletteWheel({
                     <span
                       className="mt-0.5 text-[10px] sm:text-[11px] font-semibold whitespace-nowrap"
                       style={{
-                        color: '#FFFFFF',
-                        textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 1px 1px rgba(0,0,0,0.6)',
-                        opacity: 0.8,
+                        color: '#1E1B4B',
+                        opacity: 0.85,
                       }}
                     >
                       {distanceLabel}
@@ -769,6 +787,7 @@ export function RouletteWheel({
       </div>
 
       {/* Spin Button */}
+      {!hideSpinButton && (
       <button
         onClick={handleSpinClick}
         disabled={isSpinning || !canSpin || (Boolean(onRequestSpin) && !canRequestSpin)}
@@ -789,11 +808,12 @@ export function RouletteWheel({
           </span>
         )}
       </button>
+      )}
 
       <button
         type="button"
         onClick={() => setSoundEnabled((previous) => !previous)}
-        className="inline-flex items-center gap-1.5 rounded-full border-2 border-brand-ink bg-white px-3 py-1.5 text-xs font-semibold text-eatspin-gray-1 hover:border-brand-ink hover:text-brand-orange"
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-brand-ink bg-white px-3 py-1.5 text-xs font-semibold text-eatspin-gray-1 hover:border-brand-ink hover:text-brand-orange"
       >
         {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
         {soundEnabled ? 'Sound on' : 'Sound off'}
@@ -812,7 +832,7 @@ export function RouletteWheel({
           <button
             onClick={onShuffle}
             disabled={isSpinning}
-            className="text-sm text-eatspin-orange font-medium hover:underline disabled:opacity-50"
+            className="min-h-11 px-2 text-sm text-eatspin-orange font-medium hover:underline disabled:opacity-50"
           >
             ↻ Shuffle for different options
           </button>

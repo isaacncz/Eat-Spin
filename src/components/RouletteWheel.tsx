@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback, useImperativeHandle,
 import type { Restaurant } from '@/types';
 import { Loader2, MapPin, Heart, Volume2, VolumeX } from 'lucide-react';
 import gsap from 'gsap';
-import { playSpinTick, playSpinWin, startSpinDrumroll, stopSpinDrumroll, triggerSpinHaptic } from '@/lib/spinAudio';
+import { playSpinTick, playSpinWin, playSpinStart, stopSpinAudio, setSpinSoundEnabled, unlockSpinAudio, triggerSpinHaptic } from '@/lib/spinAudio';
 import { ResultScreen, type ResultVisit } from '@/components/ResultScreen';
 import { LevelUpDialog } from '@/components/LevelUpDialog';
 import { getRarity, type Rarity } from '@/lib/rarity';
@@ -230,6 +230,28 @@ export function RouletteWheel({
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   // No separate drawer state needed — "Let's Go!" opens Google Maps directly
   const canPlayEffects = soundEnabled && !prefersReducedMotion;
+  const canPlayEffectsRef = useRef(canPlayEffects);
+
+  useEffect(() => {
+    canPlayEffectsRef.current = canPlayEffects;
+    setSpinSoundEnabled(canPlayEffects);
+  }, [canPlayEffects]);
+
+  useEffect(() => {
+    const unlock = () => { if (canPlayEffectsRef.current) void unlockSpinAudio(); };
+    const visibility = () => { if (document.hidden) stopSpinAudio(); };
+    window.addEventListener('pointerdown', unlock, { capture: true, passive: true });
+    window.addEventListener('keydown', unlock, true);
+    document.addEventListener('visibilitychange', visibility);
+    window.addEventListener('pagehide', stopSpinAudio);
+    return () => {
+      window.removeEventListener('pointerdown', unlock, true);
+      window.removeEventListener('keydown', unlock, true);
+      document.removeEventListener('visibilitychange', visibility);
+      window.removeEventListener('pagehide', stopSpinAudio);
+      setSpinSoundEnabled(false);
+    };
+  }, []);
 
   useEffect(() => {
     getLastVisitedAtRef.current = getLastVisitedAt;
@@ -387,7 +409,7 @@ export function RouletteWheel({
       if (!wheelRef.current) return;
       currentRotationRef.current = gsap.getProperty(wheelRef.current, 'rotation') as number;
       syncWheelRotationVar(currentRotationRef.current);
-      if (!canPlayEffects) return;
+      if (!canPlayEffectsRef.current) return;
 
       const normalizedRotation = ((currentRotationRef.current % 360) + 360) % 360;
       const currentSegment = Math.floor(normalizedRotation / segmentAngle);
@@ -423,7 +445,7 @@ export function RouletteWheel({
       winnerPulseTimeoutRef.current = null;
     }
     gsap.killTweensOf(wheelRef.current);
-    stopSpinDrumroll();
+    stopSpinAudio();
 
     const timeline = gsap.timeline();
     timeline.to(wheelRef.current, {
@@ -433,8 +455,8 @@ export function RouletteWheel({
       onUpdate: updateSpinFrame,
     });
 
-    if (canPlayEffects) {
-      startSpinDrumroll(Math.round(SPIN_DURATION_S * 1000));
+    if (canPlayEffectsRef.current) {
+      playSpinStart();
     }
 
     timeline.to(wheelRef.current, {
@@ -443,7 +465,7 @@ export function RouletteWheel({
       ease: 'power4.out',
       onUpdate: updateSpinFrame,
       onComplete: () => {
-        stopSpinDrumroll();
+        stopSpinAudio();
         setIsSpinning(false);
         setSpinResult(result);
         const lastVisitedAt = getLastVisitedAtRef.current?.(result);
@@ -455,7 +477,7 @@ export function RouletteWheel({
         winnerPulseTimeoutRef.current = window.setTimeout(() => {
           setIsWinnerSliceHighlighted(false);
         }, WINNER_PULSE_DURATION_MS);
-        if (canPlayEffects) {
+        if (canPlayEffectsRef.current && !document.hidden) {
           playSpinWin();
           triggerSpinHaptic();
         }
@@ -463,7 +485,7 @@ export function RouletteWheel({
         onResultRevealed?.(result, externalSpinId);
       },
     });
-  }, [canPlayEffects, onSpinComplete, onResultRevealed, recenterWheel, restaurants, resultPresentation, setIsSpinning, syncWheelRotationVar]);
+  }, [onSpinComplete, onResultRevealed, recenterWheel, restaurants, resultPresentation, setIsSpinning, syncWheelRotationVar]);
 
   const handleLocalSpin = () => {
     if (isSpinning || restaurants.length === 0 || !canSpin) return;
@@ -587,7 +609,7 @@ export function RouletteWheel({
     const wheelElement = wheelRef.current;
     return () => {
       clearCelebrationEffects();
-      stopSpinDrumroll();
+      stopSpinAudio();
       if (recenterTimeoutRef.current !== null) {
         window.clearTimeout(recenterTimeoutRef.current);
       }
@@ -830,7 +852,13 @@ export function RouletteWheel({
 
       <button
         type="button"
-        onClick={() => setSoundEnabled((previous) => !previous)}
+        onClick={() => {
+          const next = !soundEnabled;
+          canPlayEffectsRef.current = next && !prefersReducedMotion;
+          setSpinSoundEnabled(canPlayEffectsRef.current);
+          setSoundEnabled(next);
+          if (canPlayEffectsRef.current) void unlockSpinAudio();
+        }}
         className="inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-brand-ink bg-white px-3 py-1.5 text-xs font-semibold text-eatspin-gray-1 hover:border-brand-ink hover:text-brand-orange"
       >
         {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}

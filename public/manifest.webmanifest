@@ -3,8 +3,8 @@
   "short_name": "Eat-Spin",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#f97316",
+  "background_color": "#FFD93D",
+  "theme_color": "#FFD93D",
   "shortcuts": [
     {
       "name": "Spin for me",

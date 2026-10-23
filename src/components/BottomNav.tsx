@@ -3,6 +3,7 @@ import { List, LoaderPinwheel, User, Users, type LucideIcon } from 'lucide-react
 
 import { APP_TABS, type AppTab } from '@/lib/appTabs';
 import { cn } from '@/lib/utils';
+import { BrandMark } from '@/components/BrandMark';
 
 const TAB_ICONS: Record<AppTab, LucideIcon> = {
   spin: LoaderPinwheel,
@@ -74,7 +75,7 @@ export function BottomNav({ activeTab, onTabChange, hasActiveRoom = false }: Bot
                     : 'border-transparent font-semibold hover:bg-arcade-yellow/50',
                 )}
               >
-                <Icon size={22} strokeWidth={2.5} aria-hidden="true" />
+                {id === 'spin' ? <BrandMark className="size-[26px]" /> : <Icon size={22} strokeWidth={2.5} aria-hidden="true" />}
                 <span>{label}</span>
                 {id === 'group' && hasActiveRoom && (
                   <>

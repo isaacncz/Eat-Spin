@@ -1,100 +1,106 @@
-let audioContext: AudioContext | null = null;
-let drumrollTimeoutId: number | null = null;
-let drumrollActive = false;
+type Sound = 'start' | 'tick' | 'win';
+
+const SOUNDS: Sound[] = ['start', 'tick', 'win'];
+let context: AudioContext | null = null;
+let output: GainNode | null = null;
+let buffers: Partial<Record<Sound, AudioBuffer>> = {};
+let loading: Promise<void> | null = null;
+let enabled = false;
+let lastTickAt = -Infinity;
+const activeSources = new Set<AudioBufferSourceNode>();
 
 const getAudioContext = (): AudioContext | null => {
   if (typeof window === 'undefined') return null;
-  if (audioContext) return audioContext;
-  const Context = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!Context) return null;
-  audioContext = new Context();
-  return audioContext;
-};
-
-const playTone = (
-  frequency: number,
-  durationMs: number,
-  volume = 0.05,
-  type: OscillatorType = 'sine',
-  glideToFrequency?: number,
-) => {
-  const context = getAudioContext();
-  if (!context) return;
-
-  if (context.state === 'suspended') {
-    void context.resume();
-  }
-
-  const oscillator = context.createOscillator();
-  const gainNode = context.createGain();
-  const now = context.currentTime;
-  const endTime = now + durationMs / 1000;
-
-  oscillator.type = type;
-  oscillator.frequency.setValueAtTime(frequency, now);
-  if (glideToFrequency) {
-    oscillator.frequency.linearRampToValueAtTime(glideToFrequency, endTime);
-  }
-
-  gainNode.gain.setValueAtTime(0, now);
-  gainNode.gain.linearRampToValueAtTime(volume, now + 0.01);
-  gainNode.gain.exponentialRampToValueAtTime(0.0001, endTime);
-
-  oscillator.connect(gainNode);
-  gainNode.connect(context.destination);
-
-  oscillator.start(now);
-  oscillator.stop(endTime);
-};
-
-const scheduleDrumrollPulse = (startedAtMs: number, durationMs: number) => {
-  if (!drumrollActive) return;
-  const elapsedMs = Date.now() - startedAtMs;
-
-  if (elapsedMs >= durationMs) {
-    drumrollActive = false;
-    drumrollTimeoutId = null;
-    return;
-  }
-
-  const progress = Math.min(1, elapsedMs / durationMs);
-  const intervalMs = Math.max(40, 170 - Math.floor(progress * 125));
-  const frequency = 130 + Math.floor(progress * 70);
-  playTone(frequency, 50, 0.04, 'triangle');
-
-  drumrollTimeoutId = window.setTimeout(() => {
-    scheduleDrumrollPulse(startedAtMs, durationMs);
-  }, intervalMs);
-};
-
-export const playSpinTick = () => {
-  playTone(980, 18, 0.03, 'square');
-};
-
-export const startSpinDrumroll = (durationMs: number) => {
-  if (typeof window === 'undefined') return;
-  drumrollActive = true;
-  if (drumrollTimeoutId !== null) {
-    window.clearTimeout(drumrollTimeoutId);
-  }
-  scheduleDrumrollPulse(Date.now(), Math.max(200, durationMs));
-};
-
-export const stopSpinDrumroll = () => {
-  if (typeof window === 'undefined') return;
-  drumrollActive = false;
-  if (drumrollTimeoutId !== null) {
-    window.clearTimeout(drumrollTimeoutId);
-    drumrollTimeoutId = null;
+  if (context && context.state !== 'closed') return context;
+  const Constructor = window.AudioContext
+    || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Constructor) return null;
+  try {
+    context = new Constructor();
+    output = context.createGain();
+    output.gain.value = 0.85;
+    output.connect(context.destination);
+    return context;
+  } catch {
+    context = null;
+    output = null;
+    return null;
   }
 };
 
-export const playSpinWin = () => {
-  playTone(780, 130, 0.05, 'sine', 980);
-  window.setTimeout(() => {
-    playTone(980, 150, 0.055, 'sine', 1240);
-  }, 90);
+/** Call from a real pointer/key gesture, including guests watching a host's spin. */
+export const unlockSpinAudio = async (): Promise<boolean> => {
+  const audio = getAudioContext();
+  if (!audio) return false;
+  try {
+    if (audio.state === 'suspended') await audio.resume();
+    if (audio.state !== 'running') return false;
+    if (!SOUNDS.every(sound => buffers[sound])) {
+      if (!loading) {
+        loading = (async () => {
+          const decoded = await Promise.all(SOUNDS.map(async sound => {
+            const response = await fetch(`${import.meta.env.BASE_URL}audio/arcade-click-${sound}.wav`);
+            if (!response.ok) throw new Error('Spin sound unavailable');
+            return await audio.decodeAudioData(await response.arrayBuffer());
+          }));
+          buffers = Object.fromEntries(SOUNDS.map((sound, index) => [sound, decoded[index]]));
+        })();
+      }
+      await loading;
+    }
+    // Loading never queues a late sound: the next actual wheel event decides playback.
+    return true;
+  } catch {
+    return false;
+  } finally {
+    loading = null;
+  }
 };
+
+/** Stops both currently playing samples and the complete scheduled win chime. */
+export const stopSpinAudio = () => {
+  for (const source of activeSources) {
+    try { source.stop(); } catch { /* A sample can have ended between frames. */ }
+    source.disconnect();
+  }
+  activeSources.clear();
+  lastTickAt = -Infinity;
+};
+
+export const setSpinSoundEnabled = (value: boolean) => {
+  enabled = value;
+  if (!enabled) stopSpinAudio();
+};
+
+const play = (sound: Sound): boolean => {
+  const audio = context;
+  if (!enabled || !audio || audio.state !== 'running' || !output || !buffers[sound]) return false;
+  if (typeof document !== 'undefined' && document.hidden) return false;
+  // Dense wheels should sound like individual clicks rather than a harsh buzz.
+  if (sound === 'tick' && audio.currentTime - lastTickAt < 0.025) return false;
+  let source: AudioBufferSourceNode | null = null;
+  try {
+    source = audio.createBufferSource();
+    source.buffer = buffers[sound] ?? null;
+    source.connect(output);
+    const sample = source;
+    source.onended = () => { activeSources.delete(sample); sample.disconnect(); };
+    activeSources.add(source);
+    source.start();
+    if (sound === 'tick') lastTickAt = audio.currentTime;
+    return true;
+  } catch {
+    if (source) { activeSources.delete(source); source.disconnect(); }
+    // Audio support/network failures must never prevent a spin or result reveal.
+    return false;
+  }
+};
+
+export const playSpinStart = () => play('start');
+/** Called by segment crossings, so the sound slows with the actual wheel. */
+export const playSpinTick = () => play('tick');
+/** One sample contains all three notes, with no uncancellable delayed timers. */
+export const playSpinWin = () => play('win');
 
 export const triggerSpinHaptic = () => {
   if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;

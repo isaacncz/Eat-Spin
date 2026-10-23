@@ -1,4 +1,5 @@
 import { Facebook, Instagram, Twitter } from 'lucide-react';
+import { BrandMark } from '@/components/BrandMark';
 
 const footerLinks = {
   product: [
@@ -31,8 +32,8 @@ export function Footer() {
           <div className="lg:col-span-2">
             {/* Logo */}
             <div className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 bg-brand-orange border-2 border-white rounded-xl flex items-center justify-center">
-                <span className="text-white font-heading text-lg font-bold">ES</span>
+              <div className="flex size-11 items-center justify-center rounded-xl border-2 border-white bg-arcade-yellow">
+                <BrandMark className="size-10" />
               </div>
               <span className="font-heading text-xl font-bold text-white">
                 EatSpin

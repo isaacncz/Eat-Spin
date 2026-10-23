@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eat-spin-shell-v2'
+const CACHE_NAME = 'eat-spin-shell-v3'
 const CORE_ASSETS = [
   '/',
   '/index.html',
@@ -9,6 +9,10 @@ const CORE_ASSETS = [
   '/favicon-32x32.png',
   '/favicon-16x16.png',
   '/favicon.ico',
+  '/brand/eatspin-mark.png',
+  '/audio/arcade-click-start.wav',
+  '/audio/arcade-click-tick.wav',
+  '/audio/arcade-click-win.wav',
 ]
 
 self.addEventListener('install', (event) => {

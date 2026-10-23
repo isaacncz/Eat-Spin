@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react';
-import { ChevronDown, Info } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
+import { BrandMark } from '@/components/BrandMark';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
@@ -31,7 +32,7 @@ export function AboutEatSpin({ onStartSpinning }: AboutEatSpinProps) {
           )}
         >
           <span className="inline-flex items-center gap-2">
-            <Info size={20} aria-hidden="true" />
+            <BrandMark className="size-7" />
             About EatSpin
           </span>
           <ChevronDown

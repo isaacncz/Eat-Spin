@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { ChevronRight, Crown, Loader2, MapPin, Search, SlidersHorizontal } from 'lucide-react';
 
+import { DestinationPicker, type DestinationPickerProps } from '@/components/DestinationPicker';
 import { CravingSearch } from '@/components/CravingSearch';
 import { FiltersSheet, type FiltersSheetProps } from '@/components/FiltersSheet';
 import { QuestCard } from '@/components/QuestCard';
@@ -34,6 +35,7 @@ type FilterControls = Pick<
 >;
 
 export interface SpinScreenProps {
+  destinationSearch?: DestinationPickerProps;
   hud: { level: number; xpIntoLevel: number; xpPerLevel: number; coins: number; streak: number };
   quest: { title: string; rewardXp: number; progress: number; target: number; completed: boolean };
   mealTime: MealTime;
@@ -87,6 +89,7 @@ const CTA_BASE =
  * one Spin button pinned above the tab bar. All state lives in App; this only lays it out.
  */
 export function SpinScreen({
+  destinationSearch,
   hud,
   quest,
   mealTime,
@@ -125,10 +128,13 @@ export function SpinScreen({
     };
   }, []);
 
+  const expandedDestination = destinationSearch && (destinationSearch.destination || destinationSearch.radiusKm != null);
   const isEmpty = hasLocation && !isLoadingPlaces && placeCount === 0;
   const showWheel = hasLocation && placeCount > 0;
 
-  const summary = buildFilterSummary(filters.rangeMode, hasLocation ? placeCount : null, hasLocation && isLoadingPlaces);
+  const summary = destinationSearch?.radiusKm != null
+    ? `Filters · ${destinationSearch.effectiveRadiusKm} km${hasLocation ? ` · ${isLoadingPlaces ? "searching…" : `${placeCount} places`}` : ""}`
+    : buildFilterSummary(filters.rangeMode, hasLocation ? placeCount : null, hasLocation && isLoadingPlaces);
   const activeFilterCount = countActiveFilters({
     categories: filters.selectedCategories,
     priceRanges: filters.selectedPriceRanges,
@@ -205,6 +211,8 @@ export function SpinScreen({
         )}
       </div>
 
+      {destinationSearch && expandedDestination && <DestinationPicker {...destinationSearch} />}
+
       {isSearchMode ? (
         <div className="space-y-3 px-5 pb-6 pt-3">
           <button
@@ -216,6 +224,7 @@ export function SpinScreen({
           </button>
           <CravingSearch
             query={search.query}
+            distanceOrigin={destinationSearch?.destination?.label}
             onSearch={search.onSearch}
             results={search.results}
             isLoading={search.isLoading}
@@ -227,10 +236,12 @@ export function SpinScreen({
         </div>
       ) : (
         <>
+          <div className="flex items-center">
+          {destinationSearch && !expandedDestination && <DestinationPicker {...destinationSearch} />}
           <div
             role="group"
             aria-label="Quick picks"
-            className="mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-5 py-1 scrollbar-hide"
+            className="mt-2 flex min-w-0 flex-1 gap-2 overflow-x-auto overscroll-x-contain px-5 py-1 scrollbar-hide"
           >
             {MOOD_OPTIONS.map(({ id, label }) => {
               const pressed = selectedMood === id;
@@ -252,11 +263,14 @@ export function SpinScreen({
             })}
           </div>
 
+          </div>
+
           <div className="px-5 pt-2">
             <FiltersSheet
               open={filtersOpen}
               onOpenChange={handleFiltersOpenChange}
               {...filters}
+              radiusKm={destinationSearch?.radiusKm ?? undefined}
               onCategoryChange={(categories) => {
                 setSelectedMood(null);
                 filters.onCategoryChange(categories);
@@ -303,10 +317,10 @@ export function SpinScreen({
               <div className="my-4 rounded-2xl border-[3px] border-brand-ink bg-white p-5 text-center shadow-pop">
                 <MapPin size={32} aria-hidden="true" className="mx-auto text-brand-orange" />
                 <p className="mt-2 font-heading text-lg font-semibold text-brand-ink">
-                  Enable location to find restaurants around you
+                  Choose a destination or use your location
                 </p>
                 <p className="mt-1 text-sm text-eatspin-gray-1">
-                  Your location is only used to find nearby places and is never stored.
+                  Search an area above, or share your current location to find nearby food.
                 </p>
                 {locationError && (
                   <p role="alert" className="mt-2 text-sm font-semibold text-eatspin-error">

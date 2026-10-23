@@ -28,6 +28,7 @@ export interface FiltersSheetProps {
   trigger: ReactNode;
 
   rangeMode: AutoRangeMode;
+  radiusKm?: number;
   onRangeModeChange: (mode: AutoRangeMode) => void;
   selectedPriceRanges: Restaurant['priceRange'][];
   onTogglePriceRange: (price: Restaurant['priceRange']) => void;
@@ -97,6 +98,7 @@ export const FiltersSheet = memo(function FiltersSheet({
   onOpenChange,
   trigger,
   rangeMode,
+  radiusKm,
   onRangeModeChange,
   selectedPriceRanges,
   onTogglePriceRange,
@@ -195,7 +197,7 @@ export const FiltersSheet = memo(function FiltersSheet({
             </div>
           )}
 
-          <Section title="How far?">
+          {radiusKm != null ? <p className="text-sm">Searching within {radiusKm} km. Change the radius above the wheel.</p> : <Section title="How far?">
             <div role="group" aria-label="How far" className="grid grid-cols-3 gap-2">
               {AUTO_RANGE_OPTIONS.map((option) => {
                 const pressed = rangeMode === option.id;
@@ -221,7 +223,7 @@ export const FiltersSheet = memo(function FiltersSheet({
                 );
               })}
             </div>
-          </Section>
+          </Section>}
 
           <Section title="Price">
             <div role="group" aria-label="Price" className="grid grid-cols-4 gap-2">

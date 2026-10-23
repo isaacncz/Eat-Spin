@@ -154,3 +154,7 @@ Auto mode range presets:
 - 10 min drive: ~6 km
 - 20 min drive: ~12 km
 - Default selection is `10 min drive` and the last selected option is saved in localStorage.
+
+### Destination search
+
+Search around a selected area, mall, landmark, or address, then choose a 1/3/5/10 km radius. See [destination search setup and API billing/persistence notes](docs/destination-search.md), including the Firebase usage-rule update required before release.

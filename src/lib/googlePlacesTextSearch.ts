@@ -1,3 +1,5 @@
+import { radiusRectangle } from '@/lib/searchDestination';
+import { placesRegion, placesLanguage } from '@/lib/googlePlacesDestinations';
 import type { Restaurant } from '@/types';
 import {
   GOOGLE_PLACE_FIELDS,
@@ -23,6 +25,8 @@ export interface TextSearchOptions {
   region?: string;
   maxResults?: number;
   signal?: AbortSignal;
+  openNowOnly?: boolean;
+  restrictToRectangle?: boolean;
 }
 
 /**
@@ -34,11 +38,13 @@ export async function searchPlacesByText(
 ): Promise<Restaurant[]> {
   const apiKey = getGoogleApiKey();
   const radiusMeters = Math.round((options.radiusKm ?? 2) * 1000);
+  const rectangle = options.restrictToRectangle === false ? null : radiusRectangle(options.location, options.radiusKm ?? 2);
   const maxResultCount = Math.min(options.maxResults ?? 10, 20);
 
   // Count this billable call against the monthly budget (throws PlacesBudgetError when exhausted).
   await reservePlacesCall('text');
 
+  options.signal?.throwIfAborted();
   const response = await fetch(GOOGLE_TEXT_SEARCH_ENDPOINT, {
     method: 'POST',
     headers: {
@@ -50,10 +56,10 @@ export async function searchPlacesByText(
       textQuery: options.textQuery,
       maxResultCount,
       rankPreference: 'DISTANCE',
-      openNow: true,
-      languageCode: options.language ?? 'en',
-      regionCode: options.region ?? 'SG',
-      locationBias: {
+      openNow: options.openNowOnly ?? true,
+      languageCode: options.language ?? placesLanguage(),
+      regionCode: options.region ?? placesRegion(),
+      ...(rectangle ? { locationRestriction: { rectangle } } : { locationBias: {
         circle: {
           center: {
             latitude: options.location.lat,
@@ -61,7 +67,7 @@ export async function searchPlacesByText(
           },
           radius: radiusMeters,
         },
-      },
+      } }),
     }),
     signal: options.signal,
   });
@@ -80,5 +86,5 @@ export async function searchPlacesByText(
   const places = payload?.places ?? [];
   return places
     .map((place) => normalizeGooglePlace(place, options.location, apiKey))
-    .filter((r): r is Restaurant => r !== null);
+    .filter((r): r is Restaurant => r !== null && (r.distance ?? Infinity) <= (options.radiusKm ?? 2));
 }

@@ -8,8 +8,8 @@ import {
 } from '@/lib/placesUsage';
 
 const initial: PlacesUsageSnapshot = {
-  used: { nearby: 0, text: 0 },
-  blocked: { nearby: false, text: false },
+  used: { nearby: 0, text: 0, autocomplete: 0, details: 0 },
+  blocked: { nearby: false, text: false, autocomplete: false, details: false },
 };
 
 /** Live monthly Google Places budget state. `nearbyBlocked` gates auto-mode spinning. */

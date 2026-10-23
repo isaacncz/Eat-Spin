@@ -2,7 +2,7 @@
 
 import type { Restaurant, FoodCategory, DailyHours, TimeWindow } from '@/types';
 
-export type RangeMode = 'walk' | 'drive10' | 'drive20';
+export type RangeMode = 'walk' | 'drive10' | 'drive20' | number;
 export type HalalFilter = 'all' | 'halal' | 'non-halal';
 
 export interface FilterResult {
@@ -35,8 +35,8 @@ const filterCache = new Map<string, FilterCacheEntry>();
 // walk: 0 ≤ d ≤ 0.85      (~12 min walk)
 // drive10 primary: 0.85 < d ≤ 4.3  (~10 min drive)
 // drive20 primary: 4.3 < d ≤ 8.5   (~20 min drive)
-const RANGE_BAND_MIN_KM: Record<RangeMode, number> = { walk: 0, drive10: 0.85, drive20: 4.3 };
-const RANGE_BAND_MAX_KM: Record<RangeMode, number> = { walk: 0.85, drive10: 4.3, drive20: 8.5 };
+const RANGE_BAND_MIN_KM: Record<Exclude<RangeMode, number>, number> = { walk: 0, drive10: 0.85, drive20: 4.3 };
+const RANGE_BAND_MAX_KM: Record<Exclude<RangeMode, number>, number> = { walk: 0.85, drive10: 4.3, drive20: 8.5 };
 const SPARSE_THRESHOLD = 12;
 const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 const AUTO_RESULT_SOURCES = new Set<NonNullable<Restaurant['source']>>([
@@ -107,7 +107,7 @@ const buildFilterCacheKey = (
   avoidedRestaurantIds?: Set<string>,
 ): string => {
   const locationKey = userLocation
-    ? `${toBucket(userLocation.lat)}:${toBucket(userLocation.lng)}`
+    ? typeof rangeMode === 'number' ? `${userLocation.lat}:${userLocation.lng}` : `${toBucket(userLocation.lat)}:${toBucket(userLocation.lng)}`
     : 'no-location';
   const poolSignature = buildRestaurantPoolSignature(restaurants, dataVersion);
   const avoidedKey = avoidedRestaurantIds && avoidedRestaurantIds.size > 0
@@ -358,6 +358,7 @@ export const enhancedFilterRestaurants = (
   halalFilter: HalalFilter = 'all',
   dataVersion?: string,
   avoidedRestaurantIds?: Set<string>,
+  openNowOnly = true,
 ): FilterResult => {
   const cacheKey = buildFilterCacheKey(
     restaurants,
@@ -368,7 +369,7 @@ export const enhancedFilterRestaurants = (
     halalFilter,
     dataVersion,
     avoidedRestaurantIds,
-  );
+  ) + `::open:${openNowOnly}`;
 
   const cached = readFilterCache(cacheKey);
   if (cached) {
@@ -427,7 +428,7 @@ export const enhancedFilterRestaurants = (
   let closedNowExcludedCount = 0;
   let closingSoonExcludedCount = 0;
   filtered = filtered.filter((restaurant) => {
-    if (!restaurant.source || !AUTO_RESULT_SOURCES.has(restaurant.source)) {
+    if (!openNowOnly || !restaurant.source || !AUTO_RESULT_SOURCES.has(restaurant.source)) {
       return true;
     }
 
@@ -449,7 +450,7 @@ export const enhancedFilterRestaurants = (
   const withDistance = userLocation
     ? filtered.map((restaurant) => ({
         ...restaurant,
-        distance: restaurant.distance ?? calculateDistance(
+        distance: calculateDistance(
           userLocation.lat,
           userLocation.lng,
           restaurant.coordinates.lat,
@@ -465,6 +466,8 @@ export const enhancedFilterRestaurants = (
 
   if (!userLocation) {
     results = withDistance;
+  } else if (typeof rangeMode === "number") {
+    results = withDistance.filter((r) => (r.distance ?? Infinity) <= rangeMode);
   } else {
     const maxKm = RANGE_BAND_MAX_KM[rangeMode];
     const minKm = RANGE_BAND_MIN_KM[rangeMode];

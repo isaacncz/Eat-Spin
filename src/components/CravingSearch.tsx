@@ -23,6 +23,7 @@ const POPULAR_CHIPS = [
 
 interface CravingSearchProps {
   query: string;
+  distanceOrigin?: string;
   onSearch: (text: string) => void;
   results: Restaurant[];
   isLoading: boolean;
@@ -57,6 +58,7 @@ export const CravingSearch = memo(function CravingSearch({
   isLoading,
   error,
   recentSearches,
+  distanceOrigin,
   onLetsGo,
   onClear,
 }: CravingSearchProps) {
@@ -226,7 +228,7 @@ export const CravingSearch = memo(function CravingSearch({
                   {r.distance !== undefined && (
                     <>
                       <span className="text-eatspin-gray-3">·</span>
-                      <span>{estimateWalkTime(r.distance)}</span>
+                      <span>{distanceOrigin ? `${r.distance.toFixed(1)} km from ${distanceOrigin}` : estimateWalkTime(r.distance)}</span>
                     </>
                   )}
                 </div>

@@ -14,9 +14,9 @@ import { ensureAnonymousAuthUser, firebaseDb } from '@/lib/firebase';
  * the public key. Keep a hard per-API quota in Google Cloud Console as backstop.
  */
 
-export type PlacesUsageKind = 'nearby' | 'text';
+export type PlacesUsageKind = 'nearby' | 'text' | 'autocomplete' | 'details';
 
-export const PLACES_USAGE_KINDS: PlacesUsageKind[] = ['nearby', 'text'];
+export const PLACES_USAGE_KINDS: PlacesUsageKind[] = ['nearby', 'text', 'autocomplete', 'details'];
 
 const DEFAULT_MONTHLY_CAP = 1000;
 const DEFAULT_BLOCK_AT_PERCENT = 90;
@@ -100,8 +100,8 @@ export interface PlacesUsageSnapshot {
 }
 
 const emptySnapshot = (): PlacesUsageSnapshot => ({
-  used: { nearby: 0, text: 0 },
-  blocked: { nearby: false, text: false },
+  used: { nearby: 0, text: 0, autocomplete: 0, details: 0 },
+  blocked: { nearby: false, text: false, autocomplete: false, details: false },
 });
 
 /** Live view of this month's counters for the UI. Returns an unsubscribe function. */

@@ -42,6 +42,9 @@ try {
   await assertFails(set(ref(outsider, room + '/preferences/outsider/61'), 'prefer'));
   await assertFails(set(ref(member, room + '/preferences/member/62'), 'veto'));
   await assertFails(update(ref(cohost, room + '/meta'), { hostUid: 'cohost' }));
+  // Validation rules are skipped on deletes: deny delete/recreate takeover at .write too.
+  await assertFails(remove(ref(cohost, room + '/meta')));
+  await assertFails(set(ref(cohost, room + '/meta'), { ...meta, hostUid: 'cohost' }));
   await assertFails(update(ref(host, room + '/meta'), { hostUid: 'outsider' }));
   await assertSucceeds(update(ref(host, room + '/meta'), { hostUid: 'member' }));
   await assertFails(set(ref(host, room + '/cohosts/host'), true));

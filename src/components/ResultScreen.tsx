@@ -200,8 +200,9 @@ export function ResultScreen({
 
         <DialogDescription className="sr-only">EatSpin picked {restaurant.name}.</DialogDescription>
 
-        <div className={cn('relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pb-4 pt-3', GUTTER)}>
-          <div className="mx-auto w-full max-w-[480px]">
+        <div className={cn('relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain pb-4 pt-3', GUTTER)}>
+          {/* my-auto centres a short card between the header and the actions; a tall one scrolls. */}
+          <div className="mx-auto my-auto w-full max-w-[480px]">
             {/* The capture area for Share: it includes room for the tab and the hard shadow. */}
             <div ref={cardRef} id="spin-result-card" className="pb-3 pt-5">
               <section

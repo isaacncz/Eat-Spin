@@ -9,6 +9,7 @@ const RECENT_KEY = 'eatspin:recent-searches';
 export interface UseTextSearchOptions {
   location: { lat: number; lng: number } | null;
   radiusKm?: number;
+  openNowOnly?: boolean;
 }
 
 export interface UseTextSearchReturn {
@@ -37,13 +38,15 @@ function saveRecent(searches: string[]) {
   } catch { /* quota exceeded — ignore */ }
 }
 
-export function useTextSearch({ location, radiusKm }: UseTextSearchOptions): UseTextSearchReturn {
+export function useTextSearch({ location, radiusKm, openNowOnly = true }: UseTextSearchOptions): UseTextSearchReturn {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recentSearches, setRecentSearches] = useState<string[]>(loadRecent);
 
+  const searchKey = `${location?.lat},${location?.lng}|${radiusKm}|${openNowOnly}`;
+  const [resolvedKey, setResolvedKey] = useState(searchKey);
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -65,6 +68,7 @@ export function useTextSearch({ location, radiusKm }: UseTextSearchOptions): Use
       abortRef.current = controller;
 
       setIsLoading(true);
+      setResolvedKey(searchKey);
       setError(null);
 
       try {
@@ -72,11 +76,13 @@ export function useTextSearch({ location, radiusKm }: UseTextSearchOptions): Use
           textQuery: trimmed,
           location,
           radiusKm,
+          openNowOnly,
           signal: controller.signal,
         });
 
         if (!controller.signal.aborted) {
           setResults(restaurants);
+          setResolvedKey(searchKey);
 
           // Save to recent
           setRecentSearches((prev) => {
@@ -95,7 +101,7 @@ export function useTextSearch({ location, radiusKm }: UseTextSearchOptions): Use
         if (!controller.signal.aborted) setIsLoading(false);
       }
     },
-    [location, radiusKm],
+    [location, radiusKm, openNowOnly, searchKey],
   );
 
   const search = useCallback(
@@ -125,5 +131,13 @@ export function useTextSearch({ location, radiusKm }: UseTextSearchOptions): Use
     abortRef.current?.abort();
   }, []);
 
-  return { query, setQuery, results, isLoading, error, recentSearches, search, clearResults };
+  useEffect(() => {
+    clearResults();
+    return () => {
+      abortRef.current?.abort();
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [location, radiusKm, openNowOnly, clearResults]);
+
+  return { query, setQuery, results: resolvedKey === searchKey ? results : [], isLoading, error: resolvedKey === searchKey ? error : null, recentSearches, search, clearResults };
 }

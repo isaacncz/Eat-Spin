@@ -20,6 +20,7 @@ interface RouletteWheelProps {
   ref?: Ref<RouletteWheelHandle>;
   /** Hide the built-in spin button when the host screen renders its own and calls `ref.spin()`. */
   hideSpinButton?: boolean;
+  distanceOrigin?: string;
   /** A room can render its own inline result and attendance instead of the modal. */
   resultPresentation?: 'dialog' | 'parent';
   /** Reveal notification, including direct restoration of an older external event. */
@@ -162,6 +163,7 @@ const loadSoundPreference = (): boolean => {
 export function RouletteWheel({
   ref,
   hideSpinButton = false,
+  distanceOrigin,
   resultPresentation = 'dialog',
   onResultRevealed,
   wheelMaxSize = '32.5rem',
@@ -684,7 +686,7 @@ export function RouletteWheel({
       const labelBaseFontSize = clamp(Math.min(constrainedWidth * 0.16, radialBandHeight * 0.28), 11.5, 22);
       const fontSize = clamp(labelBaseFontSize * densityScale, 11.5, 24);
       const distanceLabel = canShowDistance && lines.length <= 3 && restaurant.distance !== undefined
-        ? estimateTravelTime(restaurant.distance)
+        ? distanceOrigin ? `${restaurant.distance.toFixed(1)} km` : estimateTravelTime(restaurant.distance)
         : null;
 
       return {
@@ -916,7 +918,7 @@ export function RouletteWheel({
                       </span>
                     </span>
                     <span className="flex-shrink-0 text-xs font-semibold text-brand-orange tabular-nums">
-                      {estimateTravelTime(r.distance!)}
+                      {distanceOrigin ? `${r.distance!.toFixed(1)} km from ${distanceOrigin}` : estimateTravelTime(r.distance!)}
                     </span>
                   </li>
                 ))}
@@ -931,6 +933,7 @@ export function RouletteWheel({
           open={resultOpen}
           onOpenChange={setResultOpen}
           restaurant={spinResult}
+          distanceOrigin={distanceOrigin}
           isManual={isManualResult}
           rarity={resultRarity}
           visit={resultVisit}

@@ -60,6 +60,8 @@ export function useNearbyRestaurants({
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [shouldUseLocalFallback, setShouldUseLocalFallback] = useState(false);
   const requestIdRef = useRef(0);
+  const queryKey = JSON.stringify([enabled, location?.lat, location?.lng, radiusKm, openNowOnly, region, language, selectedCategories]);
+  const [resolvedKey, setResolvedKey] = useState<string | null>(null);
 
   // Stable string key for selectedCategories to use as a useEffect dependency.
   // Sorted so ['chinese','japanese'] and ['japanese','chinese'] produce the same key.
@@ -104,6 +106,7 @@ export function useNearbyRestaurants({
   useEffect(() => {
     if (!enabled || !location) {
       setRestaurants([]);
+      setResolvedKey(queryKey);
       setIsLoading(false);
       setError(null);
       setSource(null);
@@ -121,6 +124,10 @@ export function useNearbyRestaurants({
     const abortController = new AbortController();
 
     const run = async (): Promise<void> => {
+      setResolvedKey(queryKey);
+      setRestaurants([]);
+      setSource(null);
+      setLastSyncedAt(null);
       setIsLoading(true);
       setError(null);
       setShouldUseLocalFallback(false);
@@ -248,7 +255,7 @@ export function useNearbyRestaurants({
           setShouldUseLocalFallback(true);
         }
       } finally {
-        if (requestIdRef.current === requestId) {
+        if (requestIdRef.current === requestId && !abortController.signal.aborted) {
           setIsLoading(false);
         }
       }
@@ -262,14 +269,14 @@ export function useNearbyRestaurants({
       window.clearTimeout(debounceTimer);
       abortController.abort();
     };
-  }, [cacheConfig, categoriesKey, enabled, language, location, openNowOnly, radiusKm, region, selectedCategories]);
+  }, [cacheConfig, categoriesKey, enabled, language, location, openNowOnly, radiusKm, region, selectedCategories, queryKey]);
 
   return {
-    restaurants,
-    isLoading,
-    error,
-    source,
-    shouldUseLocalFallback,
-    lastSyncedAt,
+    restaurants: resolvedKey === queryKey ? restaurants : [],
+    isLoading: enabled && Boolean(location) && (resolvedKey !== queryKey || isLoading),
+    error: resolvedKey === queryKey ? error : null,
+    source: resolvedKey === queryKey ? source : null,
+    shouldUseLocalFallback: resolvedKey === queryKey && shouldUseLocalFallback,
+    lastSyncedAt: resolvedKey === queryKey ? lastSyncedAt : null,
   };
 }

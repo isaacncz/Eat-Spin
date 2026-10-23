@@ -88,7 +88,7 @@
         "$month": {
           "$kind": {
             ".read": "auth != null",
-            ".write": "auth != null && ($kind === 'nearby' || $kind === 'text') && $month.matches(/^[0-9]{4}-[0-9]{2}$/)",
+            ".write": "auth != null && ($kind === 'nearby' || $kind === 'text' || $kind === 'autocomplete' || $kind === 'details') && $month.matches(/^[0-9]{4}-[0-9]{2}$/)",
             ".validate": "newData.isNumber() && ((!data.exists() && newData.val() === 1) || (data.exists() && newData.val() === data.val() + 1))"
           }
         }

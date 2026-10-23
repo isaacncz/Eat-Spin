@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import { trackEvent } from '@/lib/analytics';
 import { APP_FEATURES } from '@/lib/featureFlags';
+import { useSearchDestination } from '@/hooks/useSearchDestination';
 import { useLocation } from '@/hooks/useLocation';
 import { useNearbyRestaurants } from '@/hooks/useNearbyRestaurants';
 import { useTextSearch } from '@/hooks/useTextSearch';
@@ -262,7 +263,8 @@ function App() {
   // Fetch radius follows the selected range mode so each mode gets its own
   // focused 20-place pool from Google. Cached separately per radius — repeat
   // visits cost nothing for 7 days.
-  const fetchRadiusKm = AUTO_RANGE_RADIUS_KM[rangeMode];
+  const destinationSearch = useSearchDestination();
+  const fetchRadiusKm = destinationSearch.radiusKm ?? AUTO_RANGE_RADIUS_KM[rangeMode];
   const autoLoadedMealTimeRef = useRef<ManualListMealTime>(null);
   const hasUserSelectedManualListRef = useRef(hasSavedManualSelection());
 
@@ -295,6 +297,10 @@ function App() {
 
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
+  const searchCenter = destinationSearch.destination?.coordinates ?? location;
+  const searchIdentity = `${searchCenter?.lat},${searchCenter?.lng}|${fetchRadiusKm}|${destinationSearch.openNowOnly}`;
+  // A center change remounts the wheel and cancels its animation; release the parent spin lock too.
+  useEffect(() => () => setIsSpinning(false), [searchIdentity]);
   const { spins, canSpin, recordSpin } = useSpinTracker();
   const placesBudget = usePlacesBudget();
   const game = useGame();
@@ -318,14 +324,14 @@ function App() {
     shouldUseLocalFallback,
     lastSyncedAt: nearbyLastSyncedAt,
   } = useNearbyRestaurants({
-    enabled: activeTab === 'auto' && Boolean(location),
-    location,
+    enabled: activeTab === 'auto' && Boolean(searchCenter),
+    location: searchCenter,
     radiusKm: fetchRadiusKm,
-    openNowOnly: true,
+    openNowOnly: destinationSearch.openNowOnly,
     selectedCategories,
   });
 
-  const textSearch = useTextSearch({ location });
+  const textSearch = useTextSearch({ location: searchCenter, radiusKm: fetchRadiusKm, openNowOnly: destinationSearch.openNowOnly });
 
   const {
     authUid: groupAuthUid,
@@ -417,13 +423,13 @@ function App() {
     []
   );
   const autoSourceRestaurants = useMemo(() => {
-    if (!location) return [];
+    if (!searchCenter) return [];
     if (nearbyRestaurants.length > 0) return nearbyRestaurants;
     if (shouldUseLocalFallback) return localFallbackAutoRestaurants;
     return [];
-  }, [location, nearbyRestaurants, shouldUseLocalFallback, localFallbackAutoRestaurants]);
+  }, [searchCenter, nearbyRestaurants, shouldUseLocalFallback, localFallbackAutoRestaurants]);
   const autoDataSourceLabel = useMemo(() => {
-    if (!location) return null;
+    if (!searchCenter) return null;
     if (nearbyRestaurantsLoading) return 'Loading nearby restaurants...';
     if (nearbyRestaurantsSource === 'google-cache') {
       if (!nearbyLastSyncedAt) return 'Using cached nearby results (refresh after moving >100m).';
@@ -436,7 +442,7 @@ function App() {
     if (shouldUseLocalFallback) return 'Google unavailable. Using local fallback results.';
     return null;
   }, [
-    location,
+    searchCenter,
     nearbyLastSyncedAt,
     nearbyRestaurantsLoading,
     nearbyRestaurantsSource,
@@ -547,15 +553,16 @@ function App() {
   const filterResult = useMemo(() => (
     enhancedFilterRestaurants(
       autoSourceRestaurants,
-      location,
+      searchCenter,
       selectedCategories,
-      rangeMode,
+      destinationSearch.radiusKm ?? rangeMode,
       selectedPriceRanges,
       'all',
       undefined,
       avoidedRestaurantIds,
+      destinationSearch.openNowOnly,
     )
-  ), [autoSourceRestaurants, location, selectedCategories, rangeMode, selectedPriceRanges, avoidedRestaurantIds]);
+  ), [autoSourceRestaurants, searchCenter, selectedCategories, rangeMode, selectedPriceRanges, avoidedRestaurantIds, destinationSearch.radiusKm, destinationSearch.openNowOnly]);
 
   const filteredRestaurants = useMemo(
     () => applyServesFilters(filterResult.results, activeServesFilters),
@@ -971,6 +978,7 @@ function App() {
   const handleAutoRangeModeChange = (nextMode: AutoRangeMode) => {
     if (nextMode === rangeMode) return;
     trackEvent('range_mode_changed', { mode: nextMode });
+    destinationSearch.setRadiusKm(null);
     setRangeMode(nextMode);
     setShowAllRoundRestaurants(false);
     resetAutoWheel();
@@ -982,6 +990,7 @@ function App() {
     setSelectedPriceRanges([]);
     setActiveServesFilters([]);
     setShowAllRoundRestaurants(false);
+    destinationSearch.setRadiusKm(null);
     handleAutoRangeModeChange(DEFAULT_AUTO_RANGE_MODE);
   };
 
@@ -1011,6 +1020,7 @@ function App() {
   // again when the range, filters or the nearby results change what can be on it. A winner
   // waiting to be dropped belongs to the old wheel, so a refill starts a fresh round.
   const wheelSeedKey = [
+    searchIdentity,
     rangeMode,
     selectedCategories.join(','),
     selectedPriceRanges.join(','),
@@ -1018,7 +1028,7 @@ function App() {
     autoSourceRestaurants.length,
   ].join('|');
   useEffect(() => {
-    if (appTab !== 'spin' || !location || isSpinning || roundRestaurants.length === 0) return;
+    if (appTab !== 'spin' || !searchCenter || isSpinning || roundRestaurants.length === 0) return;
     const roundIds = new Set(roundRestaurants.map((restaurant) => restaurant.id));
     const isStale = wheelRestaurants.length === 0 || wheelRestaurants.some((restaurant) => !roundIds.has(restaurant.id));
     if (!isStale && seededWheelKeyRef.current === wheelSeedKey) return;
@@ -1026,7 +1036,7 @@ function App() {
     setPendingAutoRemovalId(null);
     setWheelRestaurants(sampleWheelRestaurants());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appTab, isSpinning, location, roundRestaurants, wheelRestaurants, wheelSeedKey]);
+  }, [appTab, isSpinning, searchCenter, roundRestaurants, wheelRestaurants, wheelSeedKey]);
 
   const handleTabChange = (tab: AppTab) => {
     if (tab === appTab) {
@@ -1538,7 +1548,18 @@ function App() {
             }}
             mealTime={currentMealTime}
             onMoodSelect={handleMoodSelect}
-            hasLocation={Boolean(location)}
+            hasLocation={Boolean(searchCenter)}
+            destinationSearch={{
+              destination: destinationSearch.destination,
+              radiusKm: destinationSearch.radiusKm,
+              effectiveRadiusKm: fetchRadiusKm,
+              openNowOnly: destinationSearch.openNowOnly,
+              disabled: isSpinning,
+              onSelect: (destination) => { resetAutoWheel(); destinationSearch.selectDestination(destination); },
+              onCurrentLocation: () => { resetAutoWheel(); destinationSearch.useCurrentLocation(); requestLocation(); },
+              onRadiusChange: (radius) => { resetAutoWheel(); destinationSearch.setRadiusKm(radius); },
+              onOpenNowChange: (value) => { resetAutoWheel(); destinationSearch.setOpenNowOnly(value); },
+            }}
             isLocationLoading={locationLoading}
             locationError={locationError}
             onRequestLocation={requestLocation}
@@ -1562,17 +1583,18 @@ function App() {
             isLoadingPlaces={nearbyRestaurantsLoading}
             emptyState={autoEmptyState}
             budgetBlocked={placesBudget.nearbyBlocked ? { used: placesBudget.nearbyUsed, cap: placesBudget.cap } : null}
-            canSpin={wheelRestaurants.length >= 2}
+            canSpin={!nearbyRestaurantsLoading && wheelRestaurants.length >= 2}
             isSpinning={isSpinning}
             onSpin={() => wheelRef.current?.spin()}
             wheel={(
               <RouletteWheel
                 ref={wheelRef}
-                key={`auto-${autoWheelKey}`}
+                key={`auto-${autoWheelKey}-${searchIdentity}`}
                 hideSpinButton
+                distanceOrigin={destinationSearch.destination?.label}
                 scrollOnSpin={false}
                 wheelMaxSize={SPIN_SCREEN_WHEEL_SIZE}
-                restaurants={wheelRestaurants}
+                restaurants={nearbyRestaurantsLoading ? [] : wheelRestaurants}
                 totalCount={roundRestaurants.length}
                 onSpinComplete={handleSpinComplete}
                 isSpinning={isSpinning}
@@ -1611,7 +1633,7 @@ function App() {
                 onSave={(restaurant) => handleSaveFavourite(restaurant, 'auto')}
                 onRemove={removeRestaurantForRound}
                 onResetRound={resetAutoWheel}
-                formatTravel={estimateTravelTime}
+                formatTravel={destinationSearch.destination ? (km) => `${km.toFixed(1)} km from ${destinationSearch.destination!.label}` : estimateTravelTime}
               />
             )}
             pwaBanner={showPwaInstallBanner && isPwaPromptReady ? (

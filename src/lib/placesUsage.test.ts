@@ -81,15 +81,15 @@ describe('reservePlacesCall (localStorage fallback)', () => {
   it('increments the counter once per reserved call', async () => {
     const mod = await loadPlacesUsage('10', '50');
 
-    expect(readUsage(mod).used).toEqual({ nearby: 0, text: 0 });
+    expect(readUsage(mod).used).toEqual({ nearby: 0, text: 0, autocomplete: 0, details: 0 });
 
     await mod.reservePlacesCall('nearby');
     await mod.reservePlacesCall('nearby');
     await mod.reservePlacesCall('nearby');
 
     const snapshot = readUsage(mod);
-    expect(snapshot.used).toEqual({ nearby: 3, text: 0 });
-    expect(snapshot.blocked).toEqual({ nearby: false, text: false });
+    expect(snapshot.used).toEqual({ nearby: 3, text: 0, autocomplete: 0, details: 0 });
+    expect(snapshot.blocked).toEqual({ nearby: false, text: false, autocomplete: false, details: false });
   });
 
   it('does not touch Firebase', async () => {
@@ -136,8 +136,8 @@ describe('reservePlacesCall (localStorage fallback)', () => {
     await expect(mod.reservePlacesCall('text')).resolves.toBeUndefined();
 
     const snapshot = readUsage(mod);
-    expect(snapshot.used).toEqual({ nearby: mod.PLACES_BLOCK_THRESHOLD, text: 1 });
-    expect(snapshot.blocked).toEqual({ nearby: true, text: false });
+    expect(snapshot.used).toEqual({ nearby: mod.PLACES_BLOCK_THRESHOLD, text: 1, autocomplete: 0, details: 0 });
+    expect(snapshot.blocked).toEqual({ nearby: true, text: false, autocomplete: false, details: false });
   });
 
   it('enforces the default 900 call threshold', async () => {
@@ -211,8 +211,8 @@ describe('subscribePlacesUsage (localStorage fallback)', () => {
   it('reports an empty, unblocked snapshot with no stored usage', async () => {
     const mod = await loadPlacesUsage('10', '50');
     expect(readUsage(mod)).toEqual({
-      used: { nearby: 0, text: 0 },
-      blocked: { nearby: false, text: false },
+      used: { nearby: 0, text: 0, autocomplete: 0, details: 0 },
+      blocked: { nearby: false, text: false, autocomplete: false, details: false },
     });
   });
 
@@ -225,7 +225,7 @@ describe('subscribePlacesUsage (localStorage fallback)', () => {
   it('reports zero usage when storage cannot be read', async () => {
     const mod = await loadPlacesUsage('10', '50');
     stubWindowStorage(createBrokenStorage({ read: true }));
-    expect(readUsage(mod).used).toEqual({ nearby: 0, text: 0 });
+    expect(readUsage(mod).used).toEqual({ nearby: 0, text: 0, autocomplete: 0, details: 0 });
   });
 });
 

@@ -157,6 +157,7 @@ export function SpinScreen({
   const openSearch = () => {
     trackEvent('search_mode_open');
     setIsSearchMode(true);
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   };
 
   const closeSearch = () => {
@@ -192,9 +193,9 @@ export function SpinScreen({
 
   return (
     <div className="flex min-h-[calc(100dvh-var(--bottom-nav-height))] flex-col">
-      <SpinHud {...hud} />
+      {!isSearchMode && <SpinHud {...hud} />}
 
-      <div className="flex items-start justify-between gap-3 px-5 pt-3">
+      {!isSearchMode && <div className="flex items-start justify-between gap-3 px-5 pt-3">
         <h1 className="font-heading text-[30px] font-bold leading-[1.1] text-brand-ink">
           What's for {MEAL_HEADING_WORD[mealTime]}?
         </h1>
@@ -209,12 +210,12 @@ export function SpinScreen({
             <Search size={20} strokeWidth={2.5} aria-hidden="true" />
           </button>
         )}
-      </div>
+      </div>}
 
-      {destinationSearch && expandedDestination && <DestinationPicker {...destinationSearch} />}
+      {destinationSearch && expandedDestination && !isSearchMode && <DestinationPicker {...destinationSearch} />}
 
       {isSearchMode ? (
-        <div className="space-y-3 px-5 pb-6 pt-3">
+        <div className="space-y-2 px-5 pb-6 pt-2">
           <button
             type="button"
             onClick={closeSearch}
@@ -222,6 +223,7 @@ export function SpinScreen({
           >
             ← Back to Spin
           </button>
+          {destinationSearch && <p className="truncate text-sm font-semibold text-brand-ink" aria-label="Food search area">Within {destinationSearch.effectiveRadiusKm} km of {destinationSearch.destination?.label ?? 'your current location'}</p>}
           <CravingSearch
             query={search.query}
             distanceOrigin={destinationSearch?.destination?.label}

@@ -67,13 +67,13 @@ export const CravingSearch = memo(function CravingSearch({
   const showSuggestions = isFocused && !query && (recentSearches.length > 0);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    inputRef.current?.focus({ preventScroll: true });
   }, []);
 
   return (
     <div className="w-full space-y-4">
       {/* ── Search bar ────────────────────────────────────────── */}
-      <div className="relative">
+      <div className="sticky top-0 z-30 bg-arcade-yellow py-2">
         <Search
           size={18}
           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-eatspin-gray-2"
@@ -86,8 +86,8 @@ export const CravingSearch = memo(function CravingSearch({
           onFocus={() => setIsFocused(true)}
           onBlur={() => setTimeout(() => setIsFocused(false), 200)}
           placeholder="chicken rice, coffee, bubble tea..."
-          className="h-12 w-full rounded-xl border-2 border-brand-ink bg-white pl-10 pr-10
-                     text-sm text-brand-black placeholder:text-eatspin-gray-2
+          className="h-14 w-full rounded-2xl border-[3px] border-brand-ink bg-white pl-10 pr-12
+                     text-base text-brand-black placeholder:text-eatspin-gray-2
                      focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange/30
                      transition-all"
           aria-label="Search for food"
@@ -95,7 +95,7 @@ export const CravingSearch = memo(function CravingSearch({
         {query && (
           <button
             onClick={onClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-eatspin-gray-2
+            className="absolute right-1 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-xl text-eatspin-gray-2
                        hover:text-brand-black transition-colors"
             aria-label="Clear search"
           >

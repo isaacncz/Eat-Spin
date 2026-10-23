@@ -96,7 +96,9 @@ test('changing radius cancels old food search and ignores a late response', asyn
   const oldRequest = page.waitForRequest((r) => r.url().includes('places:searchText'));
   await page.getByLabel(/search for food/i).fill('old');
   await oldRequest;
+  await page.getByRole('button', { name: /back to spin/i }).click();
   await page.getByRole('button', { name: /^1 km$/ }).click();
+  await page.getByRole('button', { name: /search instead/i }).click();
   await expect(page.getByLabel(/search for food/i)).toHaveValue('');
   release();
   await finished;

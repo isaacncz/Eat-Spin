@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronRight, MapPin } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { autocompleteDestinations, resolveDestination, type DestinationSuggestion } from '@/lib/googlePlacesDestinations';
+import { useVisualViewport } from '@/hooks/useVisualViewport';
 import { SEARCH_RADII, type SearchDestination, type SearchRadius } from '@/lib/searchDestination';
 
 export interface DestinationPickerProps {
@@ -21,6 +22,7 @@ const control = 'min-h-11 rounded-xl border-[3px] border-brand-ink px-3 font-sem
 
 export function DestinationPicker(props: DestinationPickerProps) {
   const [open, setOpen] = useState(false);
+  const viewport = useVisualViewport(open);
   const compact = Boolean(props.triggerLabel) || (!props.destination && props.radiusKm == null);
   return <div className={props.triggerLabel ? 'min-w-0 text-brand-ink' : compact ? 'ml-5 mt-2 shrink-0 text-brand-ink' : 'mx-5 mt-3 rounded-2xl border-[3px] border-brand-ink bg-white p-3 text-brand-ink shadow-pop'}>
     <Sheet open={open} onOpenChange={setOpen}>
@@ -29,11 +31,11 @@ export function DestinationPicker(props: DestinationPickerProps) {
         <MapPin aria-hidden="true" className="shrink-0 text-brand-orange" /><span className={compact ? "sr-only" : "min-w-0 flex-1"}><span className="block text-xs font-bold uppercase">Search around</span><span className="block truncate font-heading text-lg font-bold">{props.destination?.label ?? 'Current location'}</span>{props.destination?.address && <span className="block truncate text-xs">{props.destination.address}</span>}</span>{!compact && <ChevronRight aria-hidden="true" />}</>}
 
       </button></SheetTrigger>
-      <SheetContent side="bottom" className="mx-auto max-h-[85dvh] max-w-lg overflow-y-auto rounded-t-3xl border-[3px] border-brand-ink bg-white p-5 pb-8 text-brand-ink">
+      <SheetContent side="top" style={viewport ? { top: viewport.offsetTop, maxHeight: Math.max(viewport.height - 8, 200) } : undefined} className="mx-auto max-h-[85dvh] max-w-lg overflow-y-auto overscroll-contain rounded-b-3xl border-[3px] border-brand-ink bg-white p-5 pb-5 text-brand-ink">
         <SheetTitle className="pr-6 font-heading text-2xl font-bold">Where are you heading?</SheetTitle>
-        <SheetDescription>Choose an area, landmark, mall, or address to find food around it.</SheetDescription>
-        {compact && !props.triggerLabel && <RadiusControls {...props} />}
+        <SheetDescription className={viewport && viewport.height < 600 ? 'sr-only' : undefined}>Choose an area, landmark, mall, or address to find food around it.</SheetDescription>
         {open && <DestinationSearch initialQuery={props.initialQuery} onSelect={(destination) => { props.onSelect(destination); setOpen(false); }} onCurrentLocation={() => { props.onCurrentLocation(); setOpen(false); }} />}
+        {compact && !props.triggerLabel && <RadiusControls {...props} />}
       </SheetContent>
     </Sheet>
     {!compact && <RadiusControls {...props} />}
@@ -75,7 +77,7 @@ function DestinationSearch({ onSelect, onCurrentLocation, initialQuery }: Pick<D
   };
   return <>
     <label className="sr-only" htmlFor="destination-query">Search destination</label>
-    <input id="destination-query" type="search" autoComplete="off" placeholder="Search area, mall, or address" value={query} onChange={(e) => { controller.current?.abort(); setBusy(false); setError(null); setSuggestions([]); setQuery(e.target.value); }} className={`${control} w-full bg-white`} />
+    <input id="destination-query" type="search" enterKeyHint="search" autoComplete="off" placeholder="Search area, mall, or address" value={query} onChange={(e) => { controller.current?.abort(); setBusy(false); setError(null); setSuggestions([]); setQuery(e.target.value); }} className={`${control} w-full bg-white text-base`} />
     <button className={`${control} bg-arcade-cyan`} onClick={onCurrentLocation}>Use my current location</button>
     {busy && <p role="status">Finding your destination…</p>}
     {error && <p role="alert" className="text-sm text-eatspin-error">{error}</p>}

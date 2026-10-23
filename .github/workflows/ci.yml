@@ -121,7 +121,7 @@ jobs:
           retention-days: 14
 
   sharing-rules:
-    name: Shared list Firebase rules
+    name: Shared list and group Firebase rules
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -138,9 +138,30 @@ jobs:
           java-version: '21'
       - run: npm ci
       - name: Install isolated emulator test tools
-        run: npm install --no-save --package-lock=false firebase-tools@14 @firebase/rules-unit-testing@5
-      - name: Verify shared-list access rules
-        run: npx firebase emulators:exec --only database --project demo-eat-spin-sharing --config firebase.sharing-test.json "node scripts/shared-list-rules.test.mjs"
+        run: |
+          npm install --prefix "$RUNNER_TEMP/eatspin-firebase-tools" --no-save --package-lock=false firebase-tools@14 @firebase/rules-unit-testing@5
+          # Copy rather than symlink so the test package resolves this checkout's
+          # locked Firebase SDK. Mixing SDK instances breaks transaction snapshots.
+          cp -R "$RUNNER_TEMP/eatspin-firebase-tools/node_modules/@firebase/rules-unit-testing" node_modules/@firebase/rules-unit-testing
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Verify shared-list and group rules plus live browser synchronization
+        env:
+          EATSPIN_GROUP_EMULATOR: '1'
+        run: >-
+          node "$RUNNER_TEMP/eatspin-firebase-tools/node_modules/firebase-tools/lib/bin/firebase.js"
+          emulators:exec --only database --project demo-eat-spin-sharing --config firebase.sharing-test.json
+          "node scripts/shared-list-rules.test.mjs && node --experimental-strip-types scripts/group-room-rules.test.mjs && npm run test:e2e -- tests/critical-group-sync.spec.ts"
+      - name: Upload emulator browser report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: group-emulator-report-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
 
   # Single stable check name for branch protection. Require "CI gate" and the
   # set of jobs behind it can change without editing the ruleset.

@@ -40,6 +40,7 @@ import { SPIN_SCREEN_WHEEL_SIZE } from '@/lib/spinLayout';
 import { applyServesFilters, SERVES_FILTERS, type ServesFilterId } from '@/lib/servesFilters';
 import { getTimeOfDayFilters } from '@/lib/timeOfDayDefaults';
 import { GroupScreen } from '@/screens/GroupScreen';
+import { ListTools } from '@/screens/ListTools';
 import { ListScreen } from '@/screens/ListScreen';
 import { MeScreen } from '@/screens/MeScreen';
 import { rankMostVisited } from '@/lib/placeVisits';
@@ -62,7 +63,6 @@ type AutoRangeMode = 'walk' | 'drive10' | 'drive20';
 const AUTO_RANGE_MODE_STORAGE_KEY = 'eatspin:auto-range-mode';
 const SPIN_REJECTION_STORAGE_KEY = 'eatspin:spin-rejections';
 const FIRST_RUN_ONBOARDING_SEEN_KEY = 'eatspin:first-run-onboarding-seen';
-const ROOM_LIST_SYNC_GRACE_MS = 2_500;
 const GROUP_SPIN_REPLAY_WINDOW_MS = 30_000;
 const LATE_JOIN_NOTICE_MS = 5 * 60 * 1000;
 const REVIEW_PREVIEW_COUNT = 30;
@@ -229,6 +229,9 @@ function App() {
     selectManualList,
     createNewManualList,
     importManualList,
+    saveError: manualSaveError,
+    retrySave: retryManualSave,
+    duplicateSelectedList, exportBackup, previewBackup, importBackup, restoreDeletedList, restorePlaces,
     updateSelectedManualList,
     deleteManualList,
     selectDeterministicManualList,
@@ -249,7 +252,6 @@ function App() {
   const autoLoadedMealTimeRef = useRef<ManualListMealTime>(null);
   const hasUserSelectedManualListRef = useRef(false);
   const seededRoomSyncIdRef = useRef('');
-  const pendingRoomListSyncRef = useRef<{ roomId: string; signature: string; startedAt: number } | null>(null);
 
   const handleMoodSelect = useCallback((mood: FoodMood) => {
     setSelectedMood(mood);
@@ -341,6 +343,13 @@ function App() {
     joinRoom: joinGroupRoom,
     leaveRoom: leaveGroupRoom,
     syncHostList,
+    canSeedList: canSeedGroupList,
+    listSyncState: groupListSyncState,
+    connected: groupConnected,
+    retryRoomList, transferHost,
+    preferences: groupPreferences,
+    setPreference: setGroupPreference,
+    restoreRoomPlaces,
     setParticipantCohost,
     requestHostSpin,
     sendReaction: sendGroupReaction,
@@ -885,23 +894,17 @@ function App() {
   const setDisplayedManualRestaurants = useCallback((restaurants: Restaurant[]) => {
     if (shouldShowRoomManualRestaurants) {
       setRoomManualRestaurants(restaurants);
-      return;
+      return true;
     }
 
-    updateSelectedManualList({ restaurants });
+    return updateSelectedManualList({ restaurants });
   }, [shouldShowRoomManualRestaurants, updateSelectedManualList]);
 
   const syncGroupListFromRestaurants = useCallback((restaurants: Restaurant[]) => {
     if (!isGroupRoomActive || !canEditGroupList || !groupRoomId) return;
     const normalizedNames = normalizeManualNames(restaurants.map((restaurant) => restaurant.name));
-    const signature = JSON.stringify(normalizedNames);
-    pendingRoomListSyncRef.current = {
-      roomId: groupRoomId,
-      signature,
-      startedAt: Date.now(),
-    };
-    void syncHostList(normalizedNames);
-  }, [canEditGroupList, groupRoomId, isGroupRoomActive, syncHostList]);
+    void syncHostList(normalizedNames, roomManualRestaurantNames);
+  }, [canEditGroupList, groupRoomId, isGroupRoomActive, roomManualRestaurantNames, syncHostList]);
 
   const addManualRestaurantByName = useCallback((restaurantName: string) => {
     if (isManualListReadOnly) {
@@ -922,7 +925,7 @@ function App() {
     }
 
     const nextRestaurants = [...displayedManualRestaurants, createManualRestaurant(name)];
-    setDisplayedManualRestaurants(nextRestaurants);
+    if (!setDisplayedManualRestaurants(nextRestaurants)) return;
     syncGroupListFromRestaurants(nextRestaurants);
     trackEvent('manual_restaurant_added', { name });
     setManualInput('');
@@ -1180,10 +1183,10 @@ function App() {
 
     if (!selectedManualList) return;
 
-    updateSelectedManualList({
+    if (!updateSelectedManualList({
       name: nextName,
       mealTime: listMealTimeInput,
-    });
+    })) return;
     trackEvent('manual_list_updated', {
       list_id: selectedManualList.id,
       list_name: nextName,
@@ -1241,6 +1244,7 @@ function App() {
   ]);
 
   const handleDeleteManualList = useCallback(() => {
+    if (isGroupRoomActive) return;
     if (!selectedManualList || isManualListReadOnly) {
       if (isManualListReadOnly) {
         toast.info('Only the host or co-host can edit the shared list.');
@@ -1250,7 +1254,7 @@ function App() {
 
     if (!window.confirm(`Delete "${selectedManualList.name}"?`)) return;
 
-    const fallbackList = deleteManualList(selectedManualList.id);
+    if (!deleteManualList(selectedManualList.id)) return;
     hasUserSelectedManualListRef.current = true;
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
@@ -1259,14 +1263,10 @@ function App() {
       list_name: selectedManualList.name,
     });
 
-    const nextRestaurants = fallbackList?.restaurants ?? [];
-    if (isGroupRoomActive && canEditGroupList) {
-      setRoomManualRestaurants(nextRestaurants);
-      syncGroupListFromRestaurants(nextRestaurants);
-    }
-
-    toast.success(`Deleted "${selectedManualList.name}".`);
-  }, [canEditGroupList, deleteManualList, isGroupRoomActive, isManualListReadOnly, selectedManualList, syncGroupListFromRestaurants]);
+    const deleted = structuredClone(selectedManualList);
+    toast.success(`Deleted "${selectedManualList.name}".`, { duration: 8000,
+      action: { label: 'Undo', onClick: () => { try { restoreDeletedList(deleted); } catch (error) { toast.error(String(error)); } } } });
+  }, [deleteManualList, isManualListReadOnly, selectedManualList, restoreDeletedList, isGroupRoomActive]);
   const removeManualRestaurant = (id: string) => {
     if (isManualListReadOnly) {
       toast.info('Only the host or co-host can edit the shared list.');
@@ -1276,8 +1276,16 @@ function App() {
     const nextRestaurants = displayedManualRestaurants.filter((restaurant) => restaurant.id !== id);
     const removed = displayedManualRestaurants.find((r) => r.id === id);
     if (removed) trackEvent('manual_restaurant_removed', { name: removed.name });
-    setDisplayedManualRestaurants(nextRestaurants);
+    if (!setDisplayedManualRestaurants(nextRestaurants)) return;
     syncGroupListFromRestaurants(nextRestaurants);
+    const removedRoomId = groupRoomId;
+    const removedListId = selectedManualListId;
+    if (removed) toast.success(`Removed ${removed.name}.`, { duration: 8000, action: {
+      label: 'Undo', onClick: () => {
+        if (removedRoomId) restoreRoomPlaces(removedRoomId, [removed.name]);
+        else restorePlaces(removedListId, [removed]);
+      },
+    } });
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
   };
@@ -1289,8 +1297,15 @@ function App() {
     }
 
     if (!window.confirm('Clear all restaurants?')) return;
-    setDisplayedManualRestaurants([]);
+    const removed = structuredClone(displayedManualRestaurants);
+    const removedRoomId = groupRoomId;
+    const removedListId = selectedManualListId;
+    if (!setDisplayedManualRestaurants([])) return;
     syncGroupListFromRestaurants([]);
+    toast.success('List cleared.', { duration: 8000, action: { label: 'Undo', onClick: () => {
+      if (removedRoomId) restoreRoomPlaces(removedRoomId, removed.map(item => item.name));
+      else restorePlaces(removedListId, removed);
+    } } });
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
   };
@@ -1340,7 +1355,7 @@ function App() {
   const shuffleManualRestaurants = useCallback(() => {
     if (isManualListReadOnly) return;
     const shuffledRestaurants = [...displayedManualRestaurants].sort(() => Math.random() - 0.5);
-    setDisplayedManualRestaurants(shuffledRestaurants);
+    if (!setDisplayedManualRestaurants(shuffledRestaurants)) return;
     syncGroupListFromRestaurants(shuffledRestaurants);
     setManualSpinResult(null);
     setManualWheelKey((prev) => prev + 1);
@@ -1381,7 +1396,7 @@ function App() {
     recordSpin(restaurant, currentMealTime, `group:${groupRoomId}:${groupCurrentSpin.spinId}`, groupCurrentSpin.startedAt);
   }, [currentMealTime, groupCurrentSpin, groupRoomId, isGroupRoomActive, recordSpin]);
 
-  const handleRequestGroupSpin = useCallback(async () => {
+  const handleRequestGroupSpin = useCallback(async (shortlist?: string[]) => {
     if (!isGroupRoomActive) return;
     if (!isGroupHost && !isGroupCohost) {
       toast.info('Only the room host or a co-host can start the spin.');
@@ -1393,7 +1408,7 @@ function App() {
       return;
     }
 
-    const spinResult = await requestHostSpin(displayedManualRestaurantNames);
+    const spinResult = await requestHostSpin(shortlist ?? displayedManualRestaurantNames);
     if (!spinResult) return;
     trackEvent('group_spin_requested', { room_id: groupRoomId, restaurant_count: displayedManualRestaurantNames.length });
     toast.success(`Room spin started: ${spinResult.winnerName}`);
@@ -1425,45 +1440,26 @@ function App() {
   }, [groupRoomId, leaveGroupRoom]);
 
   useEffect(() => {
-    if (!isGroupRoomActive || !canEditGroupList || !groupRoomId) return;
+    if (!isGroupRoomActive || !isGroupHost || !canSeedGroupList || !groupRoomId) return;
     if (seededRoomSyncIdRef.current === groupRoomId) return;
 
     seededRoomSyncIdRef.current = groupRoomId;
     const normalizedRemoteNames = normalizeManualNames(groupRoomListNames);
     if (normalizedRemoteNames.length > 0 || personalManualRestaurantNames.length === 0) return;
 
-    const signature = JSON.stringify(personalManualRestaurantNames);
-    pendingRoomListSyncRef.current = {
-      roomId: groupRoomId,
-      signature,
-      startedAt: Date.now(),
-    };
     void syncHostList(personalManualRestaurantNames);
-  }, [canEditGroupList, groupRoomId, groupRoomListNames, isGroupRoomActive, personalManualRestaurantNames, syncHostList]);
+  }, [isGroupHost, canSeedGroupList, groupRoomId, groupRoomListNames, isGroupRoomActive, personalManualRestaurantNames, syncHostList]);
 
   useEffect(() => {
     if (!isGroupRoomActive) {
       seededRoomSyncIdRef.current = '';
-      pendingRoomListSyncRef.current = null;
       return;
     }
 
+    if (groupListSyncState === 'saving' || groupListSyncState === 'error') return;
     const normalizedRemoteNames = normalizeManualNames(groupRoomListNames);
     const remoteSignature = JSON.stringify(normalizedRemoteNames);
     const localSignature = JSON.stringify(roomManualRestaurantNames);
-
-    const pendingSync = pendingRoomListSyncRef.current;
-    if (pendingSync) {
-      if (pendingSync.roomId !== groupRoomId) {
-        pendingRoomListSyncRef.current = null;
-      } else if (remoteSignature === pendingSync.signature) {
-        pendingRoomListSyncRef.current = null;
-      } else if (canEditGroupList && Date.now() - pendingSync.startedAt < ROOM_LIST_SYNC_GRACE_MS) {
-        return;
-      } else {
-        pendingRoomListSyncRef.current = null;
-      }
-    }
 
     if (remoteSignature === localSignature) return;
 
@@ -1487,7 +1483,7 @@ function App() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [buildRestaurantsFromNames, canEditGroupList, groupRoomId, groupRoomListNames, isGroupRoomActive, personalManualRestaurantNames, roomManualRestaurantNames]);
+  }, [buildRestaurantsFromNames, canEditGroupList, groupRoomId, groupRoomListNames, groupListSyncState, isGroupRoomActive, personalManualRestaurantNames, roomManualRestaurantNames]);
 
 
   useEffect(() => {
@@ -1652,6 +1648,11 @@ function App() {
         {/* My list screen */}
         {appTab === 'list' && (
           <ListScreen
+            tools={<ListTools inRoom={isGroupRoomActive}
+              status={isGroupRoomActive ? (!groupConnected ? 'Offline · room changes are pending' : groupListSyncState === 'saving' ? 'Saving…' : groupListSyncState === 'error' ? 'Save failed' : 'Saved to room') : manualSaveError ? 'Save failed' : 'Saved on this device'}
+              error={isGroupRoomActive ? (groupListSyncState === 'error' ? groupRoomError : null) : manualSaveError}
+              onRetry={() => { if (isGroupRoomActive) void retryRoomList(); else retryManualSave(); }}
+              onDuplicate={duplicateSelectedList} onExport={exportBackup} onPreview={previewBackup} onImport={importBackup} canDuplicate={Boolean(selectedManualList)} />}
             lists={manualLists}
             selectedListId={selectedManualListId}
             isReadOnly={isManualListReadOnly}
@@ -1661,7 +1662,7 @@ function App() {
             openWheelRequested={importedListToSpin === selectedManualListId}
             onStartEditing={() => setIsEditingListDetails(true)}
             onDeleteSelectedList={handleDeleteManualList}
-            canDeleteList={manualLists.length > 1}
+            canDeleteList={!isGroupRoomActive && manualLists.length > 1}
             details={isEditingListDetails ? {
               isCreating: isCreatingNewList,
               name: listNameInput,
@@ -1674,11 +1675,11 @@ function App() {
                 || (!isCreatingNewList && (!selectedManualList || !hasManualListDetailsChanged))
                 || Boolean(duplicateManualListForSave)
               ),
-              canDelete: !isManualListReadOnly && Boolean(selectedManualList),
+              canDelete: !isGroupRoomActive && !isManualListReadOnly && Boolean(selectedManualList),
               onNameChange: setListNameInput,
               onMealTimeChange: setListMealTimeInput,
               onUseSuggestion: () => setListNameInput(listNameSuggestion),
-              onSave: handleSaveManualListDetails,
+              onSave: () => { try { handleSaveManualListDetails(); } catch (error) { toast.error(String(error)); } },
               onCancel: handleCancelEditListDetails,
               onDelete: handleDeleteManualList,
             } : null}
@@ -1707,7 +1708,7 @@ function App() {
                 : null,
               isLateJoin: Boolean(groupSpinDisplay && groupSpinDisplay.ageMs >= LATE_JOIN_NOTICE_MS),
               canSaveCopy: displayedManualRestaurantNames.length > 0,
-              onSaveCopy: handleSaveRoomListToManualLists,
+              onSaveCopy: () => { try { handleSaveRoomListToManualLists(); } catch (error) { toast.error(String(error)); } },
               onLeave: () => { void handleLeaveGroupRoom(); },
             } : null}
             externalSpinId={manualExternalSpin?.spinId ?? null}
@@ -1772,6 +1773,11 @@ function App() {
             onLeaveRoom={handleLeaveGroupRoom}
             onStartRoomSpin={handleRequestGroupSpin}
             onSetParticipantCohost={setParticipantCohost}
+            onTransferHost={transferHost}
+            listNames={groupRoomListNames}
+            preferences={groupPreferences}
+            onSetPreference={setGroupPreference}
+            connected={groupConnected}
             onSendReaction={sendGroupReaction}
             onSetGoingVote={setGroupGoingVote}
             onClearRoomError={clearGroupRoomError}

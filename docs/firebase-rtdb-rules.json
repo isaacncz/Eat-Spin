@@ -5,11 +5,11 @@
         ".read": "auth != null",
         "meta": {
           ".write": "auth != null && ((!data.exists() && newData.child('hostUid').val() === auth.uid) || data.child('hostUid').val() === auth.uid || root.child('rooms/'+$roomId+'/cohosts/'+auth.uid).val() === true)",
-          ".validate": "newData.hasChildren(['hostUid','status','createdAt','expiresAt','lastSpinAt']) && newData.child('hostUid').isString() && newData.child('status').val().matches(/^(waiting|spinning|completed)$/) && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber() && newData.child('lastSpinAt').isNumber()"
+          ".validate": "newData.hasChildren(['hostUid','status','createdAt','expiresAt','lastSpinAt']) && newData.child('hostUid').isString() && newData.child('status').val().matches(/^(waiting|spinning|completed)$/) && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber() && newData.child('lastSpinAt').isNumber() && (!data.exists() || (newData.child('hostUid').val() === data.child('hostUid').val() || (auth.uid === data.child('hostUid').val() && root.child('rooms/'+$roomId+'/participants').child(newData.child('hostUid').val()).exists() && root.child('rooms/'+$roomId+'/participants').child(newData.child('hostUid').val()).child('lastSeenAt').val() > now - 45000 && data.child('status').val() !== 'spinning'))) && (!data.exists() || (newData.child('createdAt').val() === data.child('createdAt').val() && newData.child('expiresAt').val() === data.child('expiresAt').val()))"
         },
         "participants": {
           "$uid": {
-            ".write": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && (auth.uid === $uid || (!newData.exists() && root.child('rooms/'+$roomId+'/meta/hostUid').val() === auth.uid && data.child('lastSeenAt').val() < now - 45000))",
             ".validate": "newData.hasChildren(['name','joinedAt','lastSeenAt','ready']) && newData.child('name').isString() && newData.child('joinedAt').isNumber() && newData.child('lastSeenAt').isNumber() && newData.child('ready').isBoolean()"
           }
         },
@@ -20,7 +20,10 @@
           }
         },
         "list": {
-          ".write": "auth != null && (root.child('rooms/'+$roomId+'/meta/hostUid').val() === auth.uid || root.child('rooms/'+$roomId+'/cohosts/'+auth.uid).val() === true)"
+          ".write": "auth != null && (root.child('rooms/'+$roomId+'/meta/hostUid').val() === auth.uid || root.child('rooms/'+$roomId+'/cohosts/'+auth.uid).val() === true)",
+          "$itemId": {
+            ".validate": "(newData.isString() && newData.val().length > 0 && newData.val().length <= 24) || (newData.hasChildren(['name','order','createdAt','createdBy']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 24 && newData.child('order').isNumber() && newData.child('createdAt').isNumber() && newData.child('createdBy').isString() && (data.exists() || newData.child('createdBy').val() === auth.uid))"
+          }
         },
         "spin": {
           ".write": "auth != null && (root.child('rooms/'+$roomId+'/meta/hostUid').val() === auth.uid || root.child('rooms/'+$roomId+'/cohosts/'+auth.uid).val() === true)",
@@ -35,7 +38,15 @@
         "votes": {
           "$uid": {
             ".write": "auth != null && auth.uid === $uid && root.child('rooms/'+$roomId+'/participants/'+auth.uid).exists()",
-            ".validate": "newData.hasChildren(['name','going','updatedAt']) && newData.child('name').isString() && newData.child('going').isBoolean() && newData.child('updatedAt').isNumber()"
+            ".validate": "newData.hasChildren(['name','going','updatedAt']) && newData.child('name').isString() && newData.child('going').isBoolean() && newData.child('updatedAt').isNumber() && newData.child('spinId').isString() && newData.child('spinId').val() === root.child('rooms/'+$roomId+'/spin/spinId').val()"
+          }
+        },
+        "preferences": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('rooms/'+$roomId+'/participants/'+auth.uid).exists()",
+            "$name": {
+              ".validate": "$name.matches(/^[a-f0-9]{2,192}$/) && (newData.val() === 'prefer' || newData.val() === 'avoid')"
+            }
           }
         }
       }

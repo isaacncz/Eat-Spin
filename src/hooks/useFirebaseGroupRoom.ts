@@ -11,6 +11,7 @@ import {
   update,
   type OnDisconnect,
 } from 'firebase/database';
+import { roomListDelta, type RoomItems } from '@/lib/listOperations';
 import { ensureAnonymousAuthUser, firebaseConfigError, firebaseDb, isFirebaseConfigured } from '@/lib/firebase';
 
 const DISPLAY_NAME_KEY = 'eatspin:display-name';
@@ -68,6 +69,7 @@ export interface GroupRoomReaction {
 }
 
 export interface GroupRoomVote {
+  spinId: string;
   uid: string;
   name: string;
   going: boolean;
@@ -266,8 +268,10 @@ const parseVotes = (raw: unknown) => {
     const going = typeof candidate.going === 'boolean' ? candidate.going : false;
     const updatedAt = typeof candidate.updatedAt === 'number' ? candidate.updatedAt : 0;
     const name = typeof candidate.name === 'string' ? normalizeDisplayName(candidate.name) : '';
-    if (!uid || updatedAt <= 0) return accumulator;
+    const spinId = typeof candidate.spinId === 'string' ? candidate.spinId : '';
+    if (!spinId || !uid || updatedAt <= 0) return accumulator;
     accumulator.push({
+      spinId,
       uid,
       name: name || buildGuestName(uid),
       going,
@@ -326,6 +330,9 @@ export function useFirebaseGroupRoom() {
   const [authError, setAuthError] = useState<string | null>(firebaseConfigError);
   const [displayName, setDisplayNameState] = useState(() => getStoredDisplayName());
   const [roomId, setRoomId] = useState('');
+  const [createdRoomId, setCreatedRoomId] = useState('');
+  const [roomListLoaded, setRoomListLoaded] = useState(false);
+  const cohostUidsRef = useRef<string[]>([]);
   const [hostUid, setHostUid] = useState('');
   const [isHost, setIsHost] = useState(false);
   const [cohostUids, setCohostUids] = useState<string[]>([]);
@@ -334,7 +341,11 @@ export function useFirebaseGroupRoom() {
   const [currentSpin, setCurrentSpin] = useState<GroupRoomSpin | null>(null);
   const [roomStatus, setRoomStatus] = useState<RoomStatus>('waiting');
   const [reactions, setReactions] = useState<GroupRoomReaction[]>([]);
-  const [votes, setVotes] = useState<GroupRoomVote[]>([]);
+  const [allVotes, setVotes] = useState<GroupRoomVote[]>([]);
+  const [preferences, setPreferences] = useState<Record<string, Record<string, 'prefer' | 'avoid'>>>({});
+  const [connected, setConnected] = useState(false);
+  const [listSyncState, setListSyncState] = useState<'saved' | 'saving' | 'error'>('saved');
+  const votes = useMemo(() => allVotes.filter(vote => vote.spinId === currentSpin?.spinId), [allVotes, currentSpin]);
   const [isBusy, setIsBusy] = useState(false);
   const [roomError, setRoomError] = useState<string | null>(null);
 
@@ -346,7 +357,10 @@ export function useFirebaseGroupRoom() {
   const isCohostRef = useRef(false);
   const resolvedDisplayNameRef = useRef('Guest');
   const lastStaleCleanupRef = useRef(0);
-  const lastSyncedListRef = useRef('');
+  const joinedAtRef = useRef(0);
+  const pendingListRef = useRef<{ roomId: string; before: string[]; after: string[]; id: string; now: number }[]>([]);
+  const flushingRef = useRef(false);
+  const generationRef = useRef(0);
   const autoJoinAttemptedRef = useRef(false);
 
   const resolvedDisplayName = useMemo(() => {
@@ -394,6 +408,9 @@ export function useFirebaseGroupRoom() {
 
   const clearRoomState = useCallback(() => {
     setRoomId('');
+    setCreatedRoomId('');
+    setRoomListLoaded(false);
+    cohostUidsRef.current = [];
     setHostUid('');
     setIsHost(false);
     setCohostUids([]);
@@ -406,7 +423,11 @@ export function useFirebaseGroupRoom() {
     roomIdRef.current = '';
     isHostRef.current = false;
     isCohostRef.current = false;
-    lastSyncedListRef.current = '';
+    generationRef.current += 1;
+    pendingListRef.current = [];
+    flushingRef.current = false;
+    setListSyncState('saved');
+    setPreferences({});
   }, []);
 
   const leaveRoom = useCallback(async () => {
@@ -448,11 +469,16 @@ export function useFirebaseGroupRoom() {
       const now = Date.now();
       const activeParticipants = parsedParticipants.filter((participant) => now - participant.lastSeenAt <= PARTICIPANT_STALE_MS);
       setParticipants(activeParticipants);
-      void cleanupStaleParticipants(targetRoomId, parsedParticipants);
+      void cleanupStaleParticipants(targetRoomId, parsedParticipants).catch(error => setRoomError(extractErrorMessage(error)));
+    });
+
+    const unsubscribePreferences = onValue(ref(db, `rooms/${targetRoomId}/preferences`), snapshot => {
+      setPreferences(snapshot.val() ?? {});
     });
 
     const unsubscribeList = onValue(listRef, (snapshot) => {
       setRoomListNames(parseRoomList(snapshot.val()));
+      setRoomListLoaded(true);
     });
 
     const unsubscribeSpin = onValue(spinRef, (snapshot) => {
@@ -485,6 +511,7 @@ export function useFirebaseGroupRoom() {
       }
 
       const shouldBeHost = parsedMeta.hostUid === authUid;
+      isCohostRef.current = !shouldBeHost && cohostUidsRef.current.includes(authUid);
       setHostUid(parsedMeta.hostUid);
       setRoomStatus(parsedMeta.status);
       if (shouldBeHost !== isHostRef.current) {
@@ -498,6 +525,7 @@ export function useFirebaseGroupRoom() {
 
     const unsubscribeCohosts = onValue(cohostsRef, (snapshot) => {
       const parsedUids = parseCohostUids(snapshot.val());
+      cohostUidsRef.current = parsedUids;
       setCohostUids(parsedUids);
       const nextIsCohost = Boolean(authUid && parsedUids.includes(authUid) && !isHostRef.current);
       isCohostRef.current = nextIsCohost;
@@ -505,6 +533,7 @@ export function useFirebaseGroupRoom() {
 
     unsubscribersRef.current.push(
       unsubscribeParticipants,
+      unsubscribePreferences,
       unsubscribeList,
       unsubscribeSpin,
       unsubscribeReactions,
@@ -515,10 +544,11 @@ export function useFirebaseGroupRoom() {
   }, [authUid, cleanupStaleParticipants, leaveRoom]);
 
   const writePresenceHeartbeat = useCallback(async (targetRoomId: string) => {
-    if (!firebaseDb || !authUid || !targetRoomId) return;
+    if (!firebaseDb || !authUid || !targetRoomId || targetRoomId !== roomIdRef.current || !joinedAtRef.current) return;
 
     await update(ref(firebaseDb, `rooms/${targetRoomId}/participants/${authUid}`), {
       name: resolvedDisplayNameRef.current,
+      joinedAt: joinedAtRef.current,
       lastSeenAt: Date.now(),
       ready: true,
     });
@@ -608,6 +638,7 @@ export function useFirebaseGroupRoom() {
       }
 
       const participantRef = ref(firebaseDb, `rooms/${parsedRoomCode}/participants/${authUid}`);
+      joinedAtRef.current = existingSelf?.joinedAt ?? now;
       await set(participantRef, {
         name: resolvedDisplayName,
         joinedAt: existingSelf?.joinedAt ?? now,
@@ -622,6 +653,8 @@ export function useFirebaseGroupRoom() {
       roomIdRef.current = parsedRoomCode;
       isHostRef.current = nextHost;
       isCohostRef.current = false;
+      setRoomListLoaded(false);
+      setCreatedRoomId(createMode ? parsedRoomCode : '');
       setRoomId(parsedRoomCode);
       setHostUid(nextHost ? authUid : (existingMeta?.hostUid ?? ''));
       setIsHost(nextHost);
@@ -632,10 +665,27 @@ export function useFirebaseGroupRoom() {
       setRoomStatus(existingMeta?.status ?? 'waiting');
 
       attachRoomSubscriptions(parsedRoomCode);
+      const generation = generationRef.current;
+      const unsubscribeConnection = onValue(ref(firebaseDb, '.info/connected'), snapshot => {
+        const online = snapshot.val() === true;
+        setConnected(online);
+        if (!online) return;
+        // onDisconnect registrations are consumed on disconnect; install again before restoring presence.
+        const reconnect = async () => {
+          if (roomIdRef.current !== parsedRoomCode || generationRef.current !== generation) return;
+          const cleanup = onDisconnect(participantRef);
+          await cleanup.remove();
+          if (roomIdRef.current !== parsedRoomCode || generationRef.current !== generation) { await cleanup.cancel(); return; }
+          disconnectRef.current = cleanup;
+          await writePresenceHeartbeat(parsedRoomCode);
+        };
+        void reconnect().catch(error => setRoomError(extractErrorMessage(error)));
+      });
+      unsubscribersRef.current.push(unsubscribeConnection);
       await writePresenceHeartbeat(parsedRoomCode);
 
       heartbeatIntervalRef.current = window.setInterval(() => {
-        void writePresenceHeartbeat(parsedRoomCode);
+        void writePresenceHeartbeat(parsedRoomCode).catch(error => setRoomError(extractErrorMessage(error)));
       }, PRESENCE_HEARTBEAT_MS);
 
       updateRoomCodeInUrl(parsedRoomCode);
@@ -678,36 +728,72 @@ export function useFirebaseGroupRoom() {
     await enterRoom(input, false);
   }, [enterRoom]);
 
-  const syncHostList = useCallback(async (names: string[]) => {
-    const activeRoomId = roomIdRef.current;
-    if (!firebaseDb || !authUid || !activeRoomId || (!isHostRef.current && !isCohostRef.current)) return;
-
-    const normalizedNames = normalizeListNames(names);
-    const listSignature = JSON.stringify(normalizedNames);
-    if (listSignature === lastSyncedListRef.current) return;
-
-    lastSyncedListRef.current = listSignature;
-
-    const now = Date.now();
-    const payload = normalizedNames.reduce<Record<string, { name: string; order: number; createdAt: number; createdBy: string }>>(
-      (accumulator, name, index) => {
-        accumulator[`item-${index + 1}`] = {
-          name,
-          order: index,
-          createdAt: now + index,
-          createdBy: authUid,
-        };
-        return accumulator;
-      },
-      {},
-    );
-
+  const retryRoomList = useCallback(async () => {
+    const db = firebaseDb;
+    if (!db || flushingRef.current) return;
+    const generation = generationRef.current;
+    flushingRef.current = true;
+    setListSyncState('saving');
     try {
-      await set(ref(firebaseDb, `rooms/${activeRoomId}/list`), payload);
-    } catch (error: unknown) {
-      setRoomError(extractErrorMessage(error));
+      while (pendingListRef.current.length && generation === generationRef.current) {
+        const operation = pendingListRef.current[0];
+        if (roomIdRef.current !== operation.roomId) return;
+        const result = await runTransaction(ref(db, `rooms/${operation.roomId}/list`), raw => (
+          roomListDelta(raw as RoomItems | null, operation.before, operation.after, authUid ?? '', operation.id, operation.now)
+        ));
+        if (!result.committed) throw new Error('List save was not acknowledged. Retry your changes.');
+        if (generation !== generationRef.current) return;
+        pendingListRef.current.shift();
+      }
+      if (generation === generationRef.current) setListSyncState('saved');
+    } catch (error) {
+      if (generation === generationRef.current) {
+        setListSyncState('error');
+        setRoomError(extractErrorMessage(error));
+      }
+    } finally {
+      if (generation === generationRef.current) flushingRef.current = false;
     }
   }, [authUid]);
+
+  const syncHostList = useCallback(async (names: string[], before: string[] = []) => {
+    const activeRoomId = roomIdRef.current;
+    if (!firebaseDb || !authUid || !activeRoomId || (!isHostRef.current && !isCohostRef.current)) return;
+    pendingListRef.current.push({ roomId: activeRoomId, before: normalizeListNames(before), after: normalizeListNames(names), id: crypto.randomUUID(), now: Date.now() });
+    await retryRoomList();
+  }, [authUid, retryRoomList]);
+
+  useEffect(() => { if (connected && pendingListRef.current.length) void retryRoomList(); }, [connected, retryRoomList]);
+
+  const transferHost = useCallback(async (targetUid: string) => {
+    if (!firebaseDb || !authUid || !roomId || !isHostRef.current || targetUid === authUid) return;
+    try {
+      const result = await runTransaction(ref(firebaseDb, `rooms/${roomId}/meta`), raw => {
+        const meta = parseRoomMeta(raw);
+        if (!meta || meta.hostUid !== authUid || meta.status === 'spinning') return;
+        return { ...meta, hostUid: targetUid };
+      });
+      if (!result.committed) throw new Error('Host transfer could not complete. Retry after the spin.');
+    } catch (error) { setRoomError(extractErrorMessage(error)); }
+  }, [authUid, roomId]);
+
+  const setPreference = useCallback(async (name: string, preference: 'prefer' | 'avoid' | null) => {
+    if (!firebaseDb || !authUid || !roomId) return;
+    // Encode the name as a safe deterministic Firebase path; preferences are advisory.
+    const key = Array.from(new TextEncoder().encode(name.toLowerCase())).map(byte => byte.toString(16).padStart(2, '0')).join('');
+    try {
+      const target = ref(firebaseDb, `rooms/${roomId}/preferences/${authUid}/${key}`);
+      if (preference) await set(target, preference); else await remove(target);
+    } catch (error) { setRoomError(extractErrorMessage(error)); }
+  }, [authUid, roomId]);
+
+  const restoreRoomPlaces = useCallback((targetRoomId: string, names: string[]) => {
+    if (targetRoomId !== roomIdRef.current || (!isHostRef.current && !isCohostRef.current)) {
+      setRoomError('Rejoin the same room with edit permission to undo this change.');
+      return;
+    }
+    void syncHostList(names, []);
+  }, [syncHostList]);
 
   const setParticipantCohost = useCallback(async (targetUid: string, shouldBeCohost: boolean) => {
     const activeRoomId = roomIdRef.current;
@@ -820,10 +906,12 @@ export function useFirebaseGroupRoom() {
 
   const setGoingVote = useCallback(async (going: boolean) => {
     const activeRoomId = roomIdRef.current;
-    if (!firebaseDb || !authUid || !activeRoomId) return;
+    const spinId = currentSpin?.spinId;
+    if (!firebaseDb || !authUid || !activeRoomId || !spinId) return;
 
     try {
       await set(ref(firebaseDb, `rooms/${activeRoomId}/votes/${authUid}`), {
+        spinId,
         name: resolvedDisplayNameRef.current,
         going,
         updatedAt: Date.now(),
@@ -831,7 +919,7 @@ export function useFirebaseGroupRoom() {
     } catch (error: unknown) {
       setRoomError(extractErrorMessage(error));
     }
-  }, [authUid]);
+  }, [authUid, currentSpin?.spinId]);
 
   const clearRoomError = useCallback(() => {
     setRoomError(null);
@@ -853,7 +941,7 @@ export function useFirebaseGroupRoom() {
   useEffect(() => {
     const activeRoomId = roomIdRef.current;
     if (!activeRoomId) return;
-    void writePresenceHeartbeat(activeRoomId);
+    void writePresenceHeartbeat(activeRoomId).catch(error => setRoomError(extractErrorMessage(error)));
   }, [resolvedDisplayName, writePresenceHeartbeat]);
 
   useEffect(() => {
@@ -903,6 +991,8 @@ export function useFirebaseGroupRoom() {
   }, [leaveRoom]);
 
   return {
+    canSeedList: roomListLoaded && createdRoomId === roomId,
+    connected, listSyncState, retryRoomList, transferHost, preferences, setPreference, restoreRoomPlaces,
     isFirebaseConfigured,
     firebaseConfigError,
     authUid,

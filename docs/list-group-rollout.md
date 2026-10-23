@@ -27,3 +27,9 @@ Preferences are advisory prefer/avoid nominations, scoped to the room and partic
 Publish the reviewed rules before or alongside releasing the client. Existing old-client votes without spinId will be rejected by the stricter rules; participants should refresh the app. Rooms are short-lived; use a fresh room for rollout acceptance. The client transaction enforces the 60-item room limit; RTDB rules enforce item schemas and authorization, not a dynamic collection child count.
 
 Validation scenarios: two-tab additions/reload, undo with a remote addition, independent duplication, backup preview/restore and failed local save retry; real two-client room additions, identical retry after a rejected edit, disconnect/reconnect, advisory nominations, next-spin attendance isolation and ownership transfer; unauthorized rule writes rejected. Shared snapshots remain immutable independent copies.
+
+## List tools and confirmations
+
+The list page keeps a compact device-save status and List tools button. Duplicate, export and restore live in a branded bottom sheet (centered dialog on desktop). Export starts with only the current list selected; checkboxes allow other explicit choices. Restore uses a styled Choose file action, the device's native file picker, a validated file preview and per-list checkboxes. Only checked lists are restored through one atomic journal operation. Closing a sheet cancels pending file reads and returns focus to its opener.
+
+Sharing first asks which single list to share, then previews its places before creating a link. Other saved lists remain private; shared snapshot format and Firebase rules are unchanged by the picker. Delete, clear, host transfer and leaving as host use accessible in-app confirmation dialogs with explicit cancel/accept labels. Simple item removal keeps Undo. Cancelling changes nothing and returns keyboard focus to the opener.

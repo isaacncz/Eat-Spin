@@ -57,10 +57,39 @@ test('sender can prepare, copy and revoke a fixed link', async ({ page, context 
   await page.goto('/');
   await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^My list/i }).click();
   await page.getByRole('button', { name: 'Share this list' }).click();
+  await page.getByRole('button', { name: 'Preview list', exact: true }).click();
   await page.getByRole('button', { name: 'Create share link' }).click();
   await expect(page.getByLabel('Share link', { exact: true })).toHaveValue(new RegExp('list=' + id));
   await page.getByRole('button', { name: 'Copy link', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Link copied.');
   await page.getByRole('button', { name: 'Revoke link' }).click();
   await expect(page.getByRole('status')).toContainText('Link revoked.');
+});
+
+
+test('sender chooses exactly which saved list is shared', async ({ page }) => {
+  await page.addInitScript(() => {
+    const list = (id: string, name: string, place: string) => ({ id, name, mealTime: null, createdAt: 1, updatedAt: 1, restaurants: [{ id: 'manual-' + id, name: place, category: ['street food'], address: 'Your custom pick', coordinates: { lat: 0, lng: 0 }, hours: {}, rating: 0, priceRange: '$$', description: 'Added by you.' }] });
+    localStorage.setItem('eatspin:manual-base:v2', JSON.stringify([list('lunch', 'Lunch picks', 'Lunch cafe'), list('dinner', 'Dinner picks', 'Dinner cafe')]));
+    localStorage.setItem('eatspin:selected-manual-list-id', 'lunch');
+  });
+  await page.goto('/');
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^My list/i }).click();
+  await page.getByRole('button', { name: 'Share this list' }).click();
+  await expect(page.getByRole('radio', { name: /Lunch picks/ })).toBeChecked();
+  await page.getByRole('radio', { name: /Dinner picks/ }).check();
+  await page.getByRole('button', { name: 'Preview list', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Share this list', exact: true });
+  await expect(dialog).toContainText('Dinner cafe');
+  await expect(dialog).not.toContainText('Lunch cafe');
+  await dialog.getByRole('button', { name: 'Choose another list', exact: true }).click();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Share this list', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Share this list', exact: true }).click();
+  await page.getByRole('radio', { name: /Dinner picks/ }).check();
+  await page.getByRole('button', { name: 'Preview list', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Create share link' }).click();
+  const snapshot = await page.evaluate(() => (window as unknown as { __publishedSnapshot: { name: string; places: string[] } }).__publishedSnapshot);
+  expect(snapshot.name).toBe('Dinner picks');
+  expect(snapshot.places).toEqual(['Dinner cafe']);
 });

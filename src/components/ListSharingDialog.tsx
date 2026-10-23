@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ListSheet } from '@/components/ListSheet';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ArcadeButton } from '@/screens/arcade';
 import { buildSharedList, type SharedListSnapshot } from '@/lib/sharedLists';
@@ -8,15 +9,17 @@ interface Props {
   open: boolean;
   incomingId: string | null;
   list: ManualList | null;
+  lists?: ManualList[];
+  onChooseAnother?: () => void;
   onClose: () => void;
   onImport: (snapshot: SharedListSnapshot, openWheel: boolean) => void;
 }
 export function ListSharingDialog(props: Props) {
   // A fresh session per opening prevents old links/errors from leaking into another list.
   if (!props.open) return null;
-  return <SharingSession key={props.incomingId ?? props.list?.id ?? 'empty'} {...props} />;
+  return props.incomingId ? <SharingSession key={props.incomingId} {...props} /> : <OutgoingSelection {...props} />;
 }
-function SharingSession({ incomingId, list, onClose, onImport }: Props) {
+function SharingSession({ incomingId, list, onClose, onImport, onChooseAnother }: Props) {
   const [snapshot, setSnapshot] = useState<SharedListSnapshot | null>(null);
   const [link, setLink] = useState<{ id: string; url: string } | null>(null);
   const [busy, setBusy] = useState(Boolean(incomingId));
@@ -75,6 +78,7 @@ function SharingSession({ incomingId, list, onClose, onImport }: Props) {
           {(snapshot?.places ?? list?.restaurants.map((place) => place.name) ?? []).map((name, index) => <li key={index}>{name}</li>)}
         </ul>
       </section>}
+      {!incomingId && <p className="text-sm">Only this list is shared. Your other lists stay private. Friends receive a fixed copy.</p>}
       {incomingId ? snapshot && <>
         <ArcadeButton disabled={busy} onClick={() => save(false)}>Save a personal copy</ArcadeButton>
         <ArcadeButton disabled={busy || snapshot.places.length < 2} onClick={() => save(true)}>Save copy &amp; open wheel</ArcadeButton>
@@ -89,8 +93,29 @@ function SharingSession({ incomingId, list, onClose, onImport }: Props) {
             .catch(() => setError('Could not revoke this link. Try again.'))
             .finally(() => { lock.current = false; setBusy(false); });
         }}>Revoke link</ArcadeButton>
-      </> : <ArcadeButton disabled={busy || !list} onClick={() => void prepare()}>Create share link</ArcadeButton>}
+      </> : <ArcadeButton disabled={busy || !list || list.restaurants.length === 0} onClick={() => void prepare()}>Create share link</ArcadeButton>}
+      {!incomingId && onChooseAnother && <ArcadeButton disabled={busy} onClick={onChooseAnother}>Choose another list</ArcadeButton>}
       <ArcadeButton disabled={busy} onClick={onClose}>Close</ArcadeButton>
     </DialogContent>
   </Dialog>;
+}
+
+function OutgoingSelection(props: Props) {
+  const [opener] = useState(() => document.activeElement instanceof HTMLElement ? document.activeElement : null);
+  const [selectedId, setSelectedId] = useState(props.list?.id ?? '');
+  const [preview, setPreview] = useState(false);
+  const lists = props.lists ?? (props.list ? [props.list] : []);
+  const selected = lists.find(list => list.id === selectedId) ?? null;
+  if (preview && selected) return <SharingSession key={selected.id} {...props} list={selected} onChooseAnother={() => setPreview(false)} />;
+  return <ListSheet focusTarget={opener} title="Choose a list to share" description="Share one list at a time. Your other lists stay private." onClose={props.onClose}>
+    <div role="radiogroup" aria-label="List to share" className="max-h-[45dvh] space-y-2 overflow-y-auto">
+      {lists.map(list => <label key={list.id} className="flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border-2 border-brand-ink/20 p-3">
+        <input className="size-5 shrink-0 accent-arcade-pink" type="radio" name="list-to-share" value={list.id} checked={selectedId === list.id} onChange={() => setSelectedId(list.id)} />
+        <span className="min-w-0 break-words"><span className="block font-bold">{list.name}</span><span className="text-sm">{list.restaurants.length} places · {list.mealTime ?? 'Any meal'}</span></span>
+      </label>)}
+    </div>
+    {selected?.restaurants.length === 0 && <p className="text-sm">Add at least one place to this list before sharing.</p>}
+    <ArcadeButton variant="pink" disabled={!selected || selected.restaurants.length === 0} onClick={() => setPreview(true)}>Preview list</ArcadeButton>
+    <ArcadeButton onClick={props.onClose}>Cancel</ArcadeButton>
+  </ListSheet>;
 }

@@ -375,15 +375,18 @@ export function useManualLists() {
     return importManualList({ ...selectedManualList, name: `${selectedManualList.name.slice(0, 70)} copy` });
   }, [importManualList, selectedManualList]);
 
-  const exportBackup = useCallback(() => {
-    const text = JSON.stringify({ version: 1, lists: readState().map(backupListData) }, null, 2);
+  const exportBackup = useCallback((ids?: string[]) => {
+    const chosen = readState().filter(list => !ids || ids.includes(list.id));
+    if (chosen.length === 0) throw new Error('Select at least one saved list to export.');
+    const text = JSON.stringify({ version: 1, lists: chosen.map(backupListData) }, null, 2);
     // Never download a backup that this version would refuse to restore.
     parseListBackup(text, isManualList);
     return text;
   }, []);
   const previewBackup = useCallback((text: string) => parseListBackup(text, isManualList), []);
-  const importBackup = useCallback((text: string) => {
-    const lists = parseListBackup(text, isManualList).map(backupListData);
+  const importBackup = useCallback((text: string, ids?: string[]) => {
+    const lists = parseListBackup(text, isManualList).filter(list => !ids || ids.includes(list.id)).map(backupListData);
+    if (lists.length === 0) throw new Error('Select at least one list to restore.');
     const existingNames = new Set(readState().map(list => list.name.toLowerCase()));
     const copies = lists.map(list => {
       let name = list.name;

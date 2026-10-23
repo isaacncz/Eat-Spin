@@ -41,6 +41,7 @@ test('undo removal preserves a place added from another tab', async ({ page, con
 
 test('duplication creates independently editable list and item IDs', async ({ page }) => {
   await openList(page);
+  await page.getByRole('button', { name: 'List tools', exact: true }).click();
   await page.getByRole('button', { name: 'Duplicate list', exact: true }).click();
   await page.getByRole('button', { name: 'Remove A', exact: true }).click();
   await page.getByRole('option', { name: 'Lunch 2', exact: true }).click();
@@ -53,19 +54,26 @@ test('duplication creates independently editable list and item IDs', async ({ pa
 
 test('backup restore previews and adds copies without replacing existing lists', async ({ page }) => {
   await openList(page);
-  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'List tools', exact: true }).click();
   await page.getByRole('button', { name: 'Export lists', exact: true }).click();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export 1 list', exact: true }).click();
   const download = await downloadPromise;
   const stream = await download.createReadStream();
   const chunks = []; for await (const chunk of stream!) chunks.push(chunk);
   const buffer = Buffer.concat(chunks);
-  await page.getByLabel(/Restore lists from backup/).setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer });
-  await expect(page.getByText('1 lists to add. Existing lists stay saved.')).toBeVisible();
-  await expect(page.getByRole('option')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Restore copies', exact: true }).click();
+  await page.getByRole('button', { name: 'List tools', exact: true }).click();
+  await page.getByRole('button', { name: 'Restore lists', exact: true }).click();
+  await page.getByLabel('Choose backup file', { exact: true }).setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer });
+  await expect(page.getByRole('dialog', { name: 'Ready to restore' })).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('eatspin:manual-lists')!).length)).toBe(1);
+  await page.getByRole('button', { name: 'Restore 1 list', exact: true }).click();
   await expect(page.getByRole('option')).toHaveCount(2);
-  await page.getByLabel(/Restore lists from backup/).setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{"version":2,"lists":[]}') });
-  await expect(page.getByText('Error: Unsupported or invalid list backup.')).toBeVisible();
+  await page.getByRole('button', { name: 'List tools', exact: true }).click();
+  await page.getByRole('button', { name: 'Restore lists', exact: true }).click();
+  await page.getByLabel('Choose backup file', { exact: true }).setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{"version":2,"lists":[]}') });
+  await expect(page.getByRole('alert')).toContainText('Unsupported or invalid list backup.');
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByRole('option')).toHaveCount(2);
 });
 

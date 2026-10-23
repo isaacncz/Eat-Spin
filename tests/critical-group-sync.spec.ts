@@ -62,8 +62,12 @@ test('real hook merges clients, retries failures, reconnects and scopes votes', 
   await invoke(host, 'resetCooldown');
   await invoke(host, 'requestHostSpin', [['A', 'B']]);
   await expect.poll(async () => (await state(member)).votes.length).toBe(0);
-  host.once('dialog', dialog => dialog.accept());
   await host.getByRole('button', { name: 'Transfer host', exact: true }).click();
+  await host.getByRole('alertdialog', { name: 'Transfer host?' }).getByRole('button', { name: 'Transfer host', exact: true }).click();
   await expect.poll(async () => (await state(member)).isHost).toBe(true);
   await expect.poll(async () => (await state(host)).isHost).toBe(false);
+  await member.getByRole('button', { name: 'Leave room', exact: true }).click();
+  await member.getByRole('alertdialog', { name: 'Leave without transferring host?' }).getByRole('button', { name: 'Stay in room', exact: true }).click();
+  expect((await state(member)).roomId).toBe(roomId);
+  expect((await state(member)).isHost).toBe(true);
 });

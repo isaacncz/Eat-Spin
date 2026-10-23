@@ -1,3 +1,5 @@
+import { ConfirmationDialog } from '@/components/ConfirmationDialog';
+import { useConfirmation } from '@/hooks/useConfirmation';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Check, Copy, LogOut, Share2, UserMinus, UserPlus } from 'lucide-react';
 
@@ -108,6 +110,7 @@ export function GroupScreen({
   latestSpin,
   onOpenList,
 }: GroupScreenProps) {
+  const { confirm, request: confirmation, answer: answerConfirmation, restoreFocus: restoreConfirmationFocus } = useConfirmation();
   const [joinValue, setJoinValue] = useState(() => {
     if (typeof window === 'undefined') return '';
     return normalizeRoomCode(new URLSearchParams(window.location.search).get('room') ?? '');
@@ -196,7 +199,7 @@ export function GroupScreen({
   };
 
   const handleLeaveRoom = async () => {
-    if (isHost && participants.some(participant => participant.uid !== authUid) && !window.confirm('Transfer host first if the group should continue. Leave without transferring?')) return;
+    if (isHost && participants.some(participant => participant.uid !== authUid) && !await confirm({ title: 'Leave without transferring host?', description: 'Transfer host first if the group should continue. You can stay and choose a new host.', accept: 'Leave room', cancel: 'Stay in room' })) return;
     setHasCopied(false);
     await onLeaveRoom();
   };
@@ -359,6 +362,7 @@ export function GroupScreen({
 
   return (
     <ScreenFrame title="Group spin" subtitle="Everyone sees the same wheel" pinned={pinned}>
+      <ConfirmationDialog request={confirmation} onAnswer={answerConfirmation} onRestoreFocus={restoreConfirmationFocus} />
       {statusBanner}
       <p role="status" className="text-sm font-semibold">{connected ? 'Connected to room' : 'Offline · reconnecting…'}</p>
 
@@ -416,7 +420,7 @@ export function GroupScreen({
                   )}
                   {showCohostToggle && onTransferHost && <ArcadeButton className="min-h-11 w-full px-3 text-sm"
                     disabled={transferPending || !connected} onClick={async () => {
-                      if (!window.confirm(`Make ${participant.name} the host? You will become a participant.`)) return;
+                      if (!await confirm({ title: 'Transfer host?', description: `Make ${participant.name} the host? They will control this room. ${cohostUids.includes(authUid ?? '') ? 'You will remain a co-host.' : 'You will become a participant.'}`, accept: 'Transfer host', cancel: 'Keep current host' })) return;
                       setTransferPending(true);
                       try { await onTransferHost(participant.uid); } finally { setTransferPending(false); }
                     }}>Transfer host</ArcadeButton>}

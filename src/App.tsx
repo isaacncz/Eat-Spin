@@ -1,3 +1,5 @@
+import { ConfirmationDialog } from '@/components/ConfirmationDialog';
+import { useConfirmation } from '@/hooks/useConfirmation';
 import { ListSharingDialog } from '@/components/ListSharingDialog';
 import { sharedRestaurants } from '@/lib/sharedLists';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -187,6 +189,7 @@ const calculateCurrentSpinStreak = (timestamps: Array<Date | string | number>): 
 };
 
 function App() {
+  const { confirm, request: confirmation, answer: answerConfirmation, restoreFocus: restoreConfirmationFocus } = useConfirmation();
   // State management
   const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
   const [selectedPriceRanges, setSelectedPriceRanges] = useState<Restaurant['priceRange'][]>([]);
@@ -1243,7 +1246,7 @@ function App() {
     isGroupRoomActive,
   ]);
 
-  const handleDeleteManualList = useCallback(() => {
+  const handleDeleteManualList = useCallback(async () => {
     if (isGroupRoomActive) return;
     if (!selectedManualList || isManualListReadOnly) {
       if (isManualListReadOnly) {
@@ -1252,7 +1255,7 @@ function App() {
       return;
     }
 
-    if (!window.confirm(`Delete "${selectedManualList.name}"?`)) return;
+    if (!await confirm({ title: 'Delete this list?', description: `${selectedManualList.name} and its ${selectedManualList.restaurants.length} ${selectedManualList.restaurants.length === 1 ? 'place' : 'places'} will be removed from this device.`, accept: 'Delete list', cancel: 'Keep list' })) return;
 
     if (!deleteManualList(selectedManualList.id)) return;
     hasUserSelectedManualListRef.current = true;
@@ -1266,7 +1269,7 @@ function App() {
     const deleted = structuredClone(selectedManualList);
     toast.success(`Deleted "${selectedManualList.name}".`, { duration: 8000,
       action: { label: 'Undo', onClick: () => { try { restoreDeletedList(deleted); } catch (error) { toast.error(String(error)); } } } });
-  }, [deleteManualList, isManualListReadOnly, selectedManualList, restoreDeletedList, isGroupRoomActive]);
+  }, [confirm, deleteManualList, isManualListReadOnly, selectedManualList, restoreDeletedList, isGroupRoomActive]);
   const removeManualRestaurant = (id: string) => {
     if (isManualListReadOnly) {
       toast.info('Only the host or co-host can edit the shared list.');
@@ -1290,13 +1293,13 @@ function App() {
     setManualWheelKey((prev) => prev + 1);
   };
 
-  const clearManualRestaurants = () => {
+  const clearManualRestaurants = async () => {
     if (isManualListReadOnly) {
       toast.info('Only the host or co-host can edit the shared list.');
       return;
     }
 
-    if (!window.confirm('Clear all restaurants?')) return;
+    if (!await confirm({ title: 'Clear all places?', description: `Remove the ${displayedManualRestaurants.length} places from ${isGroupRoomActive ? 'this shared room list' : 'this list'}? You can undo this for a short time.`, accept: 'Clear places', cancel: 'Keep places' })) return;
     const removed = structuredClone(displayedManualRestaurants);
     const removedRoomId = groupRoomId;
     const removedListId = selectedManualListId;
@@ -1652,7 +1655,7 @@ function App() {
               status={isGroupRoomActive ? (!groupConnected ? 'Offline · room changes are pending' : groupListSyncState === 'saving' ? 'Saving…' : groupListSyncState === 'error' ? 'Save failed' : 'Saved to room') : manualSaveError ? 'Save failed' : 'Saved on this device'}
               error={isGroupRoomActive ? (groupListSyncState === 'error' ? groupRoomError : null) : manualSaveError}
               onRetry={() => { if (isGroupRoomActive) void retryRoomList(); else retryManualSave(); }}
-              onDuplicate={duplicateSelectedList} onExport={exportBackup} onPreview={previewBackup} onImport={importBackup} canDuplicate={Boolean(selectedManualList)} />}
+              lists={manualLists} selectedListId={selectedManualListId} onDuplicate={duplicateSelectedList} onExport={exportBackup} onPreview={previewBackup} onImport={importBackup} canDuplicate={Boolean(selectedManualList)} />}
             lists={manualLists}
             selectedListId={selectedManualListId}
             isReadOnly={isManualListReadOnly}
@@ -1966,7 +1969,9 @@ function App() {
         hasActiveRoom={isGroupRoomActive}
       />
 
+      <ConfirmationDialog request={confirmation} onAnswer={answerConfirmation} onRestoreFocus={restoreConfirmationFocus} />
       <ListSharingDialog
+        lists={manualLists}
         open={shareListOpen || incomingShareId !== null}
         incomingId={incomingShareId}
         list={selectedManualList}

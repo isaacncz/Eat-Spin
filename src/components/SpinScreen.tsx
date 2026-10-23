@@ -248,7 +248,12 @@ export function SpinScreen({
           <div
             role="group"
             aria-label="Quick picks"
-            className={cn('mt-2 flex min-w-0 flex-1 gap-2 overflow-x-auto overscroll-x-contain py-1 pr-5 scrollbar-hide', destinationSearch ? 'pl-2' : 'pl-5')}
+            className={cn(
+              'mt-2 flex min-w-0 flex-1 gap-2 overflow-x-auto overscroll-x-contain py-1 pr-8 scrollbar-hide',
+              // Fade the right edge so it reads as a row that scrolls; pr-8 lets the last chip clear it.
+              '[mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)]',
+              destinationSearch ? 'pl-2' : 'pl-5',
+            )}
           >
             {MOOD_OPTIONS.map(({ id, label }) => {
               const pressed = selectedMood === id;

@@ -1,3 +1,4 @@
+import { chooseSavedList, expectSavedListCount } from './list-picker-helpers';
 import { test, expect, type Page } from '@playwright/test';
 const openList = async (page: Page) => {
   await page.goto('/');
@@ -44,7 +45,7 @@ test('duplication creates independently editable list and item IDs', async ({ pa
   await page.getByRole('button', { name: 'List tools', exact: true }).click();
   await page.getByRole('button', { name: 'Duplicate list', exact: true }).click();
   await page.getByRole('button', { name: 'Remove A', exact: true }).click();
-  await page.getByRole('option', { name: 'Lunch 2', exact: true }).click();
+  await chooseSavedList(page, 'Lunch');
   await expect(page.getByRole('button', { name: 'Remove A', exact: true })).toBeVisible();
   const lists = await page.evaluate(() => JSON.parse(localStorage.getItem('eatspin:manual-lists')!));
   expect(lists).toHaveLength(2);
@@ -68,13 +69,13 @@ test('backup restore previews and adds copies without replacing existing lists',
   await expect(page.getByRole('dialog', { name: 'Ready to restore' })).toBeVisible();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('eatspin:manual-lists')!).length)).toBe(1);
   await page.getByRole('button', { name: 'Restore 1 list', exact: true }).click();
-  await expect(page.getByRole('option')).toHaveCount(2);
+  await expectSavedListCount(page, 2);
   await page.getByRole('button', { name: 'List tools', exact: true }).click();
   await page.getByRole('button', { name: 'Restore lists', exact: true }).click();
   await page.getByLabel('Choose backup file', { exact: true }).setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{"version":2,"lists":[]}') });
   await expect(page.getByRole('alert')).toContainText('Unsupported or invalid list backup.');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(page.getByRole('option')).toHaveCount(2);
+  await expectSavedListCount(page, 2);
 });
 
 test('failed local save is visible and the identical operation can be retried', async ({ page }) => {

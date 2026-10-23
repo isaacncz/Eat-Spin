@@ -1,3 +1,4 @@
+import { expectSavedListCount } from './list-picker-helpers';
 import { test, expect } from '@playwright/test';
 const restaurant = { id: 'manual-place', name: 'Cafe', category: ['street food'], address: 'Your custom pick', coordinates: { lat: 0, lng: 0 }, hours: {}, rating: 0, priceRange: '$$', description: 'Added by you.' };
 test.beforeEach(async ({ page }) => {
@@ -58,8 +59,8 @@ test('delete and clear use in-app confirmations with safe cancellation and undo'
   const deletion = page.getByRole('alertdialog', { name: 'Delete this list?' });
   await expect(deletion).toContainText('Lunch picks and its 2 places');
   await deletion.getByRole('button', { name: 'Keep list', exact: true }).click();
-  await expect(page.getByRole('option')).toHaveCount(2);
   await expect(deleteButton).toBeFocused();
+  await expectSavedListCount(page, 2);
   await page.getByRole('button', { name: 'Clear all places', exact: true }).click();
   const clearing = page.getByRole('alertdialog', { name: 'Clear all places?' });
   await clearing.getByRole('button', { name: 'Keep places', exact: true }).click();
@@ -72,5 +73,5 @@ test('delete and clear use in-app confirmations with safe cancellation and undo'
   await expect(page.getByRole('button', { name: 'Remove Cafe', exact: true })).toBeVisible();
   await deleteButton.click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete list', exact: true }).click();
-  await expect(page.getByRole('option')).toHaveCount(1);
+  await expectSavedListCount(page, 1);
 });

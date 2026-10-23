@@ -51,7 +51,7 @@ test.describe('Bottom tab bar', () => {
     await tab(page, 'My list').click();
     await expect(tab(page, 'My list')).toHaveAttribute('aria-current', 'page');
     await expect(tab(page, 'Spin')).not.toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('listbox', { name: /saved lists/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Choose a list:/ })).toBeVisible();
 
     await tab(page, 'Group').click();
     await expect(tab(page, 'Group')).toHaveAttribute('aria-current', 'page');

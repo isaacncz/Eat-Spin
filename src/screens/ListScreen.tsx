@@ -1,8 +1,8 @@
 import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { Check, ChevronDown, ChevronLeft, Heart, LoaderPinwheel, MapPin, Pencil, Plus, Share2, Trash2, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, LoaderPinwheel, MapPin, Pencil, Plus, Share2, Trash2, X } from 'lucide-react';
 
 import { RarityBadge } from '@/components/RarityBadge';
-import { getMealTimeEmoji } from '@/hooks/useManualLists';
+import { ListPicker } from '@/components/ListPicker';
 import { buildVisitCountsByName, formatVisitCount, getVisitCountForName } from '@/lib/placeVisits';
 import type { Rarity } from '@/lib/rarity';
 import { cn } from '@/lib/utils';
@@ -266,63 +266,19 @@ export function ListScreen({
       {roomBanner}
       {tools}
 
-      <div className="-mx-4 overflow-x-auto px-4 pb-1 scrollbar-hide">
-        <div className="flex w-max items-center gap-2">
-          <div role="listbox" aria-label="Saved lists" className="flex gap-2">
-            {lists.map((list) => {
-              const isSelected = !showingFavourites && list.id === selectedListId;
-              const emoji = getMealTimeEmoji(list.mealTime);
-              return (
-                <button
-                  key={list.id}
-                  type="button"
-                  role="option"
-                  aria-selected={isSelected}
-                  title={`${list.name} · ${list.restaurants.length} ${list.restaurants.length === 1 ? 'pick' : 'picks'}`}
-                  disabled={isReadOnly}
-                  onClick={() => {
-                    setSource('list');
-                    if (list.id !== selectedListId) onSelectList(list.id);
-                  }}
-                  className={chipClass(isSelected)}
-                >
-                  {emoji && <span aria-hidden="true">{emoji}</span>}
-                  <span className="max-w-[140px] truncate">{list.name}</span>
-                  <span aria-hidden="true">·</span>
-                  <span className="tabular-nums">{list.restaurants.length}</span>
-                </button>
-              );
-            })}
-            {visibleFavourites.length > 0 && (
-              <button
-                type="button"
-                role="option"
-                aria-selected={showingFavourites}
-                onClick={() => setSource('favourites')}
-                className={chipClass(showingFavourites)}
-              >
-                <Heart size={16} strokeWidth={2.5} aria-hidden="true" />
-                <span>Favourites</span>
-                <span aria-hidden="true">·</span>
-                <span className="tabular-nums">{visibleFavourites.length}</span>
-              </button>
-            )}
-          </div>
-          <button
-            type="button"
-            aria-label="Create new list"
-            disabled={isReadOnly}
-            onClick={() => {
-              setSource('list');
-              onCreateList();
-            }}
-            className={cn(chipClass(false), 'font-semibold')}
-          >
-            <Plus size={16} strokeWidth={3} aria-hidden="true" />
-            New list
-          </button>
-        </div>
-      </div>
+      <ListPicker
+        lists={lists}
+        selectedListId={selectedListId}
+        favouritesCount={visibleFavourites.length}
+        showingFavourites={showingFavourites}
+        disabled={isReadOnly}
+        onSelectList={id => {
+          setSource('list');
+          if (id !== selectedListId || showingFavourites) onSelectList(id);
+        }}
+        onShowFavourites={() => setSource('favourites')}
+        onCreateList={() => { setSource('list'); onCreateList(); }}
+      />
 
       {details && <ListDetailsFormCard form={details} />}
 

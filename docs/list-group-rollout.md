@@ -12,13 +12,25 @@ Undo lasts eight seconds. Item undo restores only removed items and preserves un
 
 ## Group rooms
 
-Room-list writes apply a delta inside a Firebase transaction. Existing item keys survive; concurrent additions are retained, and removing/clearing an editor's baseline does not delete unseen additions. Failed operations remain pending until acknowledged. Pending operations are scoped to the current room session; this is an in-memory queue, not durable offline storage across reloads. Only a newly created host room may seed a personal list, after the first remote list snapshot loads.
+Room-list writes apply a delta inside a Firebase transaction. Existing item keys survive; concurrent additions are retained, and removing/clearing an editor's baseline does not delete unseen additions. Failed operations remain pending until acknowledged. Pending operations are scoped to the current room session; this is an in-memory queue, not durable offline storage across reloads. New rooms start empty. A host or co-host can explicitly load a saved personal list inside Group, with confirmation before replacing existing room places. Browsing, selecting, editing or importing personal lists does not publish their contents to the room.
 
 Reconnection registers onDisconnect again and restores the complete participant schema, including joinedAt. Heartbeat failures are surfaced. Attendance votes carry the spinId; the UI ignores previous-spin and legacy unscoped votes, and rules reject a vote for a different current spin.
 
 Host transfer is explicit, confirmed and transactional. Only the current host may transfer to an active participant; co-hosts cannot promote themselves. There is no automatic takeover when a host disconnects. Existing co-host assignments remain unchanged by transfer.
 
 Preferences are advisory prefer/avoid nominations, scoped to the room and participant. Only active participants' preferences count. Hosts/co-hosts may opt in to spin nominated places only; at least two nominees are required. Avoid is not a veto; ties have no ranking effect. Turning the filter off spins the full room list. Preferences persist for the room and are distinct from post-result attendance votes.
+
+## Group workspace and local-only delivery (#115–119)
+
+Group contains the room places, optional preferences, shared wheel and revealed result. My list stays personal while a room is active; personal spins remain independent and are recorded normally. Room editing is disabled during the reveal and room spinning waits for connectivity and acknowledged list saves. The room exposes preparation, spinning and finished stages; the winner and spin-scoped attendance appear together only after local reveal. Recent results animate on replay, older results open directly, and reduced-motion users get a direct reveal. Unique group events are still counted once across replay/reload. Start feedback never includes the winner name.
+
+The room list loader is expanded for an empty room and tucked behind Load a saved list for a populated room. Selection previews a personal list without publishing it. Room-name limits (24 characters per place) and the existing 60-place cap are checked before accepting additions or explicit list loading; overlong names are rejected rather than silently truncated by this UI. Room removal/clear retain Undo; saving a room copy creates an independent personal list without leaving the room.
+
+Guests can choose or edit their name in the room. Names are normalized and only reported as saved after server acknowledgement; the participant UID, joinedAt, role, preferences and existing votes stay unchanged. Offline-before-submit is rejected. A connection loss during submission keeps the operation pending until acknowledgement/rejection, rather than falsely reporting failure for a write that may still commit. Complete presence is refreshed after a successful save, including same-name saves.
+
+Host presence is distinct from the viewer's own connection. Existing heartbeats become stale after 45 seconds; a missing host record has a 10-second grace period before the disconnected notice. Co-hosts retain existing authority; no participant is automatically promoted. Ready/Idle labels are not used as a substitute for a real readiness vote.
+
+Implement this batch in local commits with local typecheck, build, unit, critical browser and Firebase emulator checks. Do not push intermediate work or trigger Netlify during development. The user requests the eventual batch push/preview. Keep required CI intact. No Firebase schema/rules changes or live rules publication are required by this batch.
 
 ## Firebase deployment
 

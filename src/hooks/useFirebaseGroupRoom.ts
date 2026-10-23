@@ -12,19 +12,22 @@ import {
   type OnDisconnect,
 } from 'firebase/database';
 import { roomListDelta, type RoomItems } from '@/lib/listOperations';
+import { GROUP_ROOM_NAME_MAX_LENGTH, normalizeGroupDisplayName } from '@/lib/groupRoomIdentity';
+import { GROUP_ROOM_PARTICIPANT_STALE_MS } from '@/lib/groupRoomPresence';
 import { ensureAnonymousAuthUser, firebaseConfigError, firebaseDb, isFirebaseConfigured } from '@/lib/firebase';
+
+export { GROUP_ROOM_NAME_MAX_LENGTH } from '@/lib/groupRoomIdentity';
 
 const DISPLAY_NAME_KEY = 'eatspin:display-name';
 const ROOM_CODE_LENGTH = 6;
 const ROOM_TTL_MS = 2 * 60 * 60 * 1000;
 const PRESENCE_HEARTBEAT_MS = 10_000;
-const PARTICIPANT_STALE_MS = 45_000;
+const PARTICIPANT_STALE_MS = GROUP_ROOM_PARTICIPANT_STALE_MS;
 const STALE_CLEANUP_COOLDOWN_MS = 30_000;
 const MAX_LIST_ITEMS = 60;
 
 export const GROUP_ROOM_MAX_PARTICIPANTS = 8;
 export const GROUP_ROOM_SPIN_COOLDOWN_MS = 7_000;
-export const GROUP_ROOM_NAME_MAX_LENGTH = 24;
 
 type RoomStatus = 'waiting' | 'spinning' | 'completed';
 
@@ -76,7 +79,7 @@ export interface GroupRoomVote {
   updatedAt: number;
 }
 
-const normalizeDisplayName = (value: string) => value.trim().replace(/\s+/g, ' ').slice(0, GROUP_ROOM_NAME_MAX_LENGTH);
+const normalizeDisplayName = normalizeGroupDisplayName;
 
 const normalizeRoomCode = (value: string) =>
   value
@@ -345,6 +348,7 @@ export function useFirebaseGroupRoom() {
   const [preferences, setPreferences] = useState<Record<string, Record<string, 'prefer' | 'avoid'>>>({});
   const [connected, setConnected] = useState(false);
   const [listSyncState, setListSyncState] = useState<'saved' | 'saving' | 'error'>('saved');
+  const [isSavingDisplayName, setIsSavingDisplayName] = useState(false);
   const votes = useMemo(() => allVotes.filter(vote => vote.spinId === currentSpin?.spinId), [allVotes, currentSpin]);
   const [isBusy, setIsBusy] = useState(false);
   const [roomError, setRoomError] = useState<string | null>(null);
@@ -362,6 +366,7 @@ export function useFirebaseGroupRoom() {
   const flushingRef = useRef(false);
   const generationRef = useRef(0);
   const autoJoinAttemptedRef = useRef(false);
+  const pendingDisplayNameRef = useRef<symbol | null>(null);
 
   const resolvedDisplayName = useMemo(() => {
     const normalized = normalizeDisplayName(displayName);
@@ -407,6 +412,8 @@ export function useFirebaseGroupRoom() {
   }, [authUid]);
 
   const clearRoomState = useCallback(() => {
+    pendingDisplayNameRef.current = null;
+    setIsSavingDisplayName(false);
     setRoomId('');
     setCreatedRoomId('');
     setRoomListLoaded(false);
@@ -545,6 +552,8 @@ export function useFirebaseGroupRoom() {
 
   const writePresenceHeartbeat = useCallback(async (targetRoomId: string) => {
     if (!firebaseDb || !authUid || !targetRoomId || targetRoomId !== roomIdRef.current || !joinedAtRef.current) return;
+    // An old heartbeat must not overwrite a rename while its server acknowledgement is pending.
+    if (pendingDisplayNameRef.current) return;
 
     await update(ref(firebaseDb, `rooms/${targetRoomId}/participants/${authUid}`), {
       name: resolvedDisplayNameRef.current,
@@ -929,9 +938,77 @@ export function useFirebaseGroupRoom() {
     setDisplayNameState(value.slice(0, GROUP_ROOM_NAME_MAX_LENGTH));
   }, []);
 
+  const saveDisplayName = useCallback(async (value: string): Promise<boolean> => {
+    const nextName = normalizeDisplayName(value);
+    if (!nextName) {
+      setRoomError('Enter a name so friends can recognize you.');
+      return false;
+    }
+    const activeRoomId = roomIdRef.current;
+    if (!activeRoomId || !firebaseDb || !authUid || !joinedAtRef.current) {
+      setRoomError('Join a room before saving your name.');
+      return false;
+    }
+    if (!connected) {
+      setRoomError('You are offline. Reconnect before saving your room name.');
+      return false;
+    }
+    if (pendingDisplayNameRef.current) return false;
+
+    const generation = generationRef.current;
+    const request = Symbol('room-name');
+    let acknowledged = false;
+    pendingDisplayNameRef.current = request;
+    setIsSavingDisplayName(true);
+    setRoomError(null);
+    try {
+      // Keep a complete membership record in case onDisconnect consumed presence while
+      // this write awaited reconnection. Roles, preferences and votes live elsewhere.
+      // If connectivity drops after submission, keep this operation pending until the SDK
+      // acknowledges/rejects it. A timeout returning false would misleadingly report failure
+      // while Firebase still retains a write that could commit on reconnection.
+      await update(ref(firebaseDb, `rooms/${activeRoomId}/participants/${authUid}`), {
+        name: nextName,
+        joinedAt: joinedAtRef.current,
+        lastSeenAt: Date.now(),
+        ready: true,
+      });
+      if (roomIdRef.current !== activeRoomId || generationRef.current !== generation
+        || pendingDisplayNameRef.current !== request) return false;
+      resolvedDisplayNameRef.current = nextName;
+      setDisplayNameState(nextName);
+      acknowledged = true;
+      return true;
+    } catch (error: unknown) {
+      if (roomIdRef.current === activeRoomId && generationRef.current === generation) {
+        setRoomError(extractErrorMessage(error));
+      }
+      return false;
+    } finally {
+      if (pendingDisplayNameRef.current === request) {
+        pendingDisplayNameRef.current = null;
+        setIsSavingDisplayName(false);
+        if (acknowledged && roomIdRef.current === activeRoomId && generationRef.current === generation) {
+          // A rename queued through a long disconnect contains its submission timestamp.
+          // Refresh even for a same-name save, which does not trigger the name-change effect.
+          // The name is already acknowledged; presence failure must not report it as unsaved.
+          void writePresenceHeartbeat(activeRoomId).catch(() => {
+            if (roomIdRef.current === activeRoomId && generationRef.current === generation) {
+              setRoomError('Your name was saved. Room presence could not refresh; reconnecting will retry.');
+            }
+          });
+        }
+      }
+    }
+  }, [authUid, connected, writePresenceHeartbeat]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem(DISPLAY_NAME_KEY, resolvedDisplayName);
+    try {
+      window.localStorage.setItem(DISPLAY_NAME_KEY, resolvedDisplayName);
+    } catch {
+      setRoomError('Your name is available for this session, but could not be saved on this device.');
+    }
   }, [resolvedDisplayName]);
 
   useEffect(() => {
@@ -992,6 +1069,7 @@ export function useFirebaseGroupRoom() {
 
   return {
     canSeedList: roomListLoaded && createdRoomId === roomId,
+    listLoaded: roomListLoaded,
     connected, listSyncState, retryRoomList, transferHost, preferences, setPreference, restoreRoomPlaces,
     isFirebaseConfigured,
     firebaseConfigError,
@@ -1001,6 +1079,8 @@ export function useFirebaseGroupRoom() {
     displayName,
     resolvedDisplayName,
     setDisplayName,
+    saveDisplayName,
+    isSavingDisplayName,
     roomId,
     hostUid,
     roomLink,

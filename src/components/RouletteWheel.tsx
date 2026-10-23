@@ -20,6 +20,10 @@ interface RouletteWheelProps {
   ref?: Ref<RouletteWheelHandle>;
   /** Hide the built-in spin button when the host screen renders its own and calls `ref.spin()`. */
   hideSpinButton?: boolean;
+  /** A room can render its own inline result and attendance instead of the modal. */
+  resultPresentation?: 'dialog' | 'parent';
+  /** Reveal notification, including direct restoration of an older external event. */
+  onResultRevealed?: (restaurant: Restaurant, spinId?: string) => void;
   /** CSS length that caps the wheel's diameter (default 32.5rem). */
   wheelMaxSize?: string;
   /** Scroll the wheel to the top of the screen when a spin starts (default true). */
@@ -158,6 +162,8 @@ const loadSoundPreference = (): boolean => {
 export function RouletteWheel({
   ref,
   hideSpinButton = false,
+  resultPresentation = 'dialog',
+  onResultRevealed,
   wheelMaxSize = '32.5rem',
   scrollOnSpin = true,
   restaurants,
@@ -363,7 +369,7 @@ export function RouletteWheel({
     }, 180);
   }, [scrollOnSpin, scrollWheelIntoView]);
 
-  const animateSpinToIndex = useCallback((index: number, sourceRestaurants?: Restaurant[]) => {
+  const animateSpinToIndex = useCallback((index: number, sourceRestaurants?: Restaurant[], externalSpinId?: string) => {
     const targetRestaurants = sourceRestaurants ?? restaurants;
     if (targetRestaurants.length === 0) return;
 
@@ -443,7 +449,7 @@ export function RouletteWheel({
         const lastVisitedAt = getLastVisitedAtRef.current?.(result);
         setResultRarity(getLastVisitedAtRef.current ? getRarity(lastVisitedAt) : null);
         setResultVisit(getLastVisitedAtRef.current ? { lastVisitedAt, visitCount: getVisitCountRef.current?.(result) } : null);
-        setResultOpen(true);
+        setResultOpen(resultPresentation === 'dialog');
         setWinnerSliceIndex(selectedIndex);
         setIsWinnerSliceHighlighted(true);
         winnerPulseTimeoutRef.current = window.setTimeout(() => {
@@ -454,9 +460,10 @@ export function RouletteWheel({
           triggerSpinHaptic();
         }
         onSpinComplete(result);
+        onResultRevealed?.(result, externalSpinId);
       },
     });
-  }, [canPlayEffects, onSpinComplete, recenterWheel, restaurants, setIsSpinning, syncWheelRotationVar]);
+  }, [canPlayEffects, onSpinComplete, onResultRevealed, recenterWheel, restaurants, resultPresentation, setIsSpinning, syncWheelRotationVar]);
 
   const handleLocalSpin = () => {
     if (isSpinning || restaurants.length === 0 || !canSpin) return;
@@ -524,7 +531,7 @@ export function RouletteWheel({
     if (!externalSpin || restaurants.length === 0) return;
     if (externalSpin.spinId === lastExternalSpinIdRef.current) return;
     lastExternalSpinIdRef.current = externalSpin.spinId;
-    if (externalSpin.animate === false) {
+    if (externalSpin.animate === false || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       const result = externalSpin.restaurant ?? restaurants[externalSpin.winnerIndex];
       if (!result) return;
       const lastVisitedAt = getLastVisitedAtRef.current?.(result);
@@ -535,12 +542,16 @@ export function RouletteWheel({
       claimedResultRef.current = null;
       setLevelUp(null);
       if (levelUpTimeoutRef.current !== null) window.clearTimeout(levelUpTimeoutRef.current);
-      setResultOpen(true);
+      setResultOpen(resultPresentation === 'dialog');
+      setIsSpinning(false);
+      // A live reduced-motion event still completes; an older restore does not.
+      if (externalSpin.animate !== false) onSpinComplete(result);
+      onResultRevealed?.(result, externalSpin.spinId);
       // Restoring an old result is not a fresh spin completion or quest event.
       return;
     }
-    animateSpinToIndex(externalSpin.winnerIndex);
-  }, [animateSpinToIndex, externalSpin, restaurants.length]);
+    animateSpinToIndex(externalSpin.winnerIndex, undefined, externalSpin.spinId);
+  }, [animateSpinToIndex, externalSpin, onResultRevealed, onSpinComplete, restaurants, resultPresentation, setIsSpinning]);
 
   useEffect(() => {
     const container = wheelContainerRef.current;
@@ -573,6 +584,7 @@ export function RouletteWheel({
   }, [spinResult, triggerCelebration]);
 
   useEffect(() => {
+    const wheelElement = wheelRef.current;
     return () => {
       clearCelebrationEffects();
       stopSpinDrumroll();
@@ -585,6 +597,10 @@ export function RouletteWheel({
       if (levelUpTimeoutRef.current !== null) {
         window.clearTimeout(levelUpTimeoutRef.current);
       }
+      gsap.killTweensOf(wheelElement);
+      // StrictMode replays mount effects after cleanup. A cancelled external
+      // animation must be allowed to restart rather than remaining unrevealed.
+      lastExternalSpinIdRef.current = '';
     };
   }, [clearCelebrationEffects]);
 
@@ -776,7 +792,7 @@ export function RouletteWheel({
       </div>
 
       {/* After Back, the pick stays one tap away. */}
-      {spinResult && !resultOpen && (
+      {resultPresentation === 'dialog' && spinResult && !resultOpen && (
         <button
           ref={reopenResultRef}
           type="button"
@@ -882,7 +898,7 @@ export function RouletteWheel({
       )}
 
       {/* Result: a full-screen view that opens when the wheel stops. */}
-      {spinResult && (
+      {resultPresentation === 'dialog' && spinResult && (
         <ResultScreen
           open={resultOpen}
           onOpenChange={setResultOpen}

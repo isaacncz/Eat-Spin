@@ -5,11 +5,10 @@ import { BrandMark } from '@/components/BrandMark';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 
-// The landing sections are not part of the mobile flow. They live here, behind
-// "About EatSpin" on the Me screen, and only load when the section is opened.
+// The app guide lives behind "About EatSpin" on the Me screen and only loads
+// when the section is opened.
 const HowItWorks = lazy(() => import('@/sections/HowItWorks').then((m) => ({ default: m.HowItWorks })));
 const Features = lazy(() => import('@/sections/Features').then((m) => ({ default: m.Features })));
-const Testimonials = lazy(() => import('@/sections/Testimonials').then((m) => ({ default: m.Testimonials })));
 const CTA = lazy(() => import('@/sections/CTA').then((m) => ({ default: m.CTA })));
 const Footer = lazy(() => import('@/sections/Footer').then((m) => ({ default: m.Footer })));
 
@@ -18,7 +17,7 @@ interface AboutEatSpinProps {
   onStartSpinning: () => void;
 }
 
-/** Collapsed by default: a settings-style row that expands to the marketing sections. */
+/** Collapsed by default: a settings-style row that expands to the app guide. */
 export function AboutEatSpin({ onStartSpinning }: AboutEatSpinProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -53,7 +52,6 @@ export function AboutEatSpin({ onStartSpinning }: AboutEatSpinProps) {
         >
           <HowItWorks onStartSpinning={onStartSpinning} />
           <Features />
-          <Testimonials />
           <CTA onStartSpinning={onStartSpinning} />
           <Footer />
         </Suspense>

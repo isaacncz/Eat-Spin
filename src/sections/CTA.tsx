@@ -84,7 +84,7 @@ export function CTA({ onStartSpinning }: CTAProps) {
 
           {/* Subtext */}
           <p className="text-lg text-brand-ink mb-8 max-w-xl mx-auto">
-            Join thousands of food lovers who have already discovered their new favorite restaurants with EatSpin.
+            Open Spin to find places around your location or a chosen area. For your own picks, use My list; to decide with friends, use Group.
           </p>
 
           {/* Buttons */}
@@ -100,27 +100,6 @@ export function CTA({ onStartSpinning }: CTAProps) {
                 className="ml-2 group-hover:translate-x-1 transition-transform"
               />
             </Button>
-
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full sm:w-auto border-2 border-[#2E2E2E] text-brand-ink bg-white/80 hover:bg-white font-medium px-8 py-6 rounded-2xl shadow-lg"
-            >
-              Download App
-            </Button>
-          </div>
-
-          {/* Trust indicators */}
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mt-10">
-            <span className="px-4 py-2 bg-brand-ink/10 text-brand-ink text-sm font-medium rounded-full border border-[#2E2E2E]/20">
-              Free to use
-            </span>
-            <span className="px-4 py-2 bg-brand-ink/10 text-brand-ink text-sm font-medium rounded-full border border-[#2E2E2E]/20">
-              No ads
-            </span>
-            <span className="px-4 py-2 bg-brand-ink/10 text-brand-ink text-sm font-medium rounded-full border border-[#2E2E2E]/20">
-              Works wherever you are
-            </span>
           </div>
         </div>
       </div>

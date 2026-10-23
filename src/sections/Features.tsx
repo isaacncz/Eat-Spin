@@ -3,11 +3,9 @@ import {
   Users,
   Radio,
   ShieldCheck,
-  Heart,
+  ListPlus,
+  Share2,
   Compass,
-  Scale,
-  Zap,
-  User,
 } from 'lucide-react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -16,44 +14,34 @@ gsap.registerPlugin(ScrollTrigger);
 
 const features = [
   {
+    icon: Compass,
+    title: 'Nearby Places',
+    description: 'Find places around your location or a chosen area. Adjust the radius and food filters on Spin. Results depend on available place data.',
+  },
+  {
+    icon: ListPlus,
+    title: 'Your Own Lists',
+    description: 'Add place names, organize multiple lists, and spin from your picks. Personal lists are saved in this browser; export a backup to keep a separate copy.',
+  },
+  {
+    icon: Share2,
+    title: 'Share a List',
+    description: 'Choose a list to share as a fixed snapshot. Friends can save independent copies; later edits do not update the shared version. Links expire after seven days.',
+  },
+  {
     icon: Users,
     title: 'Shared Room List',
-    description: 'Create or join a room and keep one synchronized restaurant list that everyone can see in real time.',
+    description: 'Create a Group room or join with a code or link. Connected participants can see the room list. Group rooms require an internet connection.',
   },
   {
     icon: Radio,
     title: 'Synchronized Spin Result',
-    description: 'One room spin delivers the exact same winner for every participant across devices.',
+    description: 'The host or a co-host starts a room spin. Connected participants receive the same winner. Returning participants can see the latest result while the room is available.',
   },
   {
     icon: ShieldCheck,
     title: 'Host & Co-host Controls',
-    description: 'Hosts can assign co-hosts to help manage the list and start spins without slowing the group down.',
-  },
-  {
-    icon: Heart,
-    title: 'No More Arguments',
-    description: 'End the endless "where should we eat" debates. Let the wheel decide fairly!',
-  },
-  {
-    icon: Compass,
-    title: 'Discover Hidden Gems',
-    description: 'Find amazing local restaurants you never knew existed within walking distance.',
-  },
-  {
-    icon: Scale,
-    title: 'Fair & Random',
-    description: 'Every spin is completely random. No bias, no favoritism - just pure chance!',
-  },
-  {
-    icon: Zap,
-    title: 'Quick & Easy',
-    description: 'Get a restaurant recommendation in seconds. No more scrolling through reviews.',
-  },
-  {
-    icon: User,
-    title: 'Personalized',
-    description: 'Choose your preferred food categories and we\'ll only show relevant options.',
+    description: 'The host can assign co-hosts. Hosts and co-hosts manage the room list and start spins.',
   },
 ];
 
@@ -96,10 +84,10 @@ export function Features() {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-bold text-brand-black mb-4">
-            Why Choose EatSpin?
+            What You Can Do
           </h2>
           <p className="text-eatspin-gray-1 max-w-lg mx-auto">
-            We're not just another food app. Here's what makes us special:
+            Find nearby options, keep your own picks, or decide with a group.
           </p>
         </div>
 
@@ -110,7 +98,7 @@ export function Features() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="group bg-white rounded-2xl border-2 border-brand-ink shadow-pop p-6 transition-all duration-300 hover:shadow-pop-lg hover:-translate-y-1 cursor-pointer"
+              className="group bg-white rounded-2xl border-2 border-brand-ink shadow-pop p-6 transition-all duration-300 hover:shadow-pop-lg hover:-translate-y-1"
             >
               <div className="w-12 h-12 bg-arcade-yellow border-2 border-brand-ink rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
                 <feature.icon size={24} className="text-brand-ink" />
@@ -122,25 +110,6 @@ export function Features() {
               <p className="text-sm text-eatspin-gray-1 leading-relaxed">
                 {feature.description}
               </p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-16 grid grid-cols-2 gap-6">
-          {[
-            { value: '10,000+', label: 'Happy Users' },
-            { value: '500+', label: 'Restaurants' },
-            { value: '98%', label: 'Satisfaction' },
-            { value: '24/7', label: 'Available' },
-          ].map((stat, index) => (
-            <div
-              key={index}
-              className="text-center p-6 bg-white rounded-2xl"
-            >
-              <p className="font-heading text-3xl font-bold text-brand-orange mb-1">
-                {stat.value}
-              </p>
-              <p className="text-sm text-eatspin-gray-1">{stat.label}</p>
             </div>
           ))}
         </div>

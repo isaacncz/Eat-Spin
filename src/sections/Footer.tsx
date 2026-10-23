@@ -1,20 +1,11 @@
-import { Facebook, Instagram, Twitter } from 'lucide-react';
 import { BrandMark } from '@/components/BrandMark';
 
 const footerLinks = {
   product: [
     { label: 'How It Works', href: '#how-it-works' },
-    { label: 'Features', href: '#features' },
-    { label: 'Pricing', href: '#' },
-    { label: 'Download App', href: '#' },
+    { label: 'What You Can Do', href: '#features' },
   ],
 };
-
-const socialLinks = [
-  { icon: Facebook, href: '#', label: 'Facebook' },
-  { icon: Instagram, href: '#', label: 'Instagram' },
-  { icon: Twitter, href: '#', label: 'Twitter' },
-];
 
 export function Footer() {
   const scrollToSection = (href: string) => {
@@ -41,10 +32,8 @@ export function Footer() {
             </div>
 
             <p className="text-white/80 text-sm leading-relaxed mb-6 max-w-sm">
-              The fun way to decide what to eat! Discover amazing restaurants with our roulette wheel and skip the "where to eat" debate.
+              A wheel to help choose your next meal, with nearby options, personal lists and shared Group rooms.
             </p>
-
-            {/* Contact Info removed */}
           </div>
 
           {/* Product Links */}
@@ -73,20 +62,6 @@ export function Footer() {
             <p className="text-sm text-white/80">
               © {new Date().getFullYear()} EatSpin. All rights reserved.
             </p>
-
-            {/* Social Links */}
-            <div className="flex items-center gap-4">
-              {socialLinks.map((social) => (
-                <a
-                  key={social.label}
-                  href={social.href}
-                  aria-label={social.label}
-                  className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center hover:bg-eatspin-orange transition-colors"
-                >
-                  <social.icon size={18} className="text-white" />
-                </a>
-              ))}
-            </div>
           </div>
         </div>
       </div>

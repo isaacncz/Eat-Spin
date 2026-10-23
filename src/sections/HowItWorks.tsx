@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Users, RefreshCw, Utensils } from 'lucide-react';
+import { ListPlus, RefreshCw, Utensils } from 'lucide-react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -7,24 +7,24 @@ gsap.registerPlugin(ScrollTrigger);
 
 const steps = [
   {
-    icon: Users,
-    title: 'Create or Join a Group Room',
+    icon: ListPlus,
+    title: 'Choose Your Options',
     description:
-      'Start with Group Spin: everyone joins one room, builds one shared restaurant list, and the host/co-host keeps the session moving.',
+      'Find places around your location or a chosen area on Spin, or add at least two place names in My list.',
     color: '#FF4D8D',
   },
   {
     icon: RefreshCw,
-    title: 'Spin Once, Sync for Everyone',
+    title: 'Spin the Wheel',
     description:
-      'When the host or co-host spins, everyone sees the same synchronized winner instantly across devices and browsers.',
+      'Check the options on the wheel, then spin. The wheel randomly picks from the places in that round.',
     color: '#22D3EE',
   },
   {
     icon: Utensils,
-    title: 'Head Out Together',
+    title: 'Make Your Pick',
     description:
-      'Celebrate the final pick, open the restaurant details, and go eat with confidence—no more back-and-forth debates.',
+      'Use the winner to plan your meal. Check current opening hours and details before heading out.',
     color: '#A3E635',
   },
 ];
@@ -77,7 +77,7 @@ export function HowItWorks({ onStartSpinning }: HowItWorksProps) {
             How It Works
           </h2>
           <p className="text-eatspin-gray-1 max-w-lg mx-auto">
-            Three simple steps to decide together and end your "what to eat" dilemma
+            A little help choosing what to eat, on your own or with friends.
           </p>
         </div>
 
@@ -115,7 +115,7 @@ export function HowItWorks({ onStartSpinning }: HowItWorksProps) {
 
         <div className="text-center mt-12">
           <p className="text-eatspin-gray-1 mb-4">
-            Ready to end your food decision fatigue?
+            Open Spin to explore an area.
           </p>
           <button
             onClick={onStartSpinning}

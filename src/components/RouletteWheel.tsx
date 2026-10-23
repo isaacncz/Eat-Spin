@@ -836,6 +836,9 @@ export function RouletteWheel({
         )}
       </button>
       )}
+      {/* The phone Spin button is sticky. It needs scroll room below it to settle back into place;
+          without this it stays pinned over "Your pick" when the wheel is the last thing on the page. */}
+      {!hideSpinButton && <div aria-hidden="true" className="-mt-6 h-[calc(var(--bottom-nav-height,0px)_+_2.5rem)] w-full sm:hidden" />}
 
 
       {helperText && (

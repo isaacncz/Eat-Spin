@@ -26,9 +26,17 @@ const missingFirebaseEnvKeys = REQUIRED_ENV_KEYS.filter((key) => !getEnv(key));
 
 export const isFirebaseConfigured = missingFirebaseEnvKeys.length === 0;
 
-export const firebaseConfigError = isFirebaseConfigured
+/** Developer detail, logged to the console only; never shown in the UI. */
+export const firebaseConfigDetail = isFirebaseConfigured
   ? null
   : `Missing Firebase env vars: ${missingFirebaseEnvKeys.join(', ')}`;
+
+if (firebaseConfigDetail) console.warn(`[EatSpin] Group spin disabled. ${firebaseConfigDetail}`);
+
+/** What users see when Group spin cannot start because the deploy is not configured. */
+export const firebaseConfigError = isFirebaseConfigured
+  ? null
+  : "Group spin isn't available right now. Your own list and nearby spins still work.";
 
 const firebaseConfig = {
   apiKey: getEnv('VITE_FIREBASE_API_KEY'),

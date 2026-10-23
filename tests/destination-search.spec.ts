@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
 async function setup(page: Page, gps = false) {
+  await page.clock.setFixedTime(new Date('2026-10-23T12:30:00Z'));
   await page.addInitScript((allowGps) => {
     localStorage.setItem('eatspin:first-run-onboarding-seen', '1');
     Object.defineProperty(navigator, 'geolocation', { value: {

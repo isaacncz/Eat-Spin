@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, memo } from 'react';
+import { useState, useRef, useEffect, memo, type ReactNode } from 'react';
 import { Search, Star, MapPin, Navigation, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Restaurant } from '@/types';
@@ -23,6 +23,7 @@ const POPULAR_CHIPS = [
 
 interface CravingSearchProps {
   query: string;
+  areaSearchAction?: ReactNode;
   distanceOrigin?: string;
   onSearch: (text: string) => void;
   results: Restaurant[];
@@ -53,6 +54,7 @@ function estimateWalkTime(distanceKm: number | undefined): string {
 
 export const CravingSearch = memo(function CravingSearch({
   query,
+  areaSearchAction,
   onSearch,
   results,
   isLoading,
@@ -74,18 +76,21 @@ export const CravingSearch = memo(function CravingSearch({
     <div className="w-full space-y-4">
       {/* ── Search bar ────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 bg-arcade-yellow py-2">
+        <label htmlFor="food-query" className="mb-1 block text-sm font-semibold text-brand-ink">Find food or a restaurant</label>
+        <div className="relative">
         <Search
           size={18}
           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-eatspin-gray-2"
         />
         <input
+          id="food-query"
           ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => onSearch(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-          placeholder="chicken rice, coffee, bubble tea..."
+          placeholder="e.g. chicken rice, coffee, sushi"
           className="h-14 w-full rounded-2xl border-[3px] border-brand-ink bg-white pl-10 pr-12
                      text-base text-brand-black placeholder:text-eatspin-gray-2
                      focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange/30
@@ -108,6 +113,8 @@ export const CravingSearch = memo(function CravingSearch({
             className="absolute right-10 top-1/2 -translate-y-1/2 animate-spin text-brand-orange"
           />
         )}
+      </div>
+
       </div>
 
       {/* ── Recent searches dropdown ──────────────────────────── */}
@@ -152,6 +159,8 @@ export const CravingSearch = memo(function CravingSearch({
         </div>
       )}
 
+      {areaSearchAction && query && <div className="flex justify-center">{areaSearchAction}</div>}
+
       {/* ── Error state ───────────────────────────────────────── */}
       {error && (
         <div className="rounded-xl bg-red-50 p-5 text-center">
@@ -173,10 +182,10 @@ export const CravingSearch = memo(function CravingSearch({
         <div className="rounded-xl bg-gray-50 p-6 text-center">
           <p className="text-2xl">😕</p>
           <p className="mt-2 text-sm font-medium text-eatspin-gray-1">
-            No results for "{query}"
+            No food matches for "{query}" in this area
           </p>
           <p className="mt-1 text-xs text-eatspin-gray-2">
-            Try a different search or tap a popular option above
+            Try a food or restaurant name, or choose another area.
           </p>
         </div>
       )}

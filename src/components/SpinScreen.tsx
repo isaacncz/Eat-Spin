@@ -223,8 +223,12 @@ export function SpinScreen({
           >
             ← Back to Spin
           </button>
-          {destinationSearch && <p className="truncate text-sm font-semibold text-brand-ink" aria-label="Food search area">Within {destinationSearch.effectiveRadiusKm} km of {destinationSearch.destination?.label ?? 'your current location'}</p>}
+          {destinationSearch && <div className="flex items-center gap-2">
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-ink" aria-label="Food search area">Within {destinationSearch.effectiveRadiusKm} km of {destinationSearch.destination?.label ?? 'your current location'}</p>
+            <DestinationPicker {...destinationSearch} triggerLabel="Change area" />
+          </div>}
           <CravingSearch
+            areaSearchAction={destinationSearch && search.query.trim() ? <DestinationPicker {...destinationSearch} triggerLabel={`Search “${search.query.trim()}” as an area`} initialQuery={search.query.trim()} /> : undefined}
             query={search.query}
             distanceOrigin={destinationSearch?.destination?.label}
             onSearch={search.onSearch}

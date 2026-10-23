@@ -5,6 +5,8 @@ import { autocompleteDestinations, resolveDestination, type DestinationSuggestio
 import { SEARCH_RADII, type SearchDestination, type SearchRadius } from '@/lib/searchDestination';
 
 export interface DestinationPickerProps {
+  triggerLabel?: string;
+  initialQuery?: string;
   destination: SearchDestination | null;
   radiusKm: SearchRadius | null;
   effectiveRadiusKm: number;
@@ -19,26 +21,28 @@ const control = 'min-h-11 rounded-xl border-[3px] border-brand-ink px-3 font-sem
 
 export function DestinationPicker(props: DestinationPickerProps) {
   const [open, setOpen] = useState(false);
-  const compact = !props.destination && props.radiusKm == null;
-  return <div className={compact ? 'ml-5 mt-2 shrink-0 text-brand-ink' : 'mx-5 mt-3 rounded-2xl border-[3px] border-brand-ink bg-white p-3 text-brand-ink shadow-pop'}>
+  const compact = Boolean(props.triggerLabel) || (!props.destination && props.radiusKm == null);
+  return <div className={props.triggerLabel ? 'min-w-0 text-brand-ink' : compact ? 'ml-5 mt-2 shrink-0 text-brand-ink' : 'mx-5 mt-3 rounded-2xl border-[3px] border-brand-ink bg-white p-3 text-brand-ink shadow-pop'}>
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild><button disabled={props.disabled} className={compact ? `${control} flex size-11 items-center justify-center bg-white px-0` : "flex min-h-11 w-full items-center gap-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-brand-orange"}>
-        <MapPin aria-hidden="true" className="shrink-0 text-brand-orange" /><span className={compact ? "sr-only" : "min-w-0 flex-1"}><span className="block text-xs font-bold uppercase">Search around</span><span className="block truncate font-heading text-lg font-bold">{props.destination?.label ?? 'Current location'}</span>{props.destination?.address && <span className="block truncate text-xs">{props.destination.address}</span>}</span>{!compact && <ChevronRight aria-hidden="true" />}
+      <SheetTrigger asChild><button disabled={props.disabled} className={props.triggerLabel ? `${control} flex items-center justify-center gap-2 bg-white text-sm` : compact ? `${control} flex size-11 items-center justify-center bg-white px-0` : "flex min-h-11 w-full items-center gap-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-brand-orange"}>
+        {props.triggerLabel ? <><MapPin size={16} aria-hidden="true" /><span>{props.triggerLabel}</span></> : <>
+        <MapPin aria-hidden="true" className="shrink-0 text-brand-orange" /><span className={compact ? "sr-only" : "min-w-0 flex-1"}><span className="block text-xs font-bold uppercase">Search around</span><span className="block truncate font-heading text-lg font-bold">{props.destination?.label ?? 'Current location'}</span>{props.destination?.address && <span className="block truncate text-xs">{props.destination.address}</span>}</span>{!compact && <ChevronRight aria-hidden="true" />}</>}
+
       </button></SheetTrigger>
       <SheetContent side="bottom" className="mx-auto max-h-[85dvh] max-w-lg overflow-y-auto rounded-t-3xl border-[3px] border-brand-ink bg-white p-5 pb-8 text-brand-ink">
         <SheetTitle className="pr-6 font-heading text-2xl font-bold">Where are you heading?</SheetTitle>
         <SheetDescription>Choose an area, landmark, mall, or address to find food around it.</SheetDescription>
-        {compact && <RadiusControls {...props} />}
-        {open && <DestinationSearch onSelect={(destination) => { props.onSelect(destination); setOpen(false); }} onCurrentLocation={() => { props.onCurrentLocation(); setOpen(false); }} />}
+        {compact && !props.triggerLabel && <RadiusControls {...props} />}
+        {open && <DestinationSearch initialQuery={props.initialQuery} onSelect={(destination) => { props.onSelect(destination); setOpen(false); }} onCurrentLocation={() => { props.onCurrentLocation(); setOpen(false); }} />}
       </SheetContent>
     </Sheet>
     {!compact && <RadiusControls {...props} />}
-    {props.destination && <p translate="no" className="mt-2 font-sans text-xs font-normal text-[#5E5E5E]">Google Maps</p>}
+    {props.destination && !props.triggerLabel && <p translate="no" className="mt-2 font-sans text-xs font-normal text-[#5E5E5E]">Google Maps</p>}
   </div>;
 }
 
-function DestinationSearch({ onSelect, onCurrentLocation }: Pick<DestinationPickerProps, 'onSelect' | 'onCurrentLocation'>) {
-  const [query, setQuery] = useState('');
+function DestinationSearch({ onSelect, onCurrentLocation, initialQuery }: Pick<DestinationPickerProps, 'onSelect' | 'onCurrentLocation' | 'initialQuery'>) {
+  const [query, setQuery] = useState(initialQuery ?? '');
   const [suggestions, setSuggestions] = useState<DestinationSuggestion[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

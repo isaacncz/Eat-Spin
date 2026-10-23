@@ -18,8 +18,10 @@ import type { MealTime, Restaurant } from '@/types';
 
 type FilterControls = Pick<
   FiltersSheetProps,
-  | 'rangeMode'
-  | 'onRangeModeChange'
+  | 'radiusKm'
+  | 'onRadiusChange'
+  | 'openNowOnly'
+  | 'onOpenNowChange'
   | 'selectedPriceRanges'
   | 'onTogglePriceRange'
   | 'selectedCategories'
@@ -128,13 +130,10 @@ export function SpinScreen({
     };
   }, []);
 
-  const expandedDestination = destinationSearch && (destinationSearch.destination || destinationSearch.radiusKm != null);
   const isEmpty = hasLocation && !isLoadingPlaces && placeCount === 0;
   const showWheel = hasLocation && placeCount > 0;
 
-  const summary = destinationSearch?.radiusKm != null
-    ? `Filters · ${destinationSearch.effectiveRadiusKm} km${hasLocation ? ` · ${isLoadingPlaces ? "searching…" : `${placeCount} places`}` : ""}`
-    : buildFilterSummary(filters.rangeMode, hasLocation ? placeCount : null, hasLocation && isLoadingPlaces);
+  const summary = buildFilterSummary(filters.radiusKm, hasLocation ? placeCount : null, hasLocation && isLoadingPlaces);
   const activeFilterCount = countActiveFilters({
     categories: filters.selectedCategories,
     priceRanges: filters.selectedPriceRanges,
@@ -182,7 +181,10 @@ export function SpinScreen({
   } else if (isLoadingPlaces && placeCount === 0) {
     cta = { label: 'Finding places…', disabled: true, onClick: onSpin, spin: false, icon: <Loader2 className="size-5 animate-spin" aria-hidden="true" /> };
   } else if (placeCount === 0) {
-    cta = { label: 'No places to spin', disabled: true, onClick: onSpin, spin: false };
+    // Nothing to spin: the pinned button becomes the fix (widen, include closed, reset round).
+    cta = emptyState?.action
+      ? { label: emptyState.action.label, disabled: false, onClick: emptyState.action.onClick, spin: false }
+      : { label: 'Open filters', disabled: false, onClick: () => handleFiltersOpenChange(true), spin: false, icon: <SlidersHorizontal className="size-5" aria-hidden="true" /> };
   } else if (isSpinning) {
     cta = { label: 'Spinning…', disabled: true, onClick: onSpin, spin: false, icon: <Loader2 className="size-5 animate-spin" aria-hidden="true" /> };
   } else if (placeCount < 2) {
@@ -212,7 +214,6 @@ export function SpinScreen({
         )}
       </div>}
 
-      {destinationSearch && expandedDestination && !isSearchMode && <DestinationPicker {...destinationSearch} />}
 
       {isSearchMode ? (
         <div className="space-y-2 px-5 pb-6 pt-2">
@@ -224,7 +225,7 @@ export function SpinScreen({
             ← Back to Spin
           </button>
           {destinationSearch && <div className="flex items-center gap-2">
-            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-ink" aria-label="Food search area">Within {destinationSearch.effectiveRadiusKm} km of {destinationSearch.destination?.label ?? 'your current location'}</p>
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-ink" aria-label="Food search area">Within {filters.radiusKm} km of {destinationSearch.destination?.label ?? 'your current location'}</p>
             <DestinationPicker {...destinationSearch} triggerLabel="Change area" />
           </div>}
           <CravingSearch
@@ -243,11 +244,11 @@ export function SpinScreen({
       ) : (
         <>
           <div className="flex items-center">
-          {destinationSearch && !expandedDestination && <DestinationPicker {...destinationSearch} />}
+          {destinationSearch && <DestinationPicker {...destinationSearch} />}
           <div
             role="group"
             aria-label="Quick picks"
-            className="mt-2 flex min-w-0 flex-1 gap-2 overflow-x-auto overscroll-x-contain px-5 py-1 scrollbar-hide"
+            className={cn('mt-2 flex min-w-0 flex-1 gap-2 overflow-x-auto overscroll-x-contain py-1 pr-5 scrollbar-hide', destinationSearch ? 'pl-2' : 'pl-5')}
           >
             {MOOD_OPTIONS.map(({ id, label }) => {
               const pressed = selectedMood === id;
@@ -268,7 +269,6 @@ export function SpinScreen({
               );
             })}
           </div>
-
           </div>
 
           <div className="px-5 pt-2">
@@ -276,7 +276,8 @@ export function SpinScreen({
               open={filtersOpen}
               onOpenChange={handleFiltersOpenChange}
               {...filters}
-              radiusKm={destinationSearch?.radiusKm ?? undefined}
+              destinationLabel={destinationSearch?.destination?.label ?? null}
+              emptyAction={emptyState?.action}
               onCategoryChange={(categories) => {
                 setSelectedMood(null);
                 filters.onCategoryChange(categories);
@@ -307,6 +308,9 @@ export function SpinScreen({
                     </button>
               )}
             />
+            {destinationSearch?.destination && (
+              <p translate="no" className="mt-1 text-right font-sans text-[11px] font-normal leading-none text-[#5E5E5E]">Google Maps</p>
+            )}
           </div>
 
           {budgetBlocked && (
@@ -354,13 +358,15 @@ export function SpinScreen({
                 <p className="mt-1 text-sm text-eatspin-gray-1">
                   {emptyState?.subtitle ?? 'Try a wider range in Filters, or check back during meal hours.'}
                 </p>
-                <button
-                  type="button"
-                  onClick={emptyState?.action?.onClick ?? (() => handleFiltersOpenChange(true))}
-                  className="mt-3 inline-flex min-h-11 items-center rounded-full border-[3px] border-brand-ink bg-arcade-cyan px-4 font-heading text-[15px] font-bold text-brand-ink outline-none focus-visible:ring-[3px] focus-visible:ring-brand-ink focus-visible:ring-offset-2"
-                >
-                  {emptyState?.action?.label ?? 'Open filters'}
-                </button>
+                {emptyState?.action && (
+                  <button
+                    type="button"
+                    onClick={() => handleFiltersOpenChange(true)}
+                    className="mt-3 inline-flex min-h-11 items-center rounded-full border-[3px] border-brand-ink bg-white px-4 font-heading text-[15px] font-bold text-brand-ink outline-none focus-visible:ring-[3px] focus-visible:ring-brand-ink focus-visible:ring-offset-2"
+                  >
+                    Open filters
+                  </button>
+                )}
               </div>
             )}
 

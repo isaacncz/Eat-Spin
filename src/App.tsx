@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { trackEvent } from '@/lib/analytics';
 import { APP_FEATURES } from '@/lib/featureFlags';
 import { useSearchDestination } from '@/hooks/useSearchDestination';
+import { nextWiderRadius, type SearchRadius } from '@/lib/searchDestination';
 import { useLocation } from '@/hooks/useLocation';
 import { useNearbyRestaurants } from '@/hooks/useNearbyRestaurants';
 import { useTextSearch } from '@/hooks/useTextSearch';
@@ -63,24 +64,12 @@ import { toast } from 'sonner';
 import './App.css';
 
 type SpinTab = 'auto' | 'manual';
-type AutoRangeMode = 'walk' | 'drive10' | 'drive20';
 
-const AUTO_RANGE_MODE_STORAGE_KEY = 'eatspin:auto-range-mode';
 const SPIN_REJECTION_STORAGE_KEY = 'eatspin:spin-rejections';
 const FIRST_RUN_ONBOARDING_SEEN_KEY = 'eatspin:first-run-onboarding-seen';
 const GROUP_SPIN_REPLAY_WINDOW_MS = 30_000;
 const REVIEW_PREVIEW_COUNT = 30;
 const SPIN_HISTORY_PREVIEW_COUNT = 8;
-const DEFAULT_AUTO_RANGE_MODE: AutoRangeMode = 'drive10';
-const AUTO_RANGE_RADIUS_KM: Record<AutoRangeMode, number> = {
-  walk: 0.85,
-  drive10: 4.3,
-  drive20: 8.5,
-};
-
-const isAutoRangeMode = (value: string): value is AutoRangeMode =>
-  value === 'walk' || value === 'drive10' || value === 'drive20';
-
 /** Estimate travel time from straight-line distance using road detour factor. */
 const estimateTravelTime = (straightLineKm: number): string => {
   const roadKm = straightLineKm * 1.4;
@@ -97,15 +86,6 @@ const scrollPageToTop = (smooth: boolean) => {
   if (typeof window === 'undefined') return;
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   window.scrollTo({ top: 0, behavior: smooth && !prefersReducedMotion ? 'smooth' : 'instant' });
-};
-
-const loadAutoRangeMode = (): AutoRangeMode => {
-  if (typeof window === 'undefined') return DEFAULT_AUTO_RANGE_MODE;
-  const storedMode = window.localStorage.getItem(AUTO_RANGE_MODE_STORAGE_KEY);
-  if (!storedMode || !isAutoRangeMode(storedMode)) {
-    return DEFAULT_AUTO_RANGE_MODE;
-  }
-  return storedMode;
 };
 
 const hasSavedManualSelection = () => {
@@ -203,7 +183,6 @@ function App() {
   // State management
   const [selectedCategories, setSelectedCategories] = useState<FoodCategory[]>([]);
   const [selectedPriceRanges, setSelectedPriceRanges] = useState<Restaurant['priceRange'][]>([]);
-  const [rangeMode, setRangeMode] = useState<AutoRangeMode>(() => loadAutoRangeMode());
   const [isSpinning, setIsSpinning] = useState(false);
   const respinCountRef = useRef(0);
   const [showSubscription, setShowSubscription] = useState(false);
@@ -260,11 +239,10 @@ function App() {
   const [isEditingListDetails, setIsEditingListDetails] = useState(false);
   const [isCreatingNewList, setIsCreatingNewList] = useState(false);
   const [groupSpinNow, setGroupSpinNow] = useState(() => Date.now());
-  // Fetch radius follows the selected range mode so each mode gets its own
-  // focused 20-place pool from Google. Cached separately per radius — repeat
-  // visits cost nothing for 7 days.
+  // One radius (1/3/5/10 km) for current location and destinations alike. Each radius gets its
+  // own focused 20-place pool from Google, cached separately — repeat visits cost nothing for 7 days.
   const destinationSearch = useSearchDestination();
-  const fetchRadiusKm = destinationSearch.radiusKm ?? AUTO_RANGE_RADIUS_KM[rangeMode];
+  const fetchRadiusKm = destinationSearch.radiusKm;
   const autoLoadedMealTimeRef = useRef<ManualListMealTime>(null);
   const hasUserSelectedManualListRef = useRef(hasSavedManualSelection());
 
@@ -462,11 +440,6 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(AUTO_RANGE_MODE_STORAGE_KEY, rangeMode);
-  }, [rangeMode]);
-
-  useEffect(() => {
     const intervalId = window.setInterval(() => {
       setUiNowMs(Date.now());
     }, 60_000);
@@ -555,14 +528,14 @@ function App() {
       autoSourceRestaurants,
       searchCenter,
       selectedCategories,
-      destinationSearch.radiusKm ?? rangeMode,
+      destinationSearch.radiusKm,
       selectedPriceRanges,
       'all',
       undefined,
       avoidedRestaurantIds,
       destinationSearch.openNowOnly,
     )
-  ), [autoSourceRestaurants, searchCenter, selectedCategories, rangeMode, selectedPriceRanges, avoidedRestaurantIds, destinationSearch.radiusKm, destinationSearch.openNowOnly]);
+  ), [autoSourceRestaurants, searchCenter, selectedCategories, selectedPriceRanges, avoidedRestaurantIds, destinationSearch.radiusKm, destinationSearch.openNowOnly]);
 
   const filteredRestaurants = useMemo(
     () => applyServesFilters(filterResult.results, activeServesFilters),
@@ -599,11 +572,11 @@ function App() {
     }
 
     if (closingSoonExcludedCount > 0 && filteredRestaurants.length === 0) {
-      return `Everything nearby is either closed or shutting within ${AUTO_SPIN_MINUTES_UNTIL_CLOSE_CUTOFF} min. Try a wider range or check back soon.`;
+      return `Everything nearby is closed or closing within ${AUTO_SPIN_MINUTES_UNTIL_CLOSE_CUTOFF} min.`;
     }
 
     if (closedNowExcludedCount > 0 && filteredRestaurants.length === 0) {
-      return 'Everything matching your filters is closed right now. Try widening your filters or check back soon.';
+      return 'Everything matching your filters is closed right now.';
     }
 
     return 'Try selecting different categories or check back during meal hours';
@@ -975,12 +948,17 @@ function App() {
     setAutoWheelKey((prev) => prev + 1);
   };
 
-  const handleAutoRangeModeChange = (nextMode: AutoRangeMode) => {
-    if (nextMode === rangeMode) return;
-    trackEvent('range_mode_changed', { mode: nextMode });
-    destinationSearch.setRadiusKm(null);
-    setRangeMode(nextMode);
+  const handleRadiusChange = (nextRadius: SearchRadius) => {
+    if (nextRadius === destinationSearch.radiusKm) return;
+    trackEvent('range_mode_changed', { mode: `${nextRadius}km` });
+    destinationSearch.setRadiusKm(nextRadius);
     setShowAllRoundRestaurants(false);
+    resetAutoWheel();
+  };
+
+  const handleOpenNowChange = (value: boolean) => {
+    trackEvent('open_now_toggled', { open_now_only: value });
+    destinationSearch.setOpenNowOnly(value);
     resetAutoWheel();
   };
 
@@ -990,8 +968,8 @@ function App() {
     setSelectedPriceRanges([]);
     setActiveServesFilters([]);
     setShowAllRoundRestaurants(false);
-    destinationSearch.setRadiusKm(null);
-    handleAutoRangeModeChange(DEFAULT_AUTO_RANGE_MODE);
+    destinationSearch.resetRadius();
+    resetAutoWheel();
   };
 
   // The pinned Spin button runs the wheel through here. The first spin of a round goes
@@ -1021,7 +999,6 @@ function App() {
   // waiting to be dropped belongs to the old wheel, so a refill starts a fresh round.
   const wheelSeedKey = [
     searchIdentity,
-    rangeMode,
     selectedCategories.join(','),
     selectedPriceRanges.join(','),
     activeServesFilters.join(','),
@@ -1507,9 +1484,28 @@ function App() {
     };
   }, [currentMealTime, isGroupRoomActive, selectDeterministicManualList]);
 
-  // Why the Spin screen has nothing to spin although places were found nearby.
+  // The one step most likely to put places back on the wheel; the pinned button runs it.
+  const widerRadius = nextWiderRadius(destinationSearch.radiusKm);
+  const servesFiltersHideAll = activeServesFilters.length > 0 && filterResult.results.length > 0;
+  const closuresHideAll = destinationSearch.openNowOnly && (closingSoonExcludedCount > 0 || closedNowExcludedCount > 0);
+  const widenAction = widerRadius
+    ? { label: `Widen to ${widerRadius} km`, onClick: () => handleRadiusChange(widerRadius) }
+    : undefined;
+  const emptyFixAction = servesFiltersHideAll
+    ? undefined // The pinned button falls back to "Open filters", where the serves pills are.
+    : closuresHideAll
+      ? { label: 'Show closed places too', onClick: () => handleOpenNowChange(false) }
+      : widenAction;
+
+  // Why the Spin screen has nothing to spin.
   const autoEmptyState = autoSourceRestaurants.length === 0
-    ? null
+    ? (nearbyRestaurantsLoading ? null : {
+        title: 'No restaurants found here yet.',
+        subtitle: widerRadius
+          ? `Nothing within ${destinationSearch.radiusKm} km. Try a wider radius.`
+          : 'Try another area, or check back during meal hours.',
+        action: widenAction,
+      })
     : filteredRestaurants.length > 0
       ? {
           title: 'Every place was removed from this round.',
@@ -1521,6 +1517,7 @@ function App() {
             ? 'No open spots left for the wheel right now.'
             : 'No matches — try clearing a filter.',
           subtitle: autoEmptyStateSubtitle,
+          action: emptyFixAction,
         };
 
   return (
@@ -1551,21 +1548,19 @@ function App() {
             hasLocation={Boolean(searchCenter)}
             destinationSearch={{
               destination: destinationSearch.destination,
-              radiusKm: destinationSearch.radiusKm,
-              effectiveRadiusKm: fetchRadiusKm,
-              openNowOnly: destinationSearch.openNowOnly,
+              hasDeviceLocation: Boolean(location),
               disabled: isSpinning,
               onSelect: (destination) => { resetAutoWheel(); destinationSearch.selectDestination(destination); },
               onCurrentLocation: () => { resetAutoWheel(); destinationSearch.useCurrentLocation(); requestLocation(); },
-              onRadiusChange: (radius) => { resetAutoWheel(); destinationSearch.setRadiusKm(radius); },
-              onOpenNowChange: (value) => { resetAutoWheel(); destinationSearch.setOpenNowOnly(value); },
             }}
             isLocationLoading={locationLoading}
             locationError={locationError}
             onRequestLocation={requestLocation}
             filters={{
-              rangeMode,
-              onRangeModeChange: handleAutoRangeModeChange,
+              radiusKm: destinationSearch.radiusKm,
+              onRadiusChange: handleRadiusChange,
+              openNowOnly: destinationSearch.openNowOnly,
+              onOpenNowChange: handleOpenNowChange,
               selectedPriceRanges,
               onTogglePriceRange: togglePriceRange,
               selectedCategories,

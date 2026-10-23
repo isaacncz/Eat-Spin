@@ -6,7 +6,6 @@ import {
   buildShowPlacesLabel,
   countActiveFilters,
   formatPlaceCount,
-  RANGE_SHORT_LABEL,
 } from './filterSummary';
 
 describe('formatPlaceCount', () => {
@@ -18,22 +17,18 @@ describe('formatPlaceCount', () => {
 });
 
 describe('buildFilterSummary', () => {
-  it('joins the range and the count', () => {
-    expect(buildFilterSummary('drive10', 24, false)).toBe('Filters · Drive 10 · 24 places');
-    expect(buildFilterSummary('walk', 1, false)).toBe('Filters · Walk · 1 place');
-    expect(buildFilterSummary('drive20', 0, false)).toBe('Filters · Drive 20 · 0 places');
+  it('joins the radius and the count', () => {
+    expect(buildFilterSummary(5, 24, false)).toBe('Filters · 5 km · 24 places');
+    expect(buildFilterSummary(1, 1, false)).toBe('Filters · 1 km · 1 place');
+    expect(buildFilterSummary(10, 0, false)).toBe('Filters · 10 km · 0 places');
   });
 
   it('shows a searching marker instead of a stale count while loading', () => {
-    expect(buildFilterSummary('drive10', 24, true)).toBe('Filters · Drive 10 · searching…');
+    expect(buildFilterSummary(5, 24, true)).toBe('Filters · 5 km · searching…');
   });
 
   it('leaves the count out when there is no location yet', () => {
-    expect(buildFilterSummary('drive10', null, false)).toBe('Filters · Drive 10');
-  });
-
-  it('has a short label for every range mode', () => {
-    expect(Object.keys(RANGE_SHORT_LABEL).sort()).toEqual(['drive10', 'drive20', 'walk']);
+    expect(buildFilterSummary(5, null, false)).toBe('Filters · 5 km');
   });
 });
 
@@ -64,8 +59,8 @@ describe('countActiveFilters', () => {
 
 describe('buildFilterButtonLabel', () => {
   it('appends the active filter count only when there is one', () => {
-    expect(buildFilterButtonLabel('Filters · Walk · 3 places', 0)).toBe('Filters · Walk · 3 places');
-    expect(buildFilterButtonLabel('Filters · Walk · 3 places', 1)).toBe('Filters · Walk · 3 places, 1 filter on');
-    expect(buildFilterButtonLabel('Filters · Walk · 3 places', 3)).toBe('Filters · Walk · 3 places, 3 filters on');
+    expect(buildFilterButtonLabel('Filters · 1 km · 3 places', 0)).toBe('Filters · 1 km · 3 places');
+    expect(buildFilterButtonLabel('Filters · 1 km · 3 places', 1)).toBe('Filters · 1 km · 3 places, 1 filter on');
+    expect(buildFilterButtonLabel('Filters · 1 km · 3 places', 3)).toBe('Filters · 1 km · 3 places, 3 filters on');
   });
 });

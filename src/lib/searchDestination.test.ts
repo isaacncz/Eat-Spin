@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createBrokenStorage, createMemoryStorage } from '@/test/memoryStorage';
-import { DESTINATION_STORAGE_KEY, DESTINATION_TTL_MS, loadSavedSearch, radiusRectangle, saveSearch } from './searchDestination';
+import { DEFAULT_SEARCH_RADIUS, DESTINATION_STORAGE_KEY, DESTINATION_TTL_MS, initialSearchRadius, loadSavedSearch, nextWiderRadius, radiusRectangle, saveSearch } from './searchDestination';
 
 beforeEach(() => vi.stubGlobal('localStorage', createMemoryStorage()));
 afterEach(() => vi.unstubAllGlobals());
@@ -37,4 +37,26 @@ it('bounds a circle and falls back at the date line and poles', () => {
   expect(box.low.longitude).toBeLessThan(101.65);
   expect(radiusRectangle({ lat: 90, lng: 0 }, 3)).toBeNull();
   expect(radiusRectangle({ lat: 0, lng: 179.999 }, 3)).toBeNull();
+});
+
+describe('single radius preset', () => {
+  it('keeps a saved radius, else maps the old walk/drive preset, else defaults to 5 km', () => {
+    expect(initialSearchRadius(3)).toBe(3);
+    expect(initialSearchRadius(null)).toBe(DEFAULT_SEARCH_RADIUS);
+    localStorage.setItem('eatspin:auto-range-mode', 'walk');
+    expect(initialSearchRadius(null)).toBe(1);
+    localStorage.setItem('eatspin:auto-range-mode', 'drive20');
+    expect(initialSearchRadius(null)).toBe(10);
+    localStorage.setItem('eatspin:auto-range-mode', 'nonsense');
+    expect(initialSearchRadius(null)).toBe(5);
+  });
+  it('steps to the next wider preset and stops at 10 km', () => {
+    expect(nextWiderRadius(1)).toBe(3);
+    expect(nextWiderRadius(5)).toBe(10);
+    expect(nextWiderRadius(10)).toBeNull();
+  });
+  it('falls back to the default when storage throws', () => {
+    vi.stubGlobal('localStorage', createBrokenStorage());
+    expect(initialSearchRadius(null)).toBe(5);
+  });
 });

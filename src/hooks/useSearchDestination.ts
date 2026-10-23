@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
-import { DESTINATION_TTL_MS, loadSavedSearch, saveSearch, type SearchDestination, type SearchRadius } from '@/lib/searchDestination';
+import {
+  DEFAULT_SEARCH_RADIUS, DESTINATION_TTL_MS, initialSearchRadius, loadSavedSearch, saveSearch,
+  type SearchDestination, type SearchRadius,
+} from '@/lib/searchDestination';
 
 export function useSearchDestination() {
   const [saved] = useState(loadSavedSearch);
   const [destination, setDestination] = useState(saved.destination);
-  const [radiusKm, setRadiusKm] = useState(saved.radiusKm);
+  const [radiusKm, setRadiusKm] = useState<SearchRadius>(() => initialSearchRadius(saved.radiusKm));
   const [openNowOnly, setOpenNowOnly] = useState(true);
   useEffect(() => { saveSearch(destination, radiusKm); }, [destination, radiusKm]);
   // Expire coordinates even if the app stays open across the caching deadline.
@@ -16,7 +19,8 @@ export function useSearchDestination() {
     return () => { clearInterval(timer); window.removeEventListener('focus', expire); };
   }, [destination]);
   return { destination, radiusKm, openNowOnly, setOpenNowOnly,
-    selectDestination: (next: SearchDestination) => { setDestination(next); setRadiusKm((r) => r ?? 3); },
+    selectDestination: (next: SearchDestination) => setDestination(next),
     useCurrentLocation: () => setDestination(null),
-    setRadiusKm: (next: SearchRadius | null) => setRadiusKm(next) };
+    setRadiusKm: (next: SearchRadius) => setRadiusKm(next),
+    resetRadius: () => setRadiusKm(DEFAULT_SEARCH_RADIUS) };
 }

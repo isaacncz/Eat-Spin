@@ -32,7 +32,8 @@ test('food input stays visible with a destination and a keyboard-sized viewport'
   await page.getByRole('button', { name: 'Clear search' }).click();
   await expect(input).toHaveValue('');
   await page.getByRole('button', { name: /back to spin/i }).click();
-  await expect(page.getByRole('group', { name: 'Search radius' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^filters · 3 km/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /search around Saved destination/i })).toBeVisible();
 });
 
 test('a city typed in food search can become the destination without returning to Spin', async ({ page }) => {

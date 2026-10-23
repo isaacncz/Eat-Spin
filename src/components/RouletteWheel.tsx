@@ -8,6 +8,7 @@ import { LevelUpDialog } from '@/components/LevelUpDialog';
 import { getRarity, type Rarity } from '@/lib/rarity';
 import type { LetsGoReward } from '@/lib/letsGoReward';
 import { estimateTravelTime } from '@/lib/travelTime';
+import { fitWheelLabel } from '@/lib/wheelLabel';
 
 
 /** What a parent can call on the wheel. Lets a screen own the spin button. */
@@ -114,39 +115,6 @@ const compactRestaurantName = (name: string, maxLength: number): string => {
   }
 
   return normalized;
-};
-
-const wrapLabelText = (text: string, maxCharsPerLine: number, maxLines: number): string[] => {
-  const words = text.split(' ').filter(Boolean);
-  const lines: string[] = [];
-
-  for (const word of words) {
-    const currentLine = lines[lines.length - 1] ?? '';
-    const nextLine = currentLine ? `${currentLine} ${word}` : word;
-
-    if (!currentLine || nextLine.length <= maxCharsPerLine) {
-      if (currentLine) {
-        lines[lines.length - 1] = nextLine;
-      } else {
-        lines.push(word);
-      }
-      continue;
-    }
-
-    if (lines.length < maxLines) {
-      lines.push(word);
-      continue;
-    }
-
-    lines[lines.length - 1] = `${currentLine.slice(0, Math.max(currentLine.length - 1, 1))}…`;
-    return lines;
-  }
-
-  if (lines.length > maxLines) {
-    return lines.slice(0, maxLines);
-  }
-
-  return lines;
 };
 
 const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
@@ -324,10 +292,12 @@ export function RouletteWheel({
         const emoji = document.createElement('span');
         emoji.className = 'celebration-emoji';
         emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-        emoji.style.left = `${Math.random() * 100}vw`;
-        emoji.style.top = `${62 + Math.random() * 32}vh`;
+        // Rise along the side margins so they frame the result card instead of covering its text.
+        const leftSide = i % 2 === 0;
+        emoji.style.left = leftSide ? `${Math.random() * 2}vw` : `${94 + Math.random() * 2}vw`;
+        emoji.style.top = `${40 + Math.random() * 55}vh`;
         emoji.style.animationDelay = `${Math.random() * 0.3}s`;
-        emoji.style.fontSize = `${1 + Math.random() * 1.1}rem`;
+        emoji.style.fontSize = `${0.85 + Math.random() * 0.35}rem`;
         celebrationLayer.appendChild(emoji);
 
         const removeTimer = window.setTimeout(() => {
@@ -678,15 +648,13 @@ export function RouletteWheel({
       const maxCircleWidth = Math.max(2 * Math.min(x - leftEdge, rightEdge - x), 40);
       const constrainedWidth = Math.min(usableArcWidth, maxCircleWidth);
 
-      const labelMaxChars = clamp(Math.floor(constrainedWidth / 10), 6, 18);
-      const compactName = compactRestaurantName(restaurant.name, labelMaxChars * 2 + 5);
-      const lines = wrapLabelText(compactName, labelMaxChars, 3);
-      const longestLineLength = Math.max(...lines.map((line) => line.length), 1);
-      const densityScale = clamp(labelMaxChars / longestLineLength, 0.75, 1.08);
       const labelBaseFontSize = clamp(Math.min(constrainedWidth * 0.16, radialBandHeight * 0.28), 11.5, 22);
-      const fontSize = clamp(labelBaseFontSize * densityScale, 11.5, 24);
-      const distanceLabel = canShowDistance && lines.length <= 3 && restaurant.distance !== undefined
-        ? distanceOrigin ? `${restaurant.distance.toFixed(1)} km` : estimateTravelTime(restaurant.distance)
+      // Text box is narrower than the segment arc; leave a little side padding.
+      const compactName = compactRestaurantName(restaurant.name, 28);
+      const { lines, fontSize } = fitWheelLabel(compactName, constrainedWidth - 6, labelBaseFontSize);
+      // One unit on the wheel: the radius is chosen in km, so distances are km too.
+      const distanceLabel = canShowDistance && restaurant.distance !== undefined
+        ? `${restaurant.distance.toFixed(1)} km`
         : null;
 
       return {
@@ -711,6 +679,23 @@ export function RouletteWheel({
     <div className="flex flex-col items-center gap-6 py-4 sm:py-5">
       {/* Roulette Wheel */}
       <div ref={wheelScrollRef} className="relative mx-auto w-full max-w-[32.5rem] px-1 sm:px-3 overflow-hidden">
+        {/* Sound: a corner icon so it does not take a row between the wheel and the Spin button. */}
+        <button
+          type="button"
+          aria-label={soundEnabled ? 'Sound on' : 'Sound off'}
+          title={prefersReducedMotion ? 'Sound is off while reduced motion is on' : soundEnabled ? 'Sound on — tap to mute' : 'Sound off — tap to unmute'}
+          onClick={() => {
+            const next = !soundEnabled;
+            canPlayEffectsRef.current = next && !prefersReducedMotion;
+            setSpinSoundEnabled(canPlayEffectsRef.current);
+            setSoundEnabled(next);
+            if (canPlayEffectsRef.current) void unlockSpinAudio();
+          }}
+          className="absolute right-1 top-0 z-30 inline-flex size-11 items-center justify-center rounded-full border-[3px] border-brand-ink bg-white text-brand-ink outline-none hover:bg-arcade-yellow/50 focus-visible:ring-[3px] focus-visible:ring-brand-ink sm:right-3"
+        >
+          {soundEnabled ? <Volume2 size={18} strokeWidth={2.5} aria-hidden="true" /> : <VolumeX size={18} strokeWidth={2.5} aria-hidden="true" />}
+        </button>
+
         {/* Pointer */}
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
           <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[30px] border-t-eatspin-orange drop-shadow-lg" />
@@ -852,21 +837,6 @@ export function RouletteWheel({
       </button>
       )}
 
-      <button
-        type="button"
-        onClick={() => {
-          const next = !soundEnabled;
-          canPlayEffectsRef.current = next && !prefersReducedMotion;
-          setSpinSoundEnabled(canPlayEffectsRef.current);
-          setSoundEnabled(next);
-          if (canPlayEffectsRef.current) void unlockSpinAudio();
-        }}
-        className="inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-brand-ink bg-white px-3 py-1.5 text-xs font-semibold text-eatspin-gray-1 hover:border-brand-ink hover:text-brand-orange"
-      >
-        {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-        {soundEnabled ? 'Sound on' : 'Sound off'}
-        {prefersReducedMotion && <span className="text-[10px] text-eatspin-gray-2">(reduced motion)</span>}
-      </button>
 
       {helperText && (
         <p className="text-sm text-eatspin-gray-1 text-center">{helperText}</p>

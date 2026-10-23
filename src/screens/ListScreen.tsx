@@ -67,6 +67,7 @@ export interface NearbyFavouriteRow {
 }
 
 export interface ListScreenProps {
+  tools?: ReactNode;
   /** Saved manual lists (chips). */
   lists: ManualList[];
   selectedListId: string | null;
@@ -113,6 +114,7 @@ type ListSource = 'list' | 'favourites';
  * compete for the same spot above the tab bar.
  */
 export function ListScreen({
+  tools,
   lists,
   selectedListId,
   isReadOnly,
@@ -177,6 +179,7 @@ export function ListScreen({
         )}
       >
         {roomBanner}
+        {tools}
         {wheel}
       </ScreenFrame>
     );
@@ -261,6 +264,7 @@ export function ListScreen({
       pinned={!details && !showingFavourites ? addBar : undefined}
     >
       {roomBanner}
+      {tools}
 
       <div className="-mx-4 overflow-x-auto px-4 pb-1 scrollbar-hide">
         <div className="flex w-max items-center gap-2">

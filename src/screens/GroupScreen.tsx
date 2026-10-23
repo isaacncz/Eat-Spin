@@ -1,3 +1,5 @@
+import { ConfirmationDialog } from '@/components/ConfirmationDialog';
+import { useConfirmation } from '@/hooks/useConfirmation';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Check, Copy, LogOut, Share2, UserMinus, UserPlus } from 'lucide-react';
 
@@ -49,7 +51,12 @@ interface GroupScreenProps {
   onCreateRoom: () => Promise<void>;
   onJoinRoom: (value: string) => Promise<void>;
   onLeaveRoom: () => Promise<void>;
-  onStartRoomSpin: () => Promise<void>;
+  onStartRoomSpin: (shortlist?: string[]) => Promise<void>;
+  onTransferHost?: (uid: string) => Promise<void>;
+  listNames?: string[];
+  preferences?: Record<string, Record<string, 'prefer' | 'avoid'>>;
+  onSetPreference?: (name: string, preference: 'prefer' | 'avoid' | null) => Promise<void>;
+  connected?: boolean;
   onSetParticipantCohost: (uid: string, shouldBeCohost: boolean) => Promise<void>;
   onSendReaction: (emoji: string) => Promise<void>;
   onSetGoingVote: (going: boolean) => Promise<void>;
@@ -93,7 +100,7 @@ export function GroupScreen({
   onCreateRoom,
   onJoinRoom,
   onLeaveRoom,
-  onStartRoomSpin,
+  onStartRoomSpin, onTransferHost, listNames = [], preferences = {}, onSetPreference, connected = true,
   onSetParticipantCohost,
   onSendReaction,
   onSetGoingVote,
@@ -103,12 +110,15 @@ export function GroupScreen({
   latestSpin,
   onOpenList,
 }: GroupScreenProps) {
+  const { confirm, request: confirmation, answer: answerConfirmation, restoreFocus: restoreConfirmationFocus } = useConfirmation();
   const [joinValue, setJoinValue] = useState(() => {
     if (typeof window === 'undefined') return '';
     return normalizeRoomCode(new URLSearchParams(window.location.search).get('room') ?? '');
   });
   const [hasCopied, setHasCopied] = useState(false);
   const [cohostPendingUid, setCohostPendingUid] = useState<string | null>(null);
+  const [shortlistOnly, setShortlistOnly] = useState(false);
+  const [transferPending, setTransferPending] = useState(false);
   const [votePending, setVotePending] = useState(false);
 
   const copiedTimerRef = useRef<number | null>(null);
@@ -125,6 +135,11 @@ export function GroupScreen({
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   const latestSpinId = latestSpin?.spinId ?? null;
 
+  const preferenceKey = (name: string) => Array.from(new TextEncoder().encode(name.toLowerCase())).map(byte => byte.toString(16).padStart(2, '0')).join('');
+  const activeUids = new Set(participants.map(participant => participant.uid));
+  const countPreference = (name: string, value: 'prefer' | 'avoid') => Object.entries(preferences).filter(([uid, entries]) => activeUids.has(uid) && entries[preferenceKey(name)] === value).length;
+  const nominatedNames = listNames.filter(name => countPreference(name, 'prefer') > 0);
+  const canSpinSelection = canStartRoomSpin && (!shortlistOnly || nominatedNames.length >= 2);
   const goingCount = votes.filter((vote) => vote.going).length;
   const myVote = votes.find((vote) => vote.uid === authUid);
   const reactionBurst = reactions.slice(-6);
@@ -184,18 +199,19 @@ export function GroupScreen({
   };
 
   const handleLeaveRoom = async () => {
+    if (isHost && participants.some(participant => participant.uid !== authUid) && !await confirm({ title: 'Leave without transferring host?', description: 'Transfer host first if the group should continue. You can stay and choose a new host.', accept: 'Leave room', cancel: 'Stay in room' })) return;
     setHasCopied(false);
     await onLeaveRoom();
   };
 
   const handleStartRoomSpin = async () => {
-    if (!canHostSpin) return;
+    if (!canHostSpin || !canSpinSelection || !connected) return;
     awaitingSpinRef.current = { previousSpinId: latestSpinId };
     if (awaitingTimerRef.current !== null) window.clearTimeout(awaitingTimerRef.current);
     awaitingTimerRef.current = window.setTimeout(() => {
       awaitingSpinRef.current = null;
     }, START_SPIN_WAIT_MS);
-    await onStartRoomSpin();
+    await onStartRoomSpin(shortlistOnly ? nominatedNames : undefined);
   };
 
   const handleToggleCohost = async (uid: string, shouldBeCohost: boolean) => {
@@ -321,7 +337,7 @@ export function GroupScreen({
             variant="pink"
             size="lg"
             onClick={() => void handleStartRoomSpin()}
-            disabled={!canStartRoomSpin || isBusy}
+            disabled={!canSpinSelection || isBusy || !connected}
             aria-describedby={canStartRoomSpin ? undefined : startHintId}
           >
             Start spin for everyone
@@ -346,7 +362,9 @@ export function GroupScreen({
 
   return (
     <ScreenFrame title="Group spin" subtitle="Everyone sees the same wheel" pinned={pinned}>
+      <ConfirmationDialog request={confirmation} onAnswer={answerConfirmation} onRestoreFocus={restoreConfirmationFocus} />
       {statusBanner}
+      <p role="status" className="text-sm font-semibold">{connected ? 'Connected to room' : 'Offline · reconnecting…'}</p>
 
       <section
         aria-label="Room code"
@@ -400,6 +418,12 @@ export function GroupScreen({
                   {role === 'participant' && (
                     <Badge tone={participant.ready ? 'lime' : 'white'}>{participant.ready ? 'Ready' : 'Idle'}</Badge>
                   )}
+                  {showCohostToggle && onTransferHost && <ArcadeButton className="min-h-11 w-full px-3 text-sm"
+                    disabled={transferPending || !connected} onClick={async () => {
+                      if (!await confirm({ title: 'Transfer host?', description: `Make ${participant.name} the host? They will control this room. ${cohostUids.includes(authUid ?? '') ? 'You will remain a co-host.' : 'You will become a participant.'}`, accept: 'Transfer host', cancel: 'Keep current host' })) return;
+                      setTransferPending(true);
+                      try { await onTransferHost(participant.uid); } finally { setTransferPending(false); }
+                    }}>Transfer host</ArcadeButton>}
                   {showCohostToggle && (
                     <ArcadeButton
                       className="min-h-11 w-full px-3 text-sm"
@@ -453,6 +477,25 @@ export function GroupScreen({
         </ArcadeButton>
       </section>
 
+      {onSetPreference && listNames.length > 0 && <section aria-label="Shortlist preferences" className={CARD_CLASS}>
+        <h2 className="text-base font-bold">Where would you like to go?</h2>
+        <p className="text-sm">Preferences stay for this room. Avoid is advice, not a veto. The host chooses whether to use nominations.</p>
+        <ul className="mt-2 space-y-3">{listNames.map(name => {
+          const mine = authUid ? preferences[authUid]?.[preferenceKey(name)] : undefined;
+          return <li key={name}><p className="font-semibold break-words">{name} · {countPreference(name, 'prefer')} prefer · {countPreference(name, 'avoid')} avoid</p>
+            <div className="flex flex-wrap gap-2">
+              <ArcadeButton className="min-h-11" disabled={!connected} aria-pressed={mine === 'prefer'} onClick={() => void onSetPreference(name, mine === 'prefer' ? null : 'prefer')}>Prefer {name}</ArcadeButton>
+              <ArcadeButton className="min-h-11" disabled={!connected} aria-pressed={mine === 'avoid'} onClick={() => void onSetPreference(name, mine === 'avoid' ? null : 'avoid')}>Avoid {name}</ArcadeButton>
+            </div>
+          </li>;
+        })}</ul>
+        {canHostSpin && <label className="mt-3 flex min-h-11 items-center gap-2 text-sm font-semibold">
+          <input type="checkbox" checked={shortlistOnly} onChange={event => setShortlistOnly(event.target.checked)} />
+          Spin nominated places only ({nominatedNames.length})
+        </label>}
+        {canHostSpin && shortlistOnly && nominatedNames.length < 2 && <p role="status">Nominate at least 2 places, or turn off this filter.</p>}
+      </section>}
+
       <section aria-label="Who is going" className={CARD_CLASS}>
         <div className="flex flex-wrap items-baseline justify-between gap-x-2">
           <h2 className="text-base font-bold">Who&apos;s in?</h2>
@@ -464,7 +507,7 @@ export function GroupScreen({
           <ArcadeButton
             variant={myVote?.going ? 'lime' : 'white'}
             aria-pressed={myVote?.going === true}
-            disabled={votePending}
+            disabled={votePending || !latestSpin || !connected}
             className="flex-1"
             onClick={() => void handleSetGoingVote(true)}
           >
@@ -473,7 +516,7 @@ export function GroupScreen({
           <ArcadeButton
             variant={myVote && !myVote.going ? 'yellow' : 'white'}
             aria-pressed={myVote ? !myVote.going : false}
-            disabled={votePending}
+            disabled={votePending || !latestSpin || !connected}
             className="flex-1"
             onClick={() => void handleSetGoingVote(false)}
           >

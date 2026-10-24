@@ -10,8 +10,6 @@
 # EATSPIN_PW_CONFIG=path/to/config.ts points Playwright at another config (e.g. a custom browser path).
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
-# Playwright rewrites this tracked file on every run, pass or fail; keep the working tree clean.
-trap 'git checkout -- test-results/.last-run.json 2>/dev/null || true' EXIT
 
 quick=false
 [[ "${1:-}" == "--quick" ]] && quick=true

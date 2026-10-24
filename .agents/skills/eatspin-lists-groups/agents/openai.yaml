@@ -1,0 +1,6 @@
+interface:
+  display_name: "EatSpin Lists and Groups"
+  short_description: "Preserve list storage and Group room contracts."
+  default_prompt: "Use $eatspin-lists-groups to complete this EatSpin list, sharing or room change with relevant persistence and synchronization checks."
+policy:
+  allow_implicit_invocation: true

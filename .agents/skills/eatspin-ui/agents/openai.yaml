@@ -1,0 +1,6 @@
+interface:
+  display_name: "EatSpin UI"
+  short_description: "Preview and build accessible EatSpin mobile UI."
+  default_prompt: "Use $eatspin-ui to design or implement this EatSpin interface change and validate it on mobile and desktop."
+policy:
+  allow_implicit_invocation: true

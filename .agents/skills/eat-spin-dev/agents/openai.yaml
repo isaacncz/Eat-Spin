@@ -1,0 +1,6 @@
+interface:
+  display_name: "EatSpin Development"
+  short_description: "Locate modules and route scoped EatSpin changes."
+  default_prompt: "Use $eat-spin-dev to locate the owning modules and complete this EatSpin request with appropriate validation."
+policy:
+  allow_implicit_invocation: true

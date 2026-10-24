@@ -135,3 +135,11 @@ Desktop.ini
 # Temporary folders
 tmp/
 temp/
+
+# Playwright output (CI uploads it as an artifact)
+playwright-report/
+test-results/
+
+# Claude Code personal overrides
+CLAUDE.local.md
+.claude/settings.local.json

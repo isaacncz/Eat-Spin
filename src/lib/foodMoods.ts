@@ -15,5 +15,6 @@ export const MEAL_HEADING_WORD: Record<MealTime, string> = {
   breakfast: 'breakfast',
   lunch: 'lunch',
   dinner: 'dinner',
-  none: 'eating',
+  // 21:00–05:00: late-night makan in Malaysia is supper.
+  none: 'supper',
 };

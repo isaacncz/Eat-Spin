@@ -8,7 +8,7 @@ test.describe('Smoke tests', () => {
 
   test('hero section renders with meal-time heading', async ({ page }) => {
     await page.goto('/');
-    // The heading contains dynamic meal time: "What's for breakfast/lunch/dinner/eating?"
+    // The heading contains dynamic meal time: "What's for breakfast/lunch/dinner/supper?"
     const heading = page.locator('text=/What.*for/i').first();
     await expect(heading).toBeVisible({ timeout: 10_000 });
   });

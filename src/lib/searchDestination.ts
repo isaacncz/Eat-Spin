@@ -4,6 +4,30 @@ export const DESTINATION_STORAGE_KEY = 'eatspin:search-destination:v1';
 export const DESTINATION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export const SEARCH_RADII = [1, 3, 5, 10] as const;
 export type SearchRadius = typeof SEARCH_RADII[number];
+export const DEFAULT_SEARCH_RADIUS: SearchRadius = 5;
+/** Approximate travel time for each preset (straight line × 1.4 road detour; 5 km/h walk, 30 km/h urban drive). */
+export const SEARCH_RADIUS_HINT: Record<SearchRadius, string> = {
+  1: '🚶 ~15 min',
+  3: '🚗 ~10 min',
+  5: '🚗 ~15 min',
+  10: '🚗 ~30 min',
+};
+const LEGACY_RANGE_MODE_KEY = 'eatspin:auto-range-mode';
+const LEGACY_RANGE_TO_RADIUS: Record<string, SearchRadius> = { walk: 1, drive10: 5, drive20: 10 };
+
+/** The radius a returning user gets before choosing one: their old walk/drive preset, else the default. */
+export function initialSearchRadius(saved: SearchRadius | null): SearchRadius {
+  if (saved) return saved;
+  try {
+    const legacy = localStorage.getItem(LEGACY_RANGE_MODE_KEY);
+    if (legacy && LEGACY_RANGE_TO_RADIUS[legacy]) return LEGACY_RANGE_TO_RADIUS[legacy];
+  } catch { /* storage unavailable */ }
+  return DEFAULT_SEARCH_RADIUS;
+}
+
+/** The next wider preset, or null at the widest. */
+export const nextWiderRadius = (radius: SearchRadius): SearchRadius | null =>
+  SEARCH_RADII.find((r) => r > radius) ?? null;
 export interface SearchDestination {
   placeId: string;
   label: string;

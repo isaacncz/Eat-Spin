@@ -7,14 +7,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { AUTO_RANGE_OPTIONS, type AutoRangeMode } from '@/contexts/AppContext';
 import { cuisineCategories, foodCategories } from '@/data/restaurants';
 import { trackEvent } from '@/lib/analytics';
 import {
   buildShowPlacesLabel,
   MAX_CATEGORY_SELECTION,
-  RANGE_SHORT_LABEL,
 } from '@/lib/filterSummary';
+import { SEARCH_RADII, SEARCH_RADIUS_HINT, type SearchRadius } from '@/lib/searchDestination';
 import { SERVES_FILTERS, type ServesFilterId } from '@/lib/servesFilters';
 import { cn } from '@/lib/utils';
 import type { FoodCategory, Restaurant } from '@/types';
@@ -27,9 +26,14 @@ export interface FiltersSheetProps {
   /** The button that opens the sheet. Focus returns to it when the sheet closes. */
   trigger: ReactNode;
 
-  rangeMode: AutoRangeMode;
-  radiusKm?: number;
-  onRangeModeChange: (mode: AutoRangeMode) => void;
+  radiusKm: SearchRadius;
+  onRadiusChange: (radius: SearchRadius) => void;
+  /** Name of the chosen destination; distances are measured from it. Null means the user's location. */
+  destinationLabel?: string | null;
+  openNowOnly: boolean;
+  onOpenNowChange: (value: boolean) => void;
+  /** What the pinned button does when no place passes the filters (e.g. "Widen to 10 km"). */
+  emptyAction?: { label: string; onClick: () => void };
   selectedPriceRanges: Restaurant['priceRange'][];
   onTogglePriceRange: (price: Restaurant['priceRange']) => void;
   selectedCategories: FoodCategory[];
@@ -97,9 +101,12 @@ export const FiltersSheet = memo(function FiltersSheet({
   open,
   onOpenChange,
   trigger,
-  rangeMode,
   radiusKm,
-  onRangeModeChange,
+  onRadiusChange,
+  destinationLabel,
+  openNowOnly,
+  onOpenNowChange,
+  emptyAction,
   selectedPriceRanges,
   onTogglePriceRange,
   selectedCategories,
@@ -156,6 +163,7 @@ export const FiltersSheet = memo(function FiltersSheet({
           ? `${closingSoonCount} closing soon`
           : null;
   const statusLines = [availabilityHint, dataSourceLabel].filter(Boolean) as string[];
+  const showEmptyAction = placeCount === 0 && !isLoading && emptyAction != null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -183,7 +191,7 @@ export const FiltersSheet = memo(function FiltersSheet({
           </button>
         </div>
         <DialogDescription className="sr-only">
-          Choose how far to look, price, food type and what a place serves. The number on the
+          Choose how far to look, whether places must be open now, price, food type and what a place serves. The number on the
           button at the bottom is how many places are on the wheel.
         </DialogDescription>
 
@@ -197,16 +205,16 @@ export const FiltersSheet = memo(function FiltersSheet({
             </div>
           )}
 
-          {radiusKm != null ? <p className="text-sm">Searching within {radiusKm} km. Change the radius above the wheel.</p> : <Section title="How far?">
-            <div role="group" aria-label="How far" className="grid grid-cols-3 gap-2">
-              {AUTO_RANGE_OPTIONS.map((option) => {
-                const pressed = rangeMode === option.id;
+          <Section title="How far?" hint={destinationLabel ? `from ${destinationLabel}` : 'from you'}>
+            <div role="group" aria-label="How far" className="grid grid-cols-4 gap-2">
+              {SEARCH_RADII.map((radius) => {
+                const pressed = radiusKm === radius;
                 return (
                   <button
-                    key={option.id}
+                    key={radius}
                     type="button"
                     aria-pressed={pressed}
-                    onClick={() => onRangeModeChange(option.id)}
+                    onClick={() => onRadiusChange(radius)}
                     className={cn(
                       'flex min-h-14 flex-col items-center justify-center rounded-[14px] border-[3px] border-brand-ink px-1 font-heading text-brand-ink',
                       'outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-brand-ink focus-visible:ring-offset-2 motion-reduce:transition-none',
@@ -215,15 +223,26 @@ export const FiltersSheet = memo(function FiltersSheet({
                         : 'bg-white hover:bg-arcade-yellow/50',
                     )}
                   >
-                    <span className={cn('text-[15px]', pressed ? 'font-bold' : 'font-semibold')}>
-                      {RANGE_SHORT_LABEL[option.id]}
-                    </span>
-                    <span className="text-xs font-medium">{option.helper}</span>
+                    <span className={cn('text-[15px]', pressed ? 'font-bold' : 'font-semibold')}>{radius} km</span>
+                    <span className="whitespace-nowrap text-xs font-medium" aria-hidden="true">{SEARCH_RADIUS_HINT[radius]}</span>
                   </button>
                 );
               })}
             </div>
-          </Section>}
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={openNowOnly}
+              onClick={() => onOpenNowChange(!openNowOnly)}
+              className="mt-2 flex min-h-11 w-full items-center gap-2 rounded-lg text-left font-heading text-[15px] font-semibold text-brand-ink outline-none focus-visible:ring-[3px] focus-visible:ring-brand-ink"
+            >
+              <span aria-hidden="true" className={cn('flex size-6 shrink-0 items-center justify-center rounded-md border-[3px] border-brand-ink text-sm', openNowOnly ? 'bg-arcade-cyan' : 'bg-white')}>
+                {openNowOnly ? '✓' : ''}
+              </span>
+              Open now only
+            </button>
+            {!openNowOnly && <p className="text-xs text-eatspin-gray-1">Includes closed places. Check opening hours before you go.</p>}
+          </Section>
 
           <Section title="Price">
             <div role="group" aria-label="Price" className="grid grid-cols-4 gap-2">
@@ -289,14 +308,14 @@ export const FiltersSheet = memo(function FiltersSheet({
         <div className="shrink-0 border-t-[3px] border-brand-ink px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
           <button
             type="button"
-            onClick={() => onOpenChange(false)}
+            onClick={showEmptyAction ? emptyAction.onClick : () => onOpenChange(false)}
             className={cn(
               'h-14 w-full rounded-[18px] border-4 border-brand-ink bg-arcade-pink font-heading text-xl font-bold text-brand-ink shadow-[0_5px_0_#1E1B4B]',
               'outline-none transition-transform focus-visible:ring-[3px] focus-visible:ring-brand-ink focus-visible:ring-offset-2',
               'active:translate-y-[3px] active:shadow-[0_2px_0_#1E1B4B] motion-reduce:transition-none',
             )}
           >
-            {buildShowPlacesLabel(placeCount, isLoading)}
+            {showEmptyAction ? emptyAction.label : buildShowPlacesLabel(placeCount, isLoading)}
           </button>
         </div>
       </DialogContent>

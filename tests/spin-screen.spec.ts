@@ -42,7 +42,7 @@ test.describe('Spin screen', () => {
       'Healthy',
       'Surprise Me!',
     ]);
-    await expect(filtersButton(page)).toHaveText(/^Filters · Drive 10 · (\d+ places?|searching…)$/);
+    await expect(filtersButton(page)).toHaveText(/^Filters · 5 km · (\d+ places?|searching…)$/);
     await expect(page.getByRole('progressbar', { name: /experience points/i })).toBeVisible();
   });
 
@@ -115,7 +115,8 @@ test.describe('Filters sheet', () => {
     const sheet = await openFiltersSheet(page);
 
     await expect(sheet.getByRole('heading', { name: 'Filters' })).toBeVisible();
-    await expect(sheet.getByRole('group', { name: /how far/i }).getByRole('button')).toHaveCount(3);
+    await expect(sheet.getByRole('group', { name: /how far/i }).getByRole('button')).toHaveText([/^1 km/, /^3 km/, /^5 km/, /^10 km/]);
+    await expect(sheet.getByRole('checkbox', { name: 'Open now only' })).toBeChecked();
     await expect(sheet.getByRole('group', { name: 'Price' }).getByRole('button')).toHaveText(['$', '$$', '$$$', '$$$$']);
     await expect(sheet.getByRole('group', { name: 'Food type' }).getByRole('button').first()).toBeVisible();
     await expect(sheet.getByRole('group', { name: /filter by what.*served/i }).getByRole('button')).toHaveCount(7);
@@ -162,17 +163,17 @@ test.describe('Filters sheet', () => {
     await sheetCta(sheet).click();
     await expect(filtersSheet(page)).toHaveCount(0);
     // One filter is on, and the button says so (a badge, and in its accessible name).
-    await expect(filtersButton(page)).toHaveAccessibleName(/^Filters · Drive 10 · \d+ places?, 1 filter on$/);
+    await expect(filtersButton(page)).toHaveAccessibleName(/^Filters · 5 km · \d+ places?, 1 filter on$/);
     expect(parsePlaceCount(await filtersButton(page).getAttribute('aria-label'))).toBe(shown);
   });
 
   test('changing the range updates the Filters button summary', async ({ page }) => {
     const sheet = await openFiltersSheet(page);
-    await sheet.getByRole('button', { name: /^walk/i }).click();
-    await expect(sheet.getByRole('button', { name: /^walk/i })).toHaveAttribute('aria-pressed', 'true');
+    await sheet.getByRole('button', { name: /^1 km/ }).click();
+    await expect(sheet.getByRole('button', { name: /^1 km/ })).toHaveAttribute('aria-pressed', 'true');
     await settledSheetCount(page);
     await sheetCta(sheet).click();
-    await expect(filtersButton(page)).toHaveText(/^Filters · Walk · /);
+    await expect(filtersButton(page)).toHaveText(/^Filters · 1 km · /);
   });
 
   test('food type is capped at three', async ({ page }) => {
@@ -192,7 +193,7 @@ test.describe('Filters sheet', () => {
     const sheet = await openFiltersSheet(page);
     const price = sheet.getByRole('group', { name: 'Price' }).getByRole('button', { name: '$$$', exact: true });
     const coffee = sheet.getByRole('group', { name: /filter by what.*served/i }).getByRole('button', { name: /coffee/i });
-    const walk = sheet.getByRole('button', { name: /^walk/i });
+    const walk = sheet.getByRole('button', { name: /^1 km/ });
 
     await price.click();
     await coffee.click();
@@ -202,9 +203,9 @@ test.describe('Filters sheet', () => {
     await sheet.getByRole('button', { name: 'Reset' }).click();
     await expect(price).toHaveAttribute('aria-pressed', 'false');
     await expect(coffee).toHaveAttribute('aria-pressed', 'false');
-    await expect(sheet.getByRole('button', { name: /^drive 10/i })).toHaveAttribute('aria-pressed', 'true');
+    await expect(sheet.getByRole('button', { name: /^5 km/ })).toHaveAttribute('aria-pressed', 'true');
     await sheetCta(sheet).click();
-    await expect(filtersButton(page)).toHaveAccessibleName(/^Filters · Drive 10 · \d+ places?$/);
+    await expect(filtersButton(page)).toHaveAccessibleName(/^Filters · 5 km · \d+ places?$/);
   });
 });
 

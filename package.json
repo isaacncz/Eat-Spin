@@ -9,9 +9,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:unit": "vitest run",
-    "test:cache":"node scripts/run-restaurant-utils-cache-test.mjs",
+    "test:cache": "node scripts/run-restaurant-utils-cache-test.mjs",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "ci:local": "bash scripts/ci-local.sh",
+    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

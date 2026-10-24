@@ -18,7 +18,7 @@ export const setLunchtimeClock = async (page: Page) => {
   });
 };
 
-/** The one-line "Filters · Drive 10 · 24 places" button (also matches while the sheet hides it). */
+/** The one-line "Filters · 5 km · 24 places" button (also matches while the sheet hides it). */
 export const filtersButton = (page: Page): Locator =>
   page.getByRole('button', { name: /^filters/i, includeHidden: true }).first();
 
@@ -51,7 +51,7 @@ export const openFiltersSheet = async (page: Page): Promise<Locator> => {
 /** The pinned button at the bottom of the sheet ("Show 9 places"). */
 export const sheetCta = (sheet: Locator): Locator => sheet.locator('button').last();
 
-/** Reads N from "Show N places" or "Filters · Drive 10 · N places"; 0 for "No places match". */
+/** Reads N from "Show N places" or "Filters · 5 km · N places"; 0 for "No places match". */
 export const parsePlaceCount = (text: string | null): number | null => {
   const match = /(\d+) places?/i.exec(text ?? '');
   if (match) return Number(match[1]);

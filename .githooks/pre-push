@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Runs the same blocking checks as CI before every push. Enabled by `npm install`
+# (the "prepare" script sets core.hooksPath to .githooks).
+#
+# Skip once:     git push --no-verify
+# Faster check:  EATSPIN_PREPUSH=quick git push   (typecheck + unit tests only)
+set -euo pipefail
+
+if [[ "${EATSPIN_PREPUSH:-full}" == "off" ]]; then
+  exit 0
+fi
+
+if [[ "${EATSPIN_PREPUSH:-full}" == "quick" ]]; then
+  exec bash scripts/ci-local.sh --quick
+fi
+
+exec bash scripts/ci-local.sh

@@ -38,6 +38,7 @@ export interface AnalyticsEventMap {
   spin_again_requested: { restaurant_name: string; round_size: number; respin_count: number };
   shuffle_wheel: { restaurant_count: number };
   range_mode_changed: { mode: string };
+  open_now_toggled: { open_now_only: boolean };
 
   // Sharing
   share_result_open: { restaurant_name: string; tab: string };

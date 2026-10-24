@@ -273,7 +273,7 @@ export function GroupScreen({
   };
 
   // Without Firebase config the auth error repeats the config error, so show the text once.
-  const configMessage = isFirebaseConfigured ? null : firebaseConfigError ?? 'Firebase configuration is missing.';
+  const configMessage = isFirebaseConfigured ? null : firebaseConfigError ?? "Group spin isn't available right now. Your own list and nearby spins still work.";
   const authMessage = authError && authError !== configMessage ? authError : null;
 
   const statusBanner = (configMessage || authMessage || roomError) && (

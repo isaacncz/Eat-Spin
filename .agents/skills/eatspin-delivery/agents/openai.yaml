@@ -1,0 +1,6 @@
+interface:
+  display_name: "EatSpin Delivery"
+  short_description: "Validate and deliver one reviewable EatSpin batch."
+  default_prompt: "Use $eatspin-delivery to validate and deliver this EatSpin change using the authorized commit, PR or main workflow."
+policy:
+  allow_implicit_invocation: true

@@ -71,5 +71,6 @@ Windows Task Scheduler:
 
 ### Notes
 
-- Expired links should still be blocked by Firebase RTDB rules using `now < data.child('meta/expiresAt').val()`.
-- This script is for database cleanup; rules are what enforce room expiry immediately.
+- This script only cleans up expired Group rooms. It does not delete expired `sharedLists` snapshots.
+- A room TTL and client expiry handling do not by themselves enforce server-side access expiry. The current supplied room rules do not gate every read/write on `meta/expiresAt`; review expiry authorization separately before relying on it.
+- Shared-list read expiry is a separate rule. Access expiry does not automatically remove stored records or recipients' saved copies.

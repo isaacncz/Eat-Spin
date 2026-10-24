@@ -1,6 +1,6 @@
 # Destination search (#122)
 
-The Spin screen can search around an area, mall, landmark, or address without GPS permission. Choosing a destination defaults to a 3 km radius; explicit presets are 1, 3, 5, and 10 km. Current-location mode retains the existing travel presets until an explicit radius is chosen. “Open now only” defaults on, can be disabled for planning, and does not predict arrival-time availability.
+The Spin screen can search around an area, mall, landmark, or address without GPS permission. Current-location and selected-destination searches share 1, 3, 5 and 10 km radius presets. A new user defaults to 5 km; saved selections are retained and legacy walk/drive preferences migrate to 1/5/10 km. Choosing a destination retains the current radius. Travel hints are approximate rather than routed travel times. “Open now only” defaults on, can be disabled for planning, and does not predict arrival-time availability.
 
 Device GPS remains separate for location-based favourites and Discover. Destination changes reset the round/result and cancel obsolete requests. Nearby cache selection retains center, radius, cuisine, and availability dimensions. Text Search uses the circle's bounding rectangle where possible, then an exact distance filter; polar/date-line circles fall back to circular bias and the same exact filter.
 

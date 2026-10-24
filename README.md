@@ -1,160 +1,143 @@
-# 🍽️ Eat-Spin
+# EatSpin
 
-> A fun and interactive food roulette app to help you decide what and where to eat!
+A food wheel for choosing where to eat, using nearby places, your own lists, or a shared Group room.
 
----
+[Open EatSpin](https://eat-spin.netlify.app) · [Agent workflow](docs/agent-workflow.md) · [Project map](.agents/skills/eat-spin-dev/references/project-map.md)
 
-## 🚀 Overview
+## What works today
 
-Eat-Spin is a modern web app built with **React**, **TypeScript**, and **Vite**. It helps users break the cycle of indecision by spinning a roulette wheel to pick a restaurant or food category. Perfect for groups, families, or anyone who can't decide what to eat!
+- **Spin:** find places around your location or a chosen area, search for food, and filter the options before spinning. Radius presets are 1, 3, 5 and 10 km; the default is 5 km. Returning users retain their saved selection or a migrated legacy range.
+- **My list:** create multiple name-based lists, find them with the searchable picker, and spin the selected list. Favourites have a separate picker entry. Duplicate lists, export selected lists, or restore independent copies from a backup.
+- **Share a list:** publish a fixed copy of one selected list. Friends can save independent personal copies. Links expire after seven days; editing your personal list does not change an existing snapshot.
+- **Group:** create or join a room with a code/link. Hosts and co-hosts manage the shared places and start spins; connected participants receive the same winner. Personal lists stay separate until someone explicitly loads a list into the room.
+- **Me and results:** local spin history, progress, saved places, result sharing, and the About guide. Recent Group results animate on replay; older results open directly.
+- **Mobile UI:** bottom navigation, sheets/dialogs, a Pizza Pick logo, optional Arcade click sounds, and installation prompts on supported browsers.
 
----
+There is no implemented paid subscription/payment service. Legacy premium UI is not a supported billing feature.
 
-## ✨ Features
+## Run locally
 
-- 🎡 Roulette wheel for random food/restaurant selection
-- 📍 Location-based suggestions (with permission)
-- 🍽️ Food category filtering
-- ⏰ Meal time indicator
-- 🔄 Spin limit warning
-- 💎 Subscription modal for premium features
-- 📱 Mobile-friendly UI
-- ⚡ Fast, modern, and responsive
+Use Node.js 22.12+ on the 22.x line, or a supported newer LTS such as Node.js 24, and npm. CI currently uses Node.js 22; see the [workflow](.github/workflows/ci.yml).
 
----
-
-## 🛠️ Tech Stack
-
-- [React](https://react.dev/)
-- [TypeScript](https://www.typescriptlang.org/)
-- [Vite](https://vitejs.dev/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [ESLint](https://eslint.org/)
-
----
-
-## 📦 Getting Started
-
-1. **Clone the repo:**
-   ```sh
-   git clone https://github.com/isaacncz/Eat-Spin.git
-   cd Eat-Spin/app
-   ```
-
-2. **Install dependencies:**
-   ```sh
-   npm install
-   ```
-
-3. **Start the development server:**
-   ```sh
-   npm run dev
-   ```
-
-4. **Open in browser:**
-   Visit [http://localhost:5173](http://localhost:5173)
-
----
-
-## 📁 Project Structure
-
-```
-app/
-src/
-  components/ # UI components
-  data/       # Restaurant/food data
-  hooks/      # Custom React hooks
-  lib/        # Utility functions
-  sections/   # Page sections
-  types/      # TypeScript types
+```sh
+git clone https://github.com/isaacncz/Eat-Spin.git
+cd Eat-Spin
+npm ci
+npm run dev
 ```
 
----
+Open <http://localhost:5173>. Run commands from the repository root; there is no `app/` subdirectory.
 
-## 🤝 Contributing
+Personal lists and the bundled fallback UI can be used without external API credentials. The fallback dataset has limited geographic coverage; it is not a substitute for live discovery everywhere.
 
-Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
+`npm ci` also runs the existing `prepare` script, which sets this clone's `core.hooksPath` to `.githooks`. The [pre-push hook](.githooks/pre-push) runs local CI before a push.
 
----
+## Configure external features
 
-## 📜 License
+For live services, copy the example and replace or remove unused placeholder values:
 
-MIT
+```sh
+cp .env.example .env.local
+```
 
----
+Restart Vite after editing environment variables. Set the same required values in your hosting provider for production builds. Vite exposes `VITE_*` values to the browser: never put service-account credentials or other server secrets in them, and never commit populated environment files.
 
-## 🙏 Credits
+### Google Places
 
-Made with ❤️ by [isaacncz](https://github.com/isaacncz)
+Enable **Places API (New)** in a billing-enabled Google Cloud project. Configure `VITE_GOOGLE_MAPS_API_KEY` with restrictions appropriate to the APIs and domains used by your deployment. The current discovery client uses Places REST endpoints for Nearby Search, Text Search, Autocomplete and Details.
 
----
+| Variable | Purpose / default |
+| --- | --- |
+| `VITE_GOOGLE_MAPS_API_KEY` | Required for live Places requests |
+| `VITE_GOOGLE_PLACES_REGION` | Region context; `MY` |
+| `VITE_GOOGLE_PLACES_LANGUAGE` | Response language; `en` |
+| `VITE_NEARBY_CACHE_TTL_DAYS` | Nearby snapshot TTL; `7` |
+| `VITE_NEARBY_CACHE_MIN_RESULTS` | Results needed to reuse a matching cache; `12` |
+| `VITE_NEARBY_CACHE_MOVEMENT_THRESHOLD_KM` | Maximum movement from cached center; `0.1` |
+| `VITE_NEARBY_CACHE_AREA_KM` | Legacy fallback for the movement threshold |
+| `VITE_PLACES_MONTHLY_CAP` | Request guard per usage kind/month; `1000` |
+| `VITE_PLACES_BLOCK_AT_PERCENT` | Guard threshold percentage; `90` |
 
-## Firebase Setup
+Nearby cache matching includes the search center, radius, categories and availability selection. Matching cached results can avoid another Nearby request. Candidate ranking uses a quality score that combines rating and review volume, followed by distance; it is not a guarantee of restaurant quality.
 
-Firebase is used for the realtime/social features in this repo:
-- Group Spin rooms
-- Group reactions and going votes
-- 7-day challenges
-- Discover feed
+The budget guard tracks `nearby`, `text`, `autocomplete` and `details` requests, shared through Firebase when configured and otherwise local to the browser. It is a request counter, not a dollar budget, billing estimate or guarantee of free usage. Photo media requests are separate. Use Google Cloud quotas and billing monitoring as appropriate.
 
-1. Copy `.env.example` to `.env` and fill:
-   - `VITE_FIREBASE_API_KEY`
-   - `VITE_FIREBASE_AUTH_DOMAIN`
-   - `VITE_FIREBASE_DATABASE_URL`
-   - `VITE_FIREBASE_PROJECT_ID`
-   - `VITE_FIREBASE_APP_ID`
-2. In Firebase Console, create or reuse a project, then:
-   - Enable `Authentication > Sign-in method > Anonymous`
-   - Create a Realtime Database instance
-3. In `Authentication > Settings > Authorized domains`, add every domain you use to open the app:
-   - `localhost`
-   - `127.0.0.1`
-   - your production domain
-   - each Netlify preview domain you actually test, because preview URLs use unique subdomains
-4. In `Realtime Database > Rules`, paste `docs/firebase-rtdb-rules.json`.
-5. Deploy the same Firebase env vars to your hosting provider.
+See [destination search](docs/destination-search.md) for persistence/session details and [photo usage](docs/photo-usage.md) for loading behavior. Check current Google documentation before changing API fields, storage policy or billing assumptions.
 
-Realtime Database paths used by the app:
-- `rooms/*` for group spin, reactions, and votes
-- `challenges/*` for 7-day challenge mode
-- `discover/*` for the nearby activity feed
+### Firebase
 
-Notes:
-- If Anonymous Auth is not enabled, group/challenge flows will fail during Firebase sign-in.
-- If the current domain is not in Authorized domains, Firebase will warn that popup/redirect OAuth flows are not allowed on that domain.
-- The Discover feed also needs Firebase-safe path keys. If you see an invalid path error containing `discover/<lat>_<lng>/events`, that is a code bug rather than a Firebase console setup issue.
+Cloud sharing and realtime/social features require Firebase Realtime Database and Anonymous Authentication. Configure:
 
-## Google Nearby Restaurants Setup
+```text
+VITE_FIREBASE_API_KEY
+VITE_FIREBASE_AUTH_DOMAIN
+VITE_FIREBASE_DATABASE_URL
+VITE_FIREBASE_PROJECT_ID
+VITE_FIREBASE_APP_ID
+```
 
-Auto mode now uses Google Places nearby search with local-first IndexedDB caching.
+Enable Anonymous sign-in, create a Realtime Database, and configure applicable authorized domains for your authentication setup. Review [the supplied rules](docs/firebase-rtdb-rules.json) against your project. Publishing rules is a separate deployment action; committing this file does not publish it.
 
-1. In Google Cloud Console, enable:
-   - Maps JavaScript API
-   - Places API
-2. Create an API key and restrict it:
-   - Application restrictions: HTTP referrers (your local/dev/prod domains)
-   - API restrictions: Maps JavaScript API and Places API
-3. Add env values in `.env` and hosting settings:
-   - `VITE_GOOGLE_MAPS_API_KEY`
-   - `VITE_GOOGLE_PLACES_REGION` (default `MY`)
-   - `VITE_GOOGLE_PLACES_LANGUAGE` (default `en`)
-   - `VITE_NEARBY_CACHE_TTL_DAYS` (default `7`)
-   - `VITE_NEARBY_CACHE_MIN_RESULTS` (default `12`)
-   - `VITE_NEARBY_CACHE_MOVEMENT_THRESHOLD_KM` (default `0.1`, refresh after moving beyond ~100m)
-   - `VITE_NEARBY_CACHE_AREA_KM` (legacy fallback; same behavior if movement threshold is unset)
+| Database path | Used for |
+| --- | --- |
+| `rooms/*` | Group lists, presence, roles, spins, preferences, reactions and attendance |
+| `sharedLists/*` | Immutable personal-list snapshots |
+| `usage/places/*` | Shared Places request counters |
+| `challenges/*` | Seven-day challenges |
+| `discover/*` | Nearby activity events |
 
-Caching behavior:
-- Cache lookup uses geohash precision 6 and checks 8 neighboring cells.
-- Cache is accepted only when user is within 0.1 km (~100m) of cached center and record is not expired.
-- If cache has at least 12 restaurants, no Google call is made.
-- If cache is missing, expired, or below 12 restaurants, app refreshes from Google and stores ranked nearby results (up to API limit) by rating, then review count, then distance.
+Live Firebase configuration and installed rules must be checked independently; local tests do not prove what is deployed. The emulator job uses an isolated demo project, not production data.
 
-Auto mode range presets:
-- Walking distance: ~1.2 km
-- 10 min drive: ~6 km
-- 20 min drive: ~12 km
-- Default selection is `10 min drive` and the last selected option is saved in localStorage.
+### Analytics
 
-### Destination search
+`VITE_GA_MEASUREMENT_ID` enables optional Google Analytics. Omit it to leave that integration unconfigured. Do not describe the application as having no tracking when this integration is enabled.
 
-Search around a selected area, mall, landmark, or address, then choose a 1/3/5/10 km radius. See [destination search setup and API billing/persistence notes](docs/destination-search.md), including the Firebase usage-rule update required before release.
+## Storage and sharing boundaries
+
+Personal lists are stored in this browser profile. They do not automatically sync between devices. Export a backup for a portable copy; restore adds independently identified lists without replacing the existing collection. Backups are limited to 2 MB and 100 lists per file.
+
+Shared links contain a fixed snapshot of the selected list's name, meal time and place names, rather than personal history, ratings or photos. Recipients' saved copies remain after a link expires or is revoked. Owners can revoke a generated link while its share dialog is open; there is currently no saved-link management screen.
+
+Expiry blocks access to a shared snapshot under the supplied rules. It does **not** automatically delete the stored record. Group offline edits are an in-memory pending queue and do not survive reload. Local data can also be lost when browser storage is cleared or unavailable.
+
+Details: [list sharing](docs/list-sharing.md), [list/Group behavior](docs/list-group-rollout.md), and [administrative room cleanup](scripts/README.md). The room-cleanup script does not clean up shared-list snapshots.
+
+## Validate changes
+
+| Command | What it checks |
+| --- | --- |
+| `npm run build` | TypeScript project build and production assets |
+| `npm run lint` | ESLint; existing legacy failures remain advisory in CI |
+| `npm run test:unit` | Pure-function/unit regressions |
+| `npm run test:e2e -- tests/critical-` | Critical browser regressions on Chromium and mobile |
+| `npm run ci:local` | Typecheck, unit tests, and required smoke/result/Group-Me/critical browser flows |
+| `npm run ci:local -- --quick` | Typecheck and unit tests only |
+
+Install the browser once with `npx playwright install chromium`. The full local CI command uses empty service keys and CI browser settings. It does not run the Firebase emulator job. Shared-list/rules/room-sync changes also need the isolated emulator checks in the [CI workflow](.github/workflows/ci.yml), using Java 21 and the test tools described there. Record emulator-only skips rather than calling them passes.
+
+For documentation-only changes, validate links, referenced paths, skill metadata and the diff. App tests are needed when app behavior or its build/test configuration changes. The existing push hook may still run its configured full checks; do not silently disable it. See [validation guidance](.agents/skills/eat-spin-dev/references/validation-checklists.md).
+
+## Work with an AI agent
+
+Start Codex inside this repository. [AGENTS.md](AGENTS.md) gives the shared defaults, and repo skills live in [`.agents/skills`](.agents/skills). Relevant skills can be selected from a normal request, or named explicitly:
+
+```text
+Use $eatspin-ui to preview a clearer My list empty state.
+Use $eatspin-lists-groups to fix this room synchronization bug.
+Use $eatspin-delivery to validate this commit and create a PR against main.
+```
+
+Default delivery is a local commit. An authorized push uses a feature branch and a PR against `main` unless you explicitly request direct main delivery. Batch implementation before pushing to avoid repeated Netlify previews. GitHub/Netlify may still build a docs-only push unless their hosting settings exclude it.
+
+Skills guide work; Git hooks run checks. Neither restarts a stopped agent. [The agent workflow](docs/agent-workflow.md) documents checkpoints, routine failure handling and the external harness needed for automatic resume. It does not install a background runner or cron job.
+
+## Project and asset notes
+
+React 19, TypeScript, Vite 7, Tailwind, Radix UI, Firebase and Playwright power the app. Domain ownership is documented in the [project map](.agents/skills/eat-spin-dev/references/project-map.md).
+
+- [Logo source and icon regeneration](assets/brand/README.md)
+- [Approved sound source and regeneration](assets/audio/README.md)
+- [Detailed Group/list rollout](docs/list-group-rollout.md)
+- [Product roadmap](docs/eat-spin-product-roadmap.md) — planned work is not a claim that a feature has shipped.
+
+A `LICENSE` file is not currently checked in. This README does not select or change the project's licensing terms.

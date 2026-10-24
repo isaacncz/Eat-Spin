@@ -1,3 +1,4 @@
+import { chooseSavedList } from './list-picker-helpers';
 import { test, expect, type Page } from '@playwright/test';
 
 const mainTab = (page: Page, name: string) => page.getByRole('navigation', { name: 'Main' })
@@ -48,7 +49,7 @@ test('the room owns editing and the shared reveal while personal lists stay priv
   await mainTab(page, 'My list').click();
   await expect(page.getByRole('button', { name: 'Remove Private cafe', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Remove Room cafe', exact: true })).toHaveCount(0);
-  await page.getByRole('option', { name: 'Personal dinner 2', exact: true }).click();
+  await chooseSavedList(page, 'Personal dinner');
   await page.getByLabel('Add a place', { exact: true }).fill('Only mine');
   await page.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Remove Only mine', exact: true })).toBeVisible();

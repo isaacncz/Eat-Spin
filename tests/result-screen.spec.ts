@@ -147,7 +147,8 @@ test.describe('Result screen', () => {
     await dialog.getByRole('button', { name: 'Spin again' }).click();
 
     await expect(resultDialog(page)).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /^spinning…$/i })).toBeDisabled();
+    await expect(page.getByRole('dialog', { name: 'Let fate decide.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^spinning…$/i, includeHidden: true })).toBeDisabled();
     await expect(resultDialog(page)).toBeVisible({ timeout: 25_000 });
     // A new result starts unclaimed.
     await expect(claimButton(page)).toBeVisible();

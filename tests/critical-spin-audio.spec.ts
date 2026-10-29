@@ -60,6 +60,7 @@ test('muting during a spin cancels audio and suppresses its win chime', async ({
 test('leaving during a spin cancels playback and prevents a delayed win chime', async ({ page }) => {
   await page.getByRole('button', { name: 'Spin the Wheel!', exact: false }).click();
   await expect.poll(async () => (await events(page)).filter(event => event.type === 'start').length).toBeGreaterThan(2);
+  await page.getByRole('button', { name: 'Back to app', exact: true }).click();
   await page.getByRole('button', { name: 'Leave wheel', exact: true }).click();
   await expect(page.getByText('Wheel closed', { exact: true })).toBeVisible();
   const startsAtExit = (await events(page)).filter(event => event.type === 'start').length;

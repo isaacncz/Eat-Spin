@@ -100,7 +100,8 @@ test.describe('Spin screen', () => {
     );
 
     await spin.click();
-    await expect(page.getByRole('button', { name: /^spinning…$/i })).toBeDisabled();
+    await expect(page.getByRole('dialog', { name: 'Let fate decide.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^spinning…$/i, includeHidden: true })).toBeDisabled();
     await expect(page.locator('#spin-result-card')).toBeVisible({ timeout: 20_000 });
   });
 });

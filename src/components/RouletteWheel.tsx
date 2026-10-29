@@ -9,6 +9,7 @@ import { getRarity, type Rarity } from '@/lib/rarity';
 import type { LetsGoReward } from '@/lib/letsGoReward';
 import { estimateTravelTime } from '@/lib/travelTime';
 import { fitWheelLabel } from '@/lib/wheelLabel';
+import { SpinSpotlight } from '@/components/SpinSpotlight';
 
 
 /** What a parent can call on the wheel. Lets a screen own the spin button. */
@@ -419,6 +420,36 @@ export function RouletteWheel({
     gsap.killTweensOf(wheelRef.current);
     stopSpinAudio();
 
+    const revealResult = () => {
+      stopSpinAudio();
+      setIsSpinning(false);
+      setSpinResult(result);
+      const lastVisitedAt = getLastVisitedAtRef.current?.(result);
+      setResultRarity(getLastVisitedAtRef.current ? getRarity(lastVisitedAt) : null);
+      setResultVisit(getLastVisitedAtRef.current ? { lastVisitedAt, visitCount: getVisitCountRef.current?.(result) } : null);
+      setResultOpen(resultPresentation === 'dialog');
+      setWinnerSliceIndex(selectedIndex);
+      setIsWinnerSliceHighlighted(true);
+      winnerPulseTimeoutRef.current = window.setTimeout(() => {
+        setIsWinnerSliceHighlighted(false);
+      }, WINNER_PULSE_DURATION_MS);
+      if (canPlayEffectsRef.current && !document.hidden) {
+        playSpinWin();
+        triggerSpinHaptic();
+      }
+      onSpinComplete(result);
+      onResultRevealed?.(result, externalSpinId);
+    };
+
+    // Preserve the outcome without spatial motion or a forced wait.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      gsap.set(wheelRef.current, { rotation: targetRotation });
+      currentRotationRef.current = targetRotation;
+      syncWheelRotationVar(targetRotation);
+      revealResult();
+      return;
+    }
+
     const timeline = gsap.timeline();
     timeline.to(wheelRef.current, {
       rotation: currentRotationRef.current - ANTICIPATION_DEG,
@@ -436,26 +467,7 @@ export function RouletteWheel({
       duration: SPIN_DURATION_S,
       ease: 'power4.out',
       onUpdate: updateSpinFrame,
-      onComplete: () => {
-        stopSpinAudio();
-        setIsSpinning(false);
-        setSpinResult(result);
-        const lastVisitedAt = getLastVisitedAtRef.current?.(result);
-        setResultRarity(getLastVisitedAtRef.current ? getRarity(lastVisitedAt) : null);
-        setResultVisit(getLastVisitedAtRef.current ? { lastVisitedAt, visitCount: getVisitCountRef.current?.(result) } : null);
-        setResultOpen(resultPresentation === 'dialog');
-        setWinnerSliceIndex(selectedIndex);
-        setIsWinnerSliceHighlighted(true);
-        winnerPulseTimeoutRef.current = window.setTimeout(() => {
-          setIsWinnerSliceHighlighted(false);
-        }, WINNER_PULSE_DURATION_MS);
-        if (canPlayEffectsRef.current && !document.hidden) {
-          playSpinWin();
-          triggerSpinHaptic();
-        }
-        onSpinComplete(result);
-        onResultRevealed?.(result, externalSpinId);
-      },
+      onComplete: revealResult,
     });
   }, [onSpinComplete, onResultRevealed, recenterWheel, restaurants, resultPresentation, setIsSpinning, syncWheelRotationVar]);
 
@@ -678,6 +690,7 @@ export function RouletteWheel({
   return (
     <div className="flex flex-col items-center gap-6 py-4 sm:py-5">
       {/* Roulette Wheel */}
+      <SpinSpotlight active={isSpinning}>
       <div ref={wheelScrollRef} className="relative mx-auto w-full max-w-[32.5rem] px-1 sm:px-3 overflow-hidden">
         {/* Sound: a corner icon so it does not take a row between the wheel and the Spin button. */}
         <button
@@ -704,6 +717,7 @@ export function RouletteWheel({
         {/* Wheel Container */}
         <div
           ref={wheelContainerRef}
+          data-wheel-disc=""
           className="relative mx-auto w-full aspect-square"
           style={{ maxWidth: wheelMaxSize }}
         >
@@ -799,6 +813,7 @@ export function RouletteWheel({
           <div className="absolute inset-0 rounded-full border-4 border-brand-ink pointer-events-none" />
         </div>
       </div>
+      </SpinSpotlight>
 
       {/* After Back, the pick stays one tap away. */}
       {resultPresentation === 'dialog' && spinResult && !resultOpen && (

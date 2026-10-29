@@ -10,6 +10,7 @@ import type { LetsGoReward } from '@/lib/letsGoReward';
 import { estimateTravelTime } from '@/lib/travelTime';
 import { fitWheelLabel } from '@/lib/wheelLabel';
 import { SpinSpotlight } from '@/components/SpinSpotlight';
+import { BrandMark } from '@/components/BrandMark';
 
 
 /** What a parent can call on the wheel. Lets a screen own the spin button. */
@@ -710,7 +711,7 @@ export function RouletteWheel({
         </button>
 
         {/* Pointer */}
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
+        <div data-wheel-pointer="" className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
           <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[30px] border-t-eatspin-orange drop-shadow-lg" />
         </div>
 
@@ -786,6 +787,7 @@ export function RouletteWheel({
                   </div>
                   {distanceLabel && (
                     <span
+                      data-wheel-distance=""
                       className="mt-0.5 text-[10px] sm:text-[11px] font-semibold whitespace-nowrap"
                       style={{
                         color: '#1E1B4B',
@@ -800,8 +802,9 @@ export function RouletteWheel({
             })}
 
             {/* Center Circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center z-20 border-4 border-brand-ink shadow-pop">
-              <span className="text-base sm:text-lg font-heading text-eatspin-orange font-bold">SPIN</span>
+            <div data-wheel-hub="" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center z-20 border-4 border-brand-ink shadow-pop">
+              <span className="wheel-hub-label text-base sm:text-lg font-heading text-eatspin-orange font-bold">SPIN</span>
+              <span className="wheel-hub-mark" aria-hidden="true"><BrandMark className="size-10 sm:size-12" /></span>
             </div>
             
             {/* Inner decorative ring */}
@@ -811,6 +814,15 @@ export function RouletteWheel({
           {/* Decorative outer rings */}
           <div className="absolute inset-0 rounded-full border-6 border-white/20 pointer-events-none shadow-inner" />
           <div className="absolute inset-0 rounded-full border-4 border-brand-ink pointer-events-none" />
+          <div className="wheel-marquee" aria-hidden="true">
+            {Array.from({ length: 16 }, (_, index) => {
+              const angle = (index / 16) * Math.PI * 2;
+              return <span key={index} style={{
+                left: `${50 + Math.cos(angle) * 50}%`,
+                top: `${50 + Math.sin(angle) * 50}%`,
+              }} />;
+            })}
+          </div>
         </div>
       </div>
       </SpinSpotlight>

@@ -1,6 +1,6 @@
 import { useCallback, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 
@@ -51,10 +51,10 @@ export function SpinSpotlight({ active, children }: { active: boolean; children:
         <DialogContent
           data-spin-spotlight=""
           showCloseButton={false}
-          overlayClassName="bg-brand-ink/90"
+          overlayClassName="bg-brand-ink/95"
           aria-labelledby={titleId}
           aria-describedby={descriptionId}
-          className="spin-spotlight max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto border-0 bg-transparent p-2 text-white shadow-none sm:max-w-[40rem] sm:p-4"
+          className="spin-spotlight max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto border-0 bg-transparent p-2 text-white shadow-none sm:max-w-[40rem] sm:p-4"
           onOpenAutoFocus={(event) => {
             event.preventDefault();
             openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -66,11 +66,16 @@ export function SpinSpotlight({ active, children }: { active: boolean; children:
             if (active) openerRef.current?.focus({ preventScroll: true });
           }}
         >
-          <div className="text-center">
-            <DialogTitle ref={titleRef} id={titleId} tabIndex={-1} className="text-3xl font-bold outline-none sm:text-4xl">
+          <div className="spin-spotlight-heading text-center">
+            <div aria-hidden="true" className="mb-3 flex items-center justify-center gap-3 text-arcade-pink">
+              <span className="h-0.5 w-8 rounded-full bg-current" />
+              <Sparkles size={22} strokeWidth={2.5} />
+              <span className="h-0.5 w-8 rounded-full bg-current" />
+            </div>
+            <DialogTitle ref={titleRef} id={titleId} tabIndex={-1} className="text-[clamp(2rem,6vw,3rem)] font-bold leading-[1.1] tracking-tight text-arcade-yellow outline-none">
               Let fate decide.
             </DialogTitle>
-            <DialogDescription id={descriptionId} className="mt-2 text-base text-white">
+            <DialogDescription id={descriptionId} className="mx-auto mt-3 max-w-[28ch] text-base leading-relaxed text-brand-linen">
               Spinning… your next meal is on its way.
             </DialogDescription>
           </div>
@@ -78,7 +83,7 @@ export function SpinSpotlight({ active, children }: { active: boolean; children:
           <button type="button" onClick={() => {
             returnWheel();
             setDismissed(true);
-          }} className="mx-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-full border-2 border-white/60 px-5 text-sm font-semibold text-white hover:bg-white/10 focus-visible:outline-white">
+          }} className="spin-spotlight-back mx-auto inline-flex min-h-12 items-center justify-center gap-2 rounded-full border-[3px] border-brand-ink bg-brand-linen px-6 text-base font-semibold text-brand-ink transition-colors hover:bg-arcade-yellow active:bg-arcade-pink focus-visible:outline-white">
             <ArrowLeft size={16} aria-hidden="true" />
             Back to app
           </button>

@@ -16,7 +16,7 @@ test('spin spotlights the same wheel, traps focus, and hands off to the result',
   const spotlight = page.getByRole('dialog', { name: 'Let fate decide.' });
   await expect(spotlight).toBeVisible();
   await expect(spotlight.locator('[data-original-disc="yes"]')).toHaveCount(1);
-  expect((await disc.boundingBox())!.width).toBeGreaterThanOrEqual(originalSize);
+  await expect.poll(async () => (await disc.boundingBox())!.width).toBeGreaterThanOrEqual(originalSize);
   await expect(spotlight.getByRole('heading')).toBeFocused();
   for (let i = 0; i < 5; i++) {
     await page.keyboard.press('Tab');

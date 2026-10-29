@@ -64,6 +64,26 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Fredoka', system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  ::selection {
+    background: var(--eatspin-black);
+    color: var(--eatspin-linen);
+  }
+
+  :where(input, textarea) {
+    caret-color: var(--eatspin-orange);
+  }
+
+  :where(button, a, input, textarea, select):focus-visible {
+    outline: 3px solid var(--eatspin-black);
+    outline-offset: 3px;
+  }
+
+  :where(h1, h2, h3) {
+    text-wrap: balance;
+    overflow-wrap: anywhere;
   }
   
   h1, h2, h3, h4, h5, h6 {

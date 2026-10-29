@@ -54,7 +54,7 @@ export function BottomNav({ activeTab, onTabChange, hasActiveRoom = false }: Bot
     <nav
       ref={navRef}
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-40 border-t-[3px] border-brand-ink bg-white"
+      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] border-t-[3px] border-brand-ink bg-white"
     >
       <ul className="mx-auto flex w-full max-w-[480px] gap-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-2">
         {APP_TABS.map(({ id, label }) => {

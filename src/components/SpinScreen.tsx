@@ -15,6 +15,7 @@ import {
 import { MEAL_HEADING_WORD, MOOD_OPTIONS, type FoodMood } from '@/lib/foodMoods';
 import { cn } from '@/lib/utils';
 import type { MealTime, Restaurant } from '@/types';
+import { SCREEN_GUTTER } from '@/screens/arcade';
 
 type FilterControls = Pick<
   FiltersSheetProps,
@@ -83,7 +84,7 @@ export interface SpinScreenProps {
 
 const CTA_BASE =
   'flex h-16 w-full items-center justify-center gap-2 rounded-[20px] border-4 border-brand-ink bg-arcade-pink font-heading font-bold text-brand-ink shadow-pop-lg outline-none ' +
-  'transition-transform focus-visible:ring-[3px] focus-visible:ring-brand-ink focus-visible:ring-offset-2 active:translate-y-[3px] active:shadow-none ' +
+  'transition-transform focus-visible:ring-[3px] focus-visible:ring-brand-ink focus-visible:ring-offset-2 enabled:active:translate-y-[3px] enabled:active:shadow-none ' +
   'disabled:cursor-not-allowed disabled:bg-white disabled:opacity-70 disabled:shadow-none motion-reduce:transition-none';
 
 /**
@@ -197,7 +198,7 @@ export function SpinScreen({
     <div className="flex min-h-[calc(100dvh-var(--bottom-nav-height))] flex-col">
       {!isSearchMode && <SpinHud {...hud} />}
 
-      {!isSearchMode && <div className="flex items-start justify-between gap-3 px-5 pt-3">
+      {!isSearchMode && <div className={cn("flex items-start justify-between gap-3 pt-4 [@media(max-height:700px)]:pt-3", SCREEN_GUTTER)}>
         <h1 className="font-heading text-[30px] font-bold leading-[1.1] text-brand-ink">
           What's for {MEAL_HEADING_WORD[mealTime]}?
         </h1>
@@ -216,7 +217,7 @@ export function SpinScreen({
 
 
       {isSearchMode ? (
-        <div className="space-y-2 px-5 pb-6 pt-2">
+        <div className={cn("space-y-2 pb-6 pt-2", SCREEN_GUTTER)}>
           <button
             type="button"
             onClick={closeSearch}
@@ -243,16 +244,16 @@ export function SpinScreen({
         </div>
       ) : (
         <>
-          <div className="flex items-center">
+          <div className="mt-3 flex flex-col gap-1 [@media(max-height:700px)]:mt-2 [@media(max-height:700px)]:flex-row [@media(max-height:700px)]:items-center">
           {destinationSearch && <DestinationPicker {...destinationSearch} />}
           <div
             role="group"
             aria-label="Quick picks"
             className={cn(
-              'mt-2 flex min-w-0 flex-1 gap-2 overflow-x-auto overscroll-x-contain py-1 pr-8 scrollbar-hide',
+              'flex min-w-0 gap-2 overflow-x-auto overscroll-x-contain py-2 pr-8 scrollbar-hide [@media(max-height:700px)]:flex-1 [@media(max-height:700px)]:py-1 [@media(max-height:700px)]:pl-2',
               // Fade the right edge so it reads as a row that scrolls; pr-8 lets the last chip clear it.
               '[mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)]',
-              destinationSearch ? 'pl-2' : 'pl-5',
+              SCREEN_GUTTER,
             )}
           >
             {MOOD_OPTIONS.map(({ id, label }) => {
@@ -276,7 +277,7 @@ export function SpinScreen({
           </div>
           </div>
 
-          <div className="px-5 pt-2">
+          <div className={cn("pt-1", SCREEN_GUTTER)}>
             <FiltersSheet
               open={filtersOpen}
               onOpenChange={handleFiltersOpenChange}
@@ -327,7 +328,7 @@ export function SpinScreen({
             </div>
           )}
 
-          <div className="flex flex-1 flex-col justify-center px-5">
+          <div className={cn("flex flex-1 flex-col justify-center", SCREEN_GUTTER)}>
             {!hasLocation && (
               <div className="my-4 rounded-2xl border-[3px] border-brand-ink bg-white p-5 text-center shadow-pop">
                 <MapPin size={32} aria-hidden="true" className="mx-auto text-brand-orange" />
@@ -378,7 +379,7 @@ export function SpinScreen({
             {showWheel && wheel}
           </div>
 
-          <div className="space-y-3 px-5 pb-4 pt-2">
+          <div className={cn("space-y-3 pb-4 pt-2", SCREEN_GUTTER)}>
             {limitWarning}
             {showWheel && roundReview}
             {pwaBanner}
@@ -392,13 +393,11 @@ export function SpinScreen({
             )}
           </div>
 
-          <div className="px-1">
-            <QuestCard {...quest} />
-          </div>
+          <QuestCard {...quest} />
           <div className="h-4" aria-hidden="true" />
 
           {/* Pinned above the tab bar. --bottom-nav-height already includes the safe area. */}
-          <div className="sticky bottom-[var(--bottom-nav-height)] z-30 mt-auto bg-arcade-yellow px-5 pb-3 pt-2 before:pointer-events-none before:absolute before:inset-x-0 before:-top-4 before:h-4 before:bg-gradient-to-t before:from-arcade-yellow before:to-transparent">
+          <div className={cn(SCREEN_GUTTER, "sticky bottom-[var(--bottom-nav-height)] z-30 mt-auto bg-arcade-yellow pb-3 pt-2 before:pointer-events-none before:absolute before:inset-x-0 before:-top-4 before:h-4 before:bg-gradient-to-t before:from-arcade-yellow before:to-transparent")}>
             <button
               type="button"
               onClick={cta.onClick}

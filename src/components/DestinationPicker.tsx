@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from 
 import { autocompleteDestinations, resolveDestination, type DestinationSuggestion } from '@/lib/googlePlacesDestinations';
 import { useVisualViewport } from '@/hooks/useVisualViewport';
 import type { SearchDestination } from '@/lib/searchDestination';
+import { SCREEN_GUTTER } from '@/screens/arcade';
 
 export interface DestinationPickerProps {
   /** Renders a small labelled button instead of the full-width "where" row. */
@@ -19,15 +20,15 @@ export interface DestinationPickerProps {
 const control = 'min-h-11 rounded-xl border-[3px] border-brand-ink px-3 font-semibold outline-none focus-visible:ring-2 focus-visible:ring-brand-orange disabled:opacity-50';
 
 /**
- * "Where" control. The default is a labelled pill ("📍 Mont Kiara ⌄") at the start of the quick
- * picks row, so the wheel stays above the fold; radius and open-now live in Filters. Callers show
+ * "Where" control. The default is a labelled pill above the quick
+ * picks, giving long destination names room to breathe; radius and open-now live in Filters. Callers show
  * the "Google Maps" attribution next to it whenever a destination name is displayed.
  */
 export function DestinationPicker(props: DestinationPickerProps) {
   const [open, setOpen] = useState(false);
   const viewport = useVisualViewport(open);
   const label = props.destination?.label ?? (props.hasDeviceLocation ? 'Near you' : 'Choose an area');
-  return <div className={props.triggerLabel ? 'min-w-0 text-brand-ink' : 'ml-5 mt-2 min-w-0 max-w-[48%] shrink-0 text-brand-ink'}>
+  return <div className={props.triggerLabel ? 'min-w-0 text-brand-ink' : `min-w-0 text-brand-ink ${SCREEN_GUTTER} [@media(max-height:700px)]:max-w-[48%] [@media(max-height:700px)]:shrink-0 [@media(max-height:700px)]:pr-0`}>
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>{props.triggerLabel
         ? <button disabled={props.disabled} className={`${control} flex items-center justify-center gap-2 bg-white text-sm`}>
@@ -36,7 +37,7 @@ export function DestinationPicker(props: DestinationPickerProps) {
         : <button
             disabled={props.disabled}
             aria-label={`Search around ${label}. Change area`}
-            className="flex h-11 max-w-full items-center gap-1.5 rounded-full border-[3px] border-brand-ink bg-brand-ink pl-2.5 pr-2 text-left font-heading text-[15px] text-white shadow-[0_3px_0_#1E1B4B] outline-none transition-transform focus-visible:ring-[3px] focus-visible:ring-brand-ink focus-visible:ring-offset-2 active:translate-y-[2px] active:shadow-none disabled:opacity-50"
+            className="flex h-11 max-w-full items-center gap-1.5 rounded-full border-[3px] border-brand-ink bg-brand-ink pl-2.5 pr-2 text-left font-heading text-[15px] text-white shadow-[0_3px_0_#1E1B4B] outline-none transition-transform focus-visible:ring-[3px] focus-visible:ring-brand-ink focus-visible:ring-offset-2 enabled:active:translate-y-[2px] enabled:active:shadow-none disabled:opacity-50"
           >
             <MapPin size={18} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-arcade-yellow" />
             <span className="min-w-0 truncate font-bold">{label}</span>

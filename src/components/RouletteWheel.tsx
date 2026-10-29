@@ -11,6 +11,7 @@ import { estimateTravelTime } from '@/lib/travelTime';
 import { fitWheelLabel } from '@/lib/wheelLabel';
 import { SpinSpotlight } from '@/components/SpinSpotlight';
 import { BrandMark } from '@/components/BrandMark';
+import { revealRestaurantFromWheel } from '@/lib/wheelReveal';
 
 
 /** What a parent can call on the wheel. Lets a screen own the spin button. */
@@ -183,12 +184,14 @@ export function RouletteWheel({
   const [resultVisit, setResultVisit] = useState<ResultVisit | null>(null);
   // The result is a full-screen view. Back closes it and leaves a "Your pick" button under the wheel.
   const [resultOpen, setResultOpen] = useState(false);
+  const [resultUsesTransition, setResultUsesTransition] = useState(false);
   const reopenResultRef = useRef<HTMLButtonElement>(null);
   // Reward reveal for the current result. Reset on every spin, so it happens once per result.
   const [claim, setClaim] = useState<{ reward: LetsGoReward | null } | null>(null);
   const claimedResultRef = useRef<Restaurant | null>(null);
   const [levelUp, setLevelUp] = useState<{ level: number; open: boolean } | null>(null);
   const levelUpTimeoutRef = useRef<number | null>(null);
+  const cancelRevealRef = useRef<() => void>(() => {});
   const currentRotationRef = useRef(0);
   const [wheelSize, setWheelSize] = useState(320);
   const celebrationTimeoutsRef = useRef<number[]>([]);
@@ -368,6 +371,7 @@ export function RouletteWheel({
   const animateSpinToIndex = useCallback((index: number, sourceRestaurants?: Restaurant[], externalSpinId?: string) => {
     const targetRestaurants = sourceRestaurants ?? restaurants;
     if (targetRestaurants.length === 0) return;
+    cancelRevealRef.current();
 
     const selectedIndex = ((Math.floor(index) % targetRestaurants.length) + targetRestaurants.length) % targetRestaurants.length;
     const result = targetRestaurants[selectedIndex];
@@ -421,7 +425,7 @@ export function RouletteWheel({
     gsap.killTweensOf(wheelRef.current);
     stopSpinAudio();
 
-    const revealResult = () => {
+    const revealResult = (shared = false) => {
       stopSpinAudio();
       setIsSpinning(false);
       setSpinResult(result);
@@ -429,6 +433,7 @@ export function RouletteWheel({
       setResultRarity(getLastVisitedAtRef.current ? getRarity(lastVisitedAt) : null);
       setResultVisit(getLastVisitedAtRef.current ? { lastVisitedAt, visitCount: getVisitCountRef.current?.(result) } : null);
       setResultOpen(resultPresentation === 'dialog');
+      setResultUsesTransition(shared);
       setWinnerSliceIndex(selectedIndex);
       setIsWinnerSliceHighlighted(true);
       winnerPulseTimeoutRef.current = window.setTimeout(() => {
@@ -468,7 +473,20 @@ export function RouletteWheel({
       duration: SPIN_DURATION_S,
       ease: 'power4.out',
       onUpdate: updateSpinFrame,
-      onComplete: revealResult,
+      onComplete: () => {
+        if (resultPresentation !== 'dialog') {
+          revealResult();
+          return;
+        }
+        cancelRevealRef.current = revealRestaurantFromWheel(
+          wheelContainerRef.current,
+          revealResult,
+          () => {
+            setWinnerSliceIndex(selectedIndex);
+            setIsWinnerSliceHighlighted(true);
+          },
+        );
+      },
     });
   }, [onSpinComplete, onResultRevealed, recenterWheel, restaurants, resultPresentation, setIsSpinning, syncWheelRotationVar]);
 
@@ -550,6 +568,7 @@ export function RouletteWheel({
       setLevelUp(null);
       if (levelUpTimeoutRef.current !== null) window.clearTimeout(levelUpTimeoutRef.current);
       setResultOpen(resultPresentation === 'dialog');
+      setResultUsesTransition(false);
       setIsSpinning(false);
       // A live reduced-motion event still completes; an older restore does not.
       if (externalSpin.animate !== false) onSpinComplete(result);
@@ -594,6 +613,7 @@ export function RouletteWheel({
     const wheelElement = wheelRef.current;
     return () => {
       clearCelebrationEffects();
+      cancelRevealRef.current();
       stopSpinAudio();
       if (recenterTimeoutRef.current !== null) {
         window.clearTimeout(recenterTimeoutRef.current);
@@ -931,7 +951,10 @@ export function RouletteWheel({
       {resultPresentation === 'dialog' && spinResult && (
         <ResultScreen
           open={resultOpen}
-          onOpenChange={setResultOpen}
+          onOpenChange={(open) => {
+            if (!open) cancelRevealRef.current();
+            setResultOpen(open);
+          }}
           restaurant={spinResult}
           distanceOrigin={distanceOrigin}
           isManual={isManualResult}
@@ -940,6 +963,7 @@ export function RouletteWheel({
           claim={claim}
           onClaim={onLetsGo ? handleClaim : undefined}
           animate={!prefersReducedMotion}
+          revealTransition={resultUsesTransition}
           onShare={onShareResult ? (cardElement) => onShareResult(spinResult, cardElement) : undefined}
           onSave={onSaveFavourite ? () => onSaveFavourite(spinResult) : undefined}
           isSaved={Boolean(isFavourite?.(spinResult))}

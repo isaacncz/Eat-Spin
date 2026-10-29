@@ -50,3 +50,40 @@ test('reduced motion reveals directly without the pop-out or spinning delay', as
   await expect(page.getByRole('dialog', { name: 'Let fate decide.' })).toHaveCount(0);
   await expect(page.locator('.celebration-layer')).toHaveCount(0);
 });
+
+test('wheel-to-restaurant transition settles and can be interrupted by Back', async ({ page }) => {
+  await page.evaluate(() => {
+    const start = document.startViewTransition.bind(document);
+    Object.assign(window, { revealTransitions: 0 });
+    document.startViewTransition = ((update: () => void) => {
+      (window as unknown as { revealTransitions: number }).revealTransitions += 1;
+      return start(update);
+    }) as typeof document.startViewTransition;
+  });
+  await page.getByRole('button', { name: /spin the wheel/i }).click();
+  const result = page.getByRole('dialog', { name: 'You got it!' });
+  await expect(result).toBeVisible({ timeout: 15_000 });
+  expect(await page.evaluate(() => (window as unknown as { revealTransitions: number }).revealTransitions)).toBe(1);
+  await expect(page.locator('html')).not.toHaveClass(/wheel-reveal-active/);
+  await expect(result).toHaveCSS('animation-name', 'none');
+  await expect(result.locator('[data-restaurant-reveal]')).toHaveCSS('animation-name', 'none');
+  await expect(result.locator(':focus')).toHaveCount(1);
+  await result.getByRole('button', { name: 'Back to wheel' }).click();
+  await page.getByRole('button', { name: /spin the wheel/i }).click();
+  await expect(result).toBeVisible({ timeout: 15_000 });
+  await page.keyboard.press('Escape');
+  await expect(result).not.toBeVisible();
+  await expect(page.locator('html')).not.toHaveClass(/wheel-reveal-active/);
+  await expect(page.locator('[data-wheel-disc]')).toBeVisible();
+});
+
+test('unsupported browsers still reveal the restaurant and restore focus normally', async ({ page }) => {
+  await page.evaluate(() => { Object.defineProperty(document, 'startViewTransition', { value: undefined, configurable: true }); });
+  await page.getByRole('button', { name: /spin the wheel/i }).click();
+  const result = page.getByRole('dialog', { name: 'You got it!' });
+  await expect(result).toBeVisible({ timeout: 15_000 });
+  await expect(result.locator(':focus')).toHaveCount(1);
+  await expect(page.locator('html')).not.toHaveClass(/wheel-reveal-active/);
+  await result.getByRole('button', { name: 'Back to wheel' }).click();
+  await expect(page.getByRole('button', { name: /^your pick/i })).toBeFocused();
+});

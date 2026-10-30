@@ -38,6 +38,8 @@ export interface ResultScreenProps {
   onClaim?: () => void;
   /** False for people who prefer reduced motion: no confetti, no tile pop. */
   animate: boolean;
+  /** The shared wheel transition owns the entrance for this result. */
+  revealTransition?: boolean;
   onShare?: (cardElement: HTMLElement) => void | Promise<void>;
   onSave?: () => void;
   isSaved?: boolean;
@@ -103,6 +105,7 @@ export function ResultScreen({
   claim,
   onClaim,
   animate,
+  revealTransition = false,
   onShare,
   onSave,
   isSaved = false,
@@ -162,6 +165,7 @@ export function ResultScreen({
           'inset-0 flex w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-0 bg-arcade-pink p-0 text-brand-ink shadow-none sm:max-w-none',
           'data-[state=open]:slide-in-from-bottom-8 data-[state=closed]:slide-out-to-bottom-8',
           'data-[state=open]:!zoom-in-100 data-[state=closed]:!zoom-out-100',
+          revealTransition && 'restaurant-reveal-shared',
         )}
       >
         {/* Decorative shapes from the board. Static, so nothing to turn off for reduced motion. */}
@@ -206,6 +210,7 @@ export function ResultScreen({
             {/* The capture area for Share: it includes room for the tab and the hard shadow. */}
             <div ref={cardRef} id="spin-result-card" className="pb-3 pt-5">
               <section
+                data-restaurant-reveal=""
                 className={cn(
                   'relative rounded-3xl border-4 border-brand-ink bg-white px-5 pb-5 pt-9 shadow-[0_8px_0_#1E1B4B]',
                   'motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-300',

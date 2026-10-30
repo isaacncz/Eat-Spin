@@ -9,6 +9,9 @@ import { getRarity, type Rarity } from '@/lib/rarity';
 import type { LetsGoReward } from '@/lib/letsGoReward';
 import { estimateTravelTime } from '@/lib/travelTime';
 import { fitWheelLabel } from '@/lib/wheelLabel';
+import { SpinSpotlight } from '@/components/SpinSpotlight';
+import { BrandMark } from '@/components/BrandMark';
+import { revealRestaurantFromWheel } from '@/lib/wheelReveal';
 
 
 /** What a parent can call on the wheel. Lets a screen own the spin button. */
@@ -181,12 +184,14 @@ export function RouletteWheel({
   const [resultVisit, setResultVisit] = useState<ResultVisit | null>(null);
   // The result is a full-screen view. Back closes it and leaves a "Your pick" button under the wheel.
   const [resultOpen, setResultOpen] = useState(false);
+  const [resultUsesTransition, setResultUsesTransition] = useState(false);
   const reopenResultRef = useRef<HTMLButtonElement>(null);
   // Reward reveal for the current result. Reset on every spin, so it happens once per result.
   const [claim, setClaim] = useState<{ reward: LetsGoReward | null } | null>(null);
   const claimedResultRef = useRef<Restaurant | null>(null);
   const [levelUp, setLevelUp] = useState<{ level: number; open: boolean } | null>(null);
   const levelUpTimeoutRef = useRef<number | null>(null);
+  const cancelRevealRef = useRef<() => void>(() => {});
   const currentRotationRef = useRef(0);
   const [wheelSize, setWheelSize] = useState(320);
   const celebrationTimeoutsRef = useRef<number[]>([]);
@@ -366,6 +371,7 @@ export function RouletteWheel({
   const animateSpinToIndex = useCallback((index: number, sourceRestaurants?: Restaurant[], externalSpinId?: string) => {
     const targetRestaurants = sourceRestaurants ?? restaurants;
     if (targetRestaurants.length === 0) return;
+    cancelRevealRef.current();
 
     const selectedIndex = ((Math.floor(index) % targetRestaurants.length) + targetRestaurants.length) % targetRestaurants.length;
     const result = targetRestaurants[selectedIndex];
@@ -419,6 +425,37 @@ export function RouletteWheel({
     gsap.killTweensOf(wheelRef.current);
     stopSpinAudio();
 
+    const revealResult = (shared = false) => {
+      stopSpinAudio();
+      setIsSpinning(false);
+      setSpinResult(result);
+      const lastVisitedAt = getLastVisitedAtRef.current?.(result);
+      setResultRarity(getLastVisitedAtRef.current ? getRarity(lastVisitedAt) : null);
+      setResultVisit(getLastVisitedAtRef.current ? { lastVisitedAt, visitCount: getVisitCountRef.current?.(result) } : null);
+      setResultOpen(resultPresentation === 'dialog');
+      setResultUsesTransition(shared);
+      setWinnerSliceIndex(selectedIndex);
+      setIsWinnerSliceHighlighted(true);
+      winnerPulseTimeoutRef.current = window.setTimeout(() => {
+        setIsWinnerSliceHighlighted(false);
+      }, WINNER_PULSE_DURATION_MS);
+      if (canPlayEffectsRef.current && !document.hidden) {
+        playSpinWin();
+        triggerSpinHaptic();
+      }
+      onSpinComplete(result);
+      onResultRevealed?.(result, externalSpinId);
+    };
+
+    // Preserve the outcome without spatial motion or a forced wait.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      gsap.set(wheelRef.current, { rotation: targetRotation });
+      currentRotationRef.current = targetRotation;
+      syncWheelRotationVar(targetRotation);
+      revealResult();
+      return;
+    }
+
     const timeline = gsap.timeline();
     timeline.to(wheelRef.current, {
       rotation: currentRotationRef.current - ANTICIPATION_DEG,
@@ -437,24 +474,18 @@ export function RouletteWheel({
       ease: 'power4.out',
       onUpdate: updateSpinFrame,
       onComplete: () => {
-        stopSpinAudio();
-        setIsSpinning(false);
-        setSpinResult(result);
-        const lastVisitedAt = getLastVisitedAtRef.current?.(result);
-        setResultRarity(getLastVisitedAtRef.current ? getRarity(lastVisitedAt) : null);
-        setResultVisit(getLastVisitedAtRef.current ? { lastVisitedAt, visitCount: getVisitCountRef.current?.(result) } : null);
-        setResultOpen(resultPresentation === 'dialog');
-        setWinnerSliceIndex(selectedIndex);
-        setIsWinnerSliceHighlighted(true);
-        winnerPulseTimeoutRef.current = window.setTimeout(() => {
-          setIsWinnerSliceHighlighted(false);
-        }, WINNER_PULSE_DURATION_MS);
-        if (canPlayEffectsRef.current && !document.hidden) {
-          playSpinWin();
-          triggerSpinHaptic();
+        if (resultPresentation !== 'dialog') {
+          revealResult();
+          return;
         }
-        onSpinComplete(result);
-        onResultRevealed?.(result, externalSpinId);
+        cancelRevealRef.current = revealRestaurantFromWheel(
+          wheelContainerRef.current,
+          revealResult,
+          () => {
+            setWinnerSliceIndex(selectedIndex);
+            setIsWinnerSliceHighlighted(true);
+          },
+        );
       },
     });
   }, [onSpinComplete, onResultRevealed, recenterWheel, restaurants, resultPresentation, setIsSpinning, syncWheelRotationVar]);
@@ -537,6 +568,7 @@ export function RouletteWheel({
       setLevelUp(null);
       if (levelUpTimeoutRef.current !== null) window.clearTimeout(levelUpTimeoutRef.current);
       setResultOpen(resultPresentation === 'dialog');
+      setResultUsesTransition(false);
       setIsSpinning(false);
       // A live reduced-motion event still completes; an older restore does not.
       if (externalSpin.animate !== false) onSpinComplete(result);
@@ -581,6 +613,7 @@ export function RouletteWheel({
     const wheelElement = wheelRef.current;
     return () => {
       clearCelebrationEffects();
+      cancelRevealRef.current();
       stopSpinAudio();
       if (recenterTimeoutRef.current !== null) {
         window.clearTimeout(recenterTimeoutRef.current);
@@ -678,6 +711,7 @@ export function RouletteWheel({
   return (
     <div className="flex flex-col items-center gap-6 py-4 sm:py-5">
       {/* Roulette Wheel */}
+      <SpinSpotlight active={isSpinning}>
       <div ref={wheelScrollRef} className="relative mx-auto w-full max-w-[32.5rem] px-1 sm:px-3 overflow-hidden">
         {/* Sound: a corner icon so it does not take a row between the wheel and the Spin button. */}
         <button
@@ -697,13 +731,14 @@ export function RouletteWheel({
         </button>
 
         {/* Pointer */}
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
+        <div data-wheel-pointer="" className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
           <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[30px] border-t-eatspin-orange drop-shadow-lg" />
         </div>
 
         {/* Wheel Container */}
         <div
           ref={wheelContainerRef}
+          data-wheel-disc=""
           className="relative mx-auto w-full aspect-square"
           style={{ maxWidth: wheelMaxSize }}
         >
@@ -772,6 +807,7 @@ export function RouletteWheel({
                   </div>
                   {distanceLabel && (
                     <span
+                      data-wheel-distance=""
                       className="mt-0.5 text-[10px] sm:text-[11px] font-semibold whitespace-nowrap"
                       style={{
                         color: '#1E1B4B',
@@ -786,8 +822,9 @@ export function RouletteWheel({
             })}
 
             {/* Center Circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center z-20 border-4 border-brand-ink shadow-pop">
-              <span className="text-base sm:text-lg font-heading text-eatspin-orange font-bold">SPIN</span>
+            <div data-wheel-hub="" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center z-20 border-4 border-brand-ink shadow-pop">
+              <span className="wheel-hub-label text-base sm:text-lg font-heading text-eatspin-orange font-bold">SPIN</span>
+              <span className="wheel-hub-mark" aria-hidden="true"><BrandMark className="size-10 sm:size-12" /></span>
             </div>
             
             {/* Inner decorative ring */}
@@ -797,8 +834,18 @@ export function RouletteWheel({
           {/* Decorative outer rings */}
           <div className="absolute inset-0 rounded-full border-6 border-white/20 pointer-events-none shadow-inner" />
           <div className="absolute inset-0 rounded-full border-4 border-brand-ink pointer-events-none" />
+          <div className="wheel-marquee" aria-hidden="true">
+            {Array.from({ length: 16 }, (_, index) => {
+              const angle = (index / 16) * Math.PI * 2;
+              return <span key={index} style={{
+                left: `${50 + Math.cos(angle) * 50}%`,
+                top: `${50 + Math.sin(angle) * 50}%`,
+              }} />;
+            })}
+          </div>
         </div>
       </div>
+      </SpinSpotlight>
 
       {/* After Back, the pick stays one tap away. */}
       {resultPresentation === 'dialog' && spinResult && !resultOpen && (
@@ -904,7 +951,10 @@ export function RouletteWheel({
       {resultPresentation === 'dialog' && spinResult && (
         <ResultScreen
           open={resultOpen}
-          onOpenChange={setResultOpen}
+          onOpenChange={(open) => {
+            if (!open) cancelRevealRef.current();
+            setResultOpen(open);
+          }}
           restaurant={spinResult}
           distanceOrigin={distanceOrigin}
           isManual={isManualResult}
@@ -913,6 +963,7 @@ export function RouletteWheel({
           claim={claim}
           onClaim={onLetsGo ? handleClaim : undefined}
           animate={!prefersReducedMotion}
+          revealTransition={resultUsesTransition}
           onShare={onShareResult ? (cardElement) => onShareResult(spinResult, cardElement) : undefined}
           onSave={onSaveFavourite ? () => onSaveFavourite(spinResult) : undefined}
           isSaved={Boolean(isFavourite?.(spinResult))}

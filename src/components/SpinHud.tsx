@@ -1,4 +1,6 @@
 import { Coins, Flame } from 'lucide-react';
+import { SCREEN_GUTTER } from '@/screens/arcade';
+import { cn } from '@/lib/utils';
 
 interface SpinHudProps {
   level: number;
@@ -21,7 +23,7 @@ export function SpinHud({ level, xpIntoLevel, xpPerLevel, coins, streak }: SpinH
   return (
     <section
       aria-label="Your progress"
-      className="flex items-center gap-2 px-5 pt-[max(0.75rem,env(safe-area-inset-top))]"
+      className={cn("flex items-center gap-2 pt-[max(0.75rem,env(safe-area-inset-top))] tabular-nums", SCREEN_GUTTER)}
     >
       <span className={CHIP} title={`${streak} day streak`}>
         <Flame size={18} aria-hidden="true" className="text-arcade-orange" />

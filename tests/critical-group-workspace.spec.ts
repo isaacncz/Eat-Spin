@@ -58,7 +58,11 @@ test('the room owns editing and the shared reveal while personal lists stay priv
 
   await mainTab(page, 'Group').click();
   await page.getByRole('button', { name: 'Start spin for everyone', exact: true }).click();
-  await expect(mainTab(page, 'Group')).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('dialog', { name: 'Let fate decide.' })).toBeVisible();
+  // The selected tab stays Group while the modal hides background controls from AT.
+  await expect(page.locator('nav[aria-label="Main"]').getByRole('button', {
+    name: /^Group/, includeHidden: true,
+  })).toHaveAttribute('aria-current', 'page');
   const startToast = page.locator('[data-sonner-toast]').filter({ hasText: 'Room spin started' });
   await expect(startToast).toBeVisible();
   await expect(startToast).not.toContainText('Room noodles');

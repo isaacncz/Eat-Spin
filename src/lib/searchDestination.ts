@@ -1,4 +1,5 @@
 import type { UserLocation } from '@/types';
+import type { SearchScope } from '@/lib/mallSearch';
 
 export const DESTINATION_STORAGE_KEY = 'eatspin:search-destination:v1';
 export const DESTINATION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -34,10 +35,15 @@ export interface SearchDestination {
   address: string;
   coordinates: UserLocation;
   fetchedAt: number;
+  /** Selected mall's ID. Only IDs and the user's scope choice are persisted. */
+  mallPlaceId?: string;
+  scope?: SearchScope;
 }
 export interface SavedSearch {
   destination: SearchDestination | null;
   radiusKm: SearchRadius | null;
+  /** Keep the user's inside-only intent when temporarily cached coordinates expire. */
+  pendingMallPlaceId?: string;
 }
 export const validCoordinates = (point: UserLocation): boolean =>
   Number.isFinite(point?.lat) && Math.abs(point.lat) <= 90 &&
@@ -52,23 +58,33 @@ export function loadSavedSearch(): SavedSearch {
     if (saved.version !== 1) { localStorage.removeItem(DESTINATION_STORAGE_KEY); return empty; }
     const radiusKm = SEARCH_RADII.includes(saved.radiusKm) ? saved.radiusKm as SearchRadius : null;
     const d = saved.destination;
-    if (!d) return { destination: null, radiusKm };
+    if (!d) return { destination: null, radiusKm,
+      ...(typeof saved.pendingMallPlaceId === 'string' && saved.pendingMallPlaceId.trim()
+        ? { pendingMallPlaceId: saved.pendingMallPlaceId } : {}) };
     if (typeof d.placeId !== 'string' || !d.placeId.trim() || !validCoordinates(d.coordinates) ||
         !Number.isFinite(d.fetchedAt) || d.fetchedAt > Date.now() || Date.now() - d.fetchedAt >= DESTINATION_TTL_MS) {
-      saveSearch(null, radiusKm);
-      return { destination: null, radiusKm };
+      const pendingMallPlaceId = typeof d.placeId === 'string' && d.mallPlaceId === d.placeId && d.scope !== 'around' ? d.placeId : undefined;
+      saveSearch(null, radiusKm, pendingMallPlaceId);
+      return { destination: null, radiusKm, ...(pendingMallPlaceId ? { pendingMallPlaceId } : {}) };
     }
+    const mallSelection = d.mallPlaceId === d.placeId
+      ? { mallPlaceId: d.placeId, scope: d.scope === 'around' ? 'around' as const : 'inside' as const }
+      : {};
     return { radiusKm, destination: { placeId: d.placeId, coordinates: d.coordinates,
-      fetchedAt: d.fetchedAt, label: 'Saved destination', address: '' } };
+      fetchedAt: d.fetchedAt, label: 'Saved destination', address: '', ...mallSelection } };
   } catch { return empty; }
 }
 
-export function saveSearch(destination: SearchDestination | null, radiusKm: SearchRadius | null): void {
+export function saveSearch(destination: SearchDestination | null, radiusKm: SearchRadius | null, pendingMallPlaceId?: string): void {
   try {
     // Places policy permits place IDs and coordinates (30 days), not cached names/addresses.
     localStorage.setItem(DESTINATION_STORAGE_KEY, JSON.stringify({ version: 1, radiusKm,
+      ...(!destination && pendingMallPlaceId ? { pendingMallPlaceId } : {}),
       destination: destination ? { placeId: destination.placeId, coordinates: destination.coordinates,
-        fetchedAt: destination.fetchedAt } : null }));
+        fetchedAt: destination.fetchedAt,
+        ...(destination.mallPlaceId === destination.placeId ? {
+          mallPlaceId: destination.placeId, scope: destination.scope === 'around' ? 'around' : 'inside',
+        } : {}) } : null }));
   } catch { /* Selection still works when storage is unavailable. */ }
 }
 

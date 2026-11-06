@@ -19,8 +19,9 @@ export const buildFilterSummary = (
   radiusKm: number,
   placeCount: number | null,
   isLoading: boolean,
+  scopeLabel?: string,
 ): string => {
-  const parts = ['Filters', `${radiusKm} km`];
+  const parts = ['Filters', scopeLabel ?? `${radiusKm} km`];
   if (isLoading) parts.push('searching…');
   else if (placeCount !== null) parts.push(formatPlaceCount(placeCount));
   return parts.join(' · ');

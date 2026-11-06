@@ -14,11 +14,12 @@ async function setup(page: Page, gps = false) {
       }, clearWatch: () => {},
     } });
   }, gps);
+  await page.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, (route) => route.abort());
   await page.route('**/places.googleapis.com/**', async (route) => {
     const url = route.request().url();
     if (url.includes('places:autocomplete')) return route.fulfill({ json: { suggestions: [{ placePrediction: { placeId: 'kiara', structuredFormat: { mainText: { text: 'Mont Kiara' }, secondaryText: { text: 'Kuala Lumpur, Malaysia' } } } }] } });
     if (url.includes('/places/kiara')) {
-      expect(route.request().headers()['x-goog-fieldmask']).toBe('location,formattedAddress');
+      expect(route.request().headers()['x-goog-fieldmask']).toBe('location,formattedAddress,types');
       return route.fulfill({ json: { location: { latitude: 3.17, longitude: 101.65 }, formattedAddress: 'Kuala Lumpur, Malaysia' } });
     }
     const request = route.request().postDataJSON();

@@ -6,6 +6,18 @@ beforeEach(() => vi.stubGlobal('localStorage', createMemoryStorage()));
 afterEach(() => vi.unstubAllGlobals());
 const destination = { placeId: 'kiara', label: 'Mont Kiara', address: 'Kuala Lumpur', coordinates: { lat: 3.17, lng: 101.65 }, fetchedAt: Date.now() };
 describe('destination persistence', () => {
+  it('retains the selected mall ID and explicit scope without labels or resetting coordinate age', () => {
+    const mall = { ...destination, mallPlaceId: destination.placeId, scope: 'inside' as const };
+    saveSearch(mall, 10);
+    const restored = loadSavedSearch();
+    expect(restored.destination).toEqual({ ...mall, label: 'Saved destination', address: '' });
+    saveSearch({ ...mall, scope: 'around' }, 10);
+    expect(loadSavedSearch().destination?.scope).toBe('around');
+    expect(loadSavedSearch().radiusKm).toBe(10);
+    expect(localStorage.getItem(DESTINATION_STORAGE_KEY)).not.toContain(destination.label);
+    saveSearch({ ...mall, mallPlaceId: 'wrong-id' }, 10);
+    expect(loadSavedSearch().destination?.mallPlaceId).toBeUndefined();
+  });
   it('restores center/radius without persisting Google labels, address or tokens', () => {
     saveSearch(destination, 3);
     const raw = localStorage.getItem(DESTINATION_STORAGE_KEY)!;
@@ -21,6 +33,12 @@ describe('destination persistence', () => {
     expect(localStorage.getItem(DESTINATION_STORAGE_KEY)).not.toContain('kiara');
     saveSearch({ ...destination, coordinates: { lat: 100, lng: 0 } }, 3);
     expect(loadSavedSearch().destination).toBeNull();
+  });
+  it('expires mall coordinates without silently switching to nearby search on reload', () => {
+    saveSearch({ ...destination, mallPlaceId: destination.placeId, scope: 'inside', fetchedAt: Date.now() - DESTINATION_TTL_MS }, 3);
+    expect(loadSavedSearch()).toEqual({ destination: null, radiusKm: 3, pendingMallPlaceId: destination.placeId });
+    expect(localStorage.getItem(DESTINATION_STORAGE_KEY)).not.toContain('coordinates');
+    expect(loadSavedSearch()).toEqual({ destination: null, radiusKm: 3, pendingMallPlaceId: destination.placeId });
   });
   it('fails safely with malformed or unavailable storage', () => {
     localStorage.setItem(DESTINATION_STORAGE_KEY, '{');

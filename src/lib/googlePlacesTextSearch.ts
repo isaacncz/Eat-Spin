@@ -8,6 +8,7 @@ import {
   type GooglePlace,
 } from '@/lib/googlePlacesRestaurants';
 import { reservePlacesCall } from '@/lib/placesUsage';
+import { filterMallRestaurants, MALL_DISCOVERY_RADIUS_KM } from '@/lib/mallSearch';
 
 const GOOGLE_TEXT_SEARCH_ENDPOINT =
   'https://places.googleapis.com/v1/places:searchText';
@@ -18,6 +19,7 @@ type GoogleTextSearchResponse = {
 };
 
 export interface TextSearchOptions {
+  mallPlaceId?: string;
   textQuery: string;
   location: { lat: number; lng: number };
   radiusKm?: number;
@@ -37,8 +39,9 @@ export async function searchPlacesByText(
   options: TextSearchOptions,
 ): Promise<Restaurant[]> {
   const apiKey = getGoogleApiKey();
-  const radiusMeters = Math.round((options.radiusKm ?? 2) * 1000);
-  const rectangle = options.restrictToRectangle === false ? null : radiusRectangle(options.location, options.radiusKm ?? 2);
+  const radiusKm = options.mallPlaceId ? MALL_DISCOVERY_RADIUS_KM : options.radiusKm ?? 2;
+  const radiusMeters = Math.round(radiusKm * 1000);
+  const rectangle = options.restrictToRectangle === false ? null : radiusRectangle(options.location, radiusKm);
   const maxResultCount = Math.min(options.maxResults ?? 10, 20);
 
   // Count this billable call against the monthly budget (throws PlacesBudgetError when exhausted).
@@ -84,7 +87,7 @@ export async function searchPlacesByText(
   }
 
   const places = payload?.places ?? [];
-  return places
+  return filterMallRestaurants(places
     .map((place) => normalizeGooglePlace(place, options.location, apiKey))
-    .filter((r): r is Restaurant => r !== null && (r.distance ?? Infinity) <= (options.radiusKm ?? 2));
+    .filter((r): r is Restaurant => r !== null && (Boolean(options.mallPlaceId) || (r.distance ?? Infinity) <= radiusKm)), options.mallPlaceId);
 }

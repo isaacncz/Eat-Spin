@@ -33,10 +33,12 @@ export async function resolveDestination(suggestion: DestinationSuggestion, sess
   signal.throwIfAborted();
   const query = new URLSearchParams({ sessionToken, languageCode: placesLanguage(), regionCode: placesRegion() });
   const data = await payload(await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(suggestion.placeId)}?${query}`, {
-    signal, headers: { 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'location,formattedAddress' },
+    signal, headers: { 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'location,formattedAddress,types' },
   }));
   const coordinates = { lat: data?.location?.latitude, lng: data?.location?.longitude };
   if (!validCoordinates(coordinates)) throw new Error('This place has no usable location. Choose another destination.');
   return { placeId: suggestion.placeId, label: suggestion.label, address: data.formattedAddress || suggestion.address,
-    coordinates, fetchedAt: Date.now() };
+    coordinates, fetchedAt: Date.now(),
+    ...(Array.isArray(data.types) && data.types.includes('shopping_mall')
+      ? { mallPlaceId: suggestion.placeId, scope: 'inside' as const } : {}) };
 }

@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { trackEvent } from '@/lib/analytics';
 import { APP_FEATURES } from '@/lib/featureFlags';
 import { useSearchDestination } from '@/hooks/useSearchDestination';
+import { filterMallRestaurants } from '@/lib/mallSearch';
 import { nextWiderRadius, type SearchRadius } from '@/lib/searchDestination';
 import { useLocation } from '@/hooks/useLocation';
 import { useNearbyRestaurants } from '@/hooks/useNearbyRestaurants';
@@ -243,6 +244,7 @@ function App() {
   // own focused 20-place pool from Google, cached separately — repeat visits cost nothing for 7 days.
   const destinationSearch = useSearchDestination();
   const fetchRadiusKm = destinationSearch.radiusKm;
+  const mallPlaceId = destinationSearch.scope === 'inside' ? destinationSearch.destination?.mallPlaceId : undefined;
   const autoLoadedMealTimeRef = useRef<ManualListMealTime>(null);
   const hasUserSelectedManualListRef = useRef(hasSavedManualSelection());
 
@@ -275,8 +277,8 @@ function App() {
 
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
-  const searchCenter = destinationSearch.destination?.coordinates ?? location;
-  const searchIdentity = `${searchCenter?.lat},${searchCenter?.lng}|${fetchRadiusKm}|${destinationSearch.openNowOnly}`;
+  const searchCenter = destinationSearch.needsMallSelection ? null : destinationSearch.destination?.coordinates ?? location;
+  const searchIdentity = `${searchCenter?.lat},${searchCenter?.lng}|${fetchRadiusKm}|${destinationSearch.openNowOnly}|${mallPlaceId ?? 'around'}`;
   // A center change remounts the wheel and cancels its animation; release the parent spin lock too.
   useEffect(() => () => setIsSpinning(false), [searchIdentity]);
   const { spins, canSpin, recordSpin } = useSpinTracker();
@@ -304,12 +306,13 @@ function App() {
   } = useNearbyRestaurants({
     enabled: activeTab === 'auto' && Boolean(searchCenter),
     location: searchCenter,
+    mallPlaceId,
     radiusKm: fetchRadiusKm,
     openNowOnly: destinationSearch.openNowOnly,
     selectedCategories,
   });
 
-  const textSearch = useTextSearch({ location: searchCenter, radiusKm: fetchRadiusKm, openNowOnly: destinationSearch.openNowOnly });
+  const textSearch = useTextSearch({ location: searchCenter, mallPlaceId, radiusKm: fetchRadiusKm, openNowOnly: destinationSearch.openNowOnly });
 
   const {
     authUid: groupAuthUid,
@@ -402,12 +405,13 @@ function App() {
   );
   const autoSourceRestaurants = useMemo(() => {
     if (!searchCenter) return [];
-    if (nearbyRestaurants.length > 0) return nearbyRestaurants;
-    if (shouldUseLocalFallback) return localFallbackAutoRestaurants;
+    if (nearbyRestaurants.length > 0) return filterMallRestaurants(nearbyRestaurants, mallPlaceId);
+    if (shouldUseLocalFallback && !mallPlaceId) return localFallbackAutoRestaurants;
     return [];
-  }, [searchCenter, nearbyRestaurants, shouldUseLocalFallback, localFallbackAutoRestaurants]);
+  }, [searchCenter, nearbyRestaurants, shouldUseLocalFallback, localFallbackAutoRestaurants, mallPlaceId]);
   const autoDataSourceLabel = useMemo(() => {
     if (!searchCenter) return null;
+    if (mallPlaceId) return nearbyRestaurantsLoading ? 'Checking restaurants inside this mall…' : 'Only restaurants with a confirmed mall relationship are included.';
     if (nearbyRestaurantsLoading) return 'Loading nearby restaurants...';
     if (nearbyRestaurantsSource === 'google-cache') {
       if (!nearbyLastSyncedAt) return 'Using cached nearby results (refresh after moving >100m).';
@@ -421,6 +425,7 @@ function App() {
     return null;
   }, [
     searchCenter,
+    mallPlaceId,
     nearbyLastSyncedAt,
     nearbyRestaurantsLoading,
     nearbyRestaurantsSource,
@@ -528,14 +533,14 @@ function App() {
       autoSourceRestaurants,
       searchCenter,
       selectedCategories,
-      destinationSearch.radiusKm,
+      mallPlaceId ? Infinity : destinationSearch.radiusKm,
       selectedPriceRanges,
       'all',
-      undefined,
+      mallPlaceId ? `${mallPlaceId}:${nearbyLastSyncedAt}:${autoSourceRestaurants.map((restaurant) => restaurant.id).sort().join(',')}` : undefined,
       avoidedRestaurantIds,
       destinationSearch.openNowOnly,
     )
-  ), [autoSourceRestaurants, searchCenter, selectedCategories, selectedPriceRanges, avoidedRestaurantIds, destinationSearch.radiusKm, destinationSearch.openNowOnly]);
+  ), [autoSourceRestaurants, searchCenter, selectedCategories, selectedPriceRanges, avoidedRestaurantIds, destinationSearch.radiusKm, destinationSearch.openNowOnly, mallPlaceId, nearbyLastSyncedAt]);
 
   const filteredRestaurants = useMemo(
     () => applyServesFilters(filterResult.results, activeServesFilters),
@@ -1485,7 +1490,7 @@ function App() {
   }, [currentMealTime, isGroupRoomActive, selectDeterministicManualList]);
 
   // The one step most likely to put places back on the wheel; the pinned button runs it.
-  const widerRadius = nextWiderRadius(destinationSearch.radiusKm);
+  const widerRadius = mallPlaceId ? null : nextWiderRadius(destinationSearch.radiusKm);
   const servesFiltersHideAll = activeServesFilters.length > 0 && filterResult.results.length > 0;
   const closuresHideAll = destinationSearch.openNowOnly && (closingSoonExcludedCount > 0 || closedNowExcludedCount > 0);
   const widenAction = widerRadius
@@ -1498,7 +1503,13 @@ function App() {
       : widenAction;
 
   // Why the Spin screen has nothing to spin.
-  const autoEmptyState = autoSourceRestaurants.length === 0
+  const autoEmptyState = mallPlaceId && autoSourceRestaurants.length === 0 && !nearbyRestaurantsLoading
+    ? {
+        title: nearbyRestaurantsError ? 'Unable to verify mall restaurants.' : 'No confirmed restaurants inside this mall yet.',
+        subtitle: 'Your search is still inside-only. Choose nearby search to include places outside the mall.',
+        action: { label: 'Search around this mall', onClick: () => { resetAutoWheel(); destinationSearch.setScope('around'); } },
+      }
+    : autoSourceRestaurants.length === 0
     ? (nearbyRestaurantsLoading ? null : {
         title: 'No restaurants found here yet.',
         subtitle: widerRadius
@@ -1548,14 +1559,16 @@ function App() {
             hasLocation={Boolean(searchCenter)}
             destinationSearch={{
               destination: destinationSearch.destination,
-              hasDeviceLocation: Boolean(location),
+              scope: destinationSearch.scope,
+              onScopeChange: (scope) => { resetAutoWheel(); destinationSearch.setScope(scope); },
+              hasDeviceLocation: Boolean(location) && !destinationSearch.needsMallSelection,
               disabled: isSpinning,
               onSelect: (destination) => { resetAutoWheel(); destinationSearch.selectDestination(destination); },
               onCurrentLocation: () => { resetAutoWheel(); destinationSearch.useCurrentLocation(); requestLocation(); },
             }}
             isLocationLoading={locationLoading}
-            locationError={locationError}
-            onRequestLocation={requestLocation}
+            locationError={destinationSearch.needsMallSelection ? 'Your saved mall location expired. Choose the mall again, or explicitly use your current location.' : locationError}
+            onRequestLocation={() => { destinationSearch.useCurrentLocation(); requestLocation(); }}
             filters={{
               radiusKm: destinationSearch.radiusKm,
               onRadiusChange: handleRadiusChange,
@@ -1586,6 +1599,7 @@ function App() {
                 ref={wheelRef}
                 key={`auto-${autoWheelKey}-${searchIdentity}`}
                 hideSpinButton
+                mallLabel={mallPlaceId ? destinationSearch.destination?.label : undefined}
                 distanceOrigin={destinationSearch.destination?.label}
                 scrollOnSpin={false}
                 wheelMaxSize={SPIN_SCREEN_WHEEL_SIZE}
@@ -1628,7 +1642,7 @@ function App() {
                 onSave={(restaurant) => handleSaveFavourite(restaurant, 'auto')}
                 onRemove={removeRestaurantForRound}
                 onResetRound={resetAutoWheel}
-                formatTravel={destinationSearch.destination ? (km) => `${km.toFixed(1)} km from ${destinationSearch.destination!.label}` : estimateTravelTime}
+                formatTravel={mallPlaceId ? () => `Inside ${destinationSearch.destination!.label}` : destinationSearch.destination ? (km) => `${km.toFixed(1)} km from ${destinationSearch.destination!.label}` : estimateTravelTime}
               />
             )}
             pwaBanner={showPwaInstallBanner && isPwaPromptReady ? (

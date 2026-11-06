@@ -4,9 +4,12 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from 
 import { autocompleteDestinations, resolveDestination, type DestinationSuggestion } from '@/lib/googlePlacesDestinations';
 import { useVisualViewport } from '@/hooks/useVisualViewport';
 import type { SearchDestination } from '@/lib/searchDestination';
+import type { SearchScope } from '@/lib/mallSearch';
 import { SCREEN_GUTTER } from '@/screens/arcade';
 
 export interface DestinationPickerProps {
+  scope?: SearchScope;
+  onScopeChange?: (scope: SearchScope) => void;
   /** Renders a small labelled button instead of the full-width "where" row. */
   triggerLabel?: string;
   initialQuery?: string;
@@ -36,7 +39,7 @@ export function DestinationPicker(props: DestinationPickerProps) {
           </button>
         : <button
             disabled={props.disabled}
-            aria-label={`Search around ${label}. Change area`}
+            aria-label={`${props.scope === 'inside' ? 'Search inside' : 'Search around'} ${label}. Change area`}
             className="flex h-11 max-w-full items-center gap-1.5 rounded-full border-[3px] border-brand-ink bg-brand-ink pl-2.5 pr-2 text-left font-heading text-[15px] text-white shadow-[0_3px_0_#1E1B4B] outline-none transition-transform focus-visible:ring-[3px] focus-visible:ring-brand-ink focus-visible:ring-offset-2 enabled:active:translate-y-[2px] enabled:active:shadow-none disabled:opacity-50"
           >
             <MapPin size={18} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-arcade-yellow" />
@@ -46,7 +49,7 @@ export function DestinationPicker(props: DestinationPickerProps) {
       </SheetTrigger>
       <SheetContent side="top" style={viewport ? { top: viewport.offsetTop, maxHeight: Math.max(viewport.height - 8, 200) } : undefined} className="mx-auto max-h-[85dvh] max-w-lg overflow-y-auto overscroll-contain rounded-b-3xl border-[3px] border-brand-ink bg-white p-5 pb-5 text-brand-ink">
         <SheetTitle className="pr-6 font-heading text-2xl font-bold">Where are you heading?</SheetTitle>
-        <SheetDescription className={viewport && viewport.height < 600 ? 'sr-only' : undefined}>Choose an area, landmark, mall, or address to find food around it. Set how far in Filters.</SheetDescription>
+        <SheetDescription className={viewport && viewport.height < 600 ? 'sr-only' : undefined}>Choose a mall to search inside it, or an area, landmark, or address to find nearby food.</SheetDescription>
         {open && <DestinationSearch initialQuery={props.initialQuery} onSelect={(destination) => { props.onSelect(destination); setOpen(false); }} onCurrentLocation={() => { props.onCurrentLocation(); setOpen(false); }} />}
       </SheetContent>
     </Sheet>

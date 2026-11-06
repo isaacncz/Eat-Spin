@@ -41,8 +41,13 @@ test('the room owns editing and the shared reveal while personal lists stay priv
   await expect(page.getByRole('heading', { name: 'Group spin', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /^I[’']m in$/ })).toHaveCount(0);
 
-  await page.getByLabel('Add a room place', { exact: true }).fill('Room cafe');
-  await page.getByRole('button', { name: 'Add to room', exact: true }).click();
+  await page.getByRole('button', { name: /^Add places/ }).click();
+  const addSheet = page.getByRole('dialog', { name: 'Add places' });
+  await addSheet.getByRole('tab', { name: 'Type a name' }).click();
+  await addSheet.getByLabel('Add a room place', { exact: true }).fill('Room cafe');
+  await addSheet.getByRole('button', { name: 'Add to room', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await expect(addSheet).toHaveCount(0);
   await expect.poll(async () => (await fixtureState(page)).roomListNames).toContain('Room cafe');
   const syncsBeforePersonal = (await fixtureState(page)).syncCalls.length;
 
@@ -141,14 +146,16 @@ test('spinning a personal list during a room records a personal result without p
 
 test('a saved-list preview is private until explicit replacement is confirmed', async ({ page }) => {
   await page.goto('/?room=ROOM42');
-  await page.getByText('Load a saved list', { exact: true }).click();
-  await page.getByLabel('Saved list', { exact: true }).selectOption('personal-dinner');
-  await expect(page.getByRole('region', { name: 'Room places', exact: true })).toContainText('Personal dinner has 2 places');
+  await page.getByRole('button', { name: /^Add places/ }).click();
+  const addSheet = page.getByRole('dialog', { name: 'Add places' });
+  await addSheet.getByRole('tab', { name: 'Saved list' }).click();
+  await addSheet.getByLabel('Choose a saved list', { exact: true }).selectOption('personal-dinner');
+  await expect(addSheet).toContainText('Personal dinner has 2 places');
   expect((await fixtureState(page)).syncCalls).toHaveLength(0);
   expect((await fixtureState(page)).roomListNames).toEqual(['Room noodles', 'Room rice']);
   const personalBefore = await page.evaluate(() => localStorage.getItem('eatspin:manual-lists'));
 
-  await page.getByRole('button', { name: 'Use this list in room', exact: true }).click();
+  await addSheet.getByRole('button', { name: 'Use this list in room', exact: true }).click();
   const confirmation = page.getByRole('alertdialog', { name: 'Replace room places?', exact: true });
   await expect(confirmation).toContainText('Personal dinner');
   expect((await fixtureState(page)).syncCalls).toHaveLength(0);
@@ -156,8 +163,9 @@ test('a saved-list preview is private until explicit replacement is confirmed', 
   await expect(confirmation).toHaveCount(0);
   expect((await fixtureState(page)).roomListNames).toEqual(['Room noodles', 'Room rice']);
 
-  await page.getByRole('button', { name: 'Use this list in room', exact: true }).click();
+  await addSheet.getByRole('button', { name: 'Use this list in room', exact: true }).click();
   await confirmation.getByRole('button', { name: 'Use this list in room', exact: true }).click();
+  await expect(addSheet).toHaveCount(0);
   await expect.poll(async () => (await fixtureState(page)).roomListNames).toEqual(['Private dinner', 'Private supper']);
   expect((await fixtureState(page)).syncCalls).toEqual([['Private dinner', 'Private supper']]);
   expect(await page.evaluate(() => localStorage.getItem('eatspin:manual-lists'))).toBe(personalBefore);

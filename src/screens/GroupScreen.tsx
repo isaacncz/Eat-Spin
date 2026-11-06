@@ -13,7 +13,7 @@ import {
 import { normalizeRoomCode } from '@/lib/roomCode';
 import { getHostPresence, GROUP_ROOM_PARTICIPANT_STALE_MS } from '@/lib/groupRoomPresence';
 import { cn } from '@/lib/utils';
-import { ArcadeButton, FOCUS_RING, InitialTile, ScreenFrame, SectionLabel } from '@/screens/arcade';
+import { ArcadeButton, ArcadeIconButton, FOCUS_RING, InitialTile, ScreenFrame } from '@/screens/arcade';
 
 const GROUP_REACTION_CHOICES = ['🔥', '😂', '🤮', '🙌'];
 const COPIED_LABEL_MS = 2_500;
@@ -220,6 +220,8 @@ export function GroupScreen({
     }
   };
 
+  const handleInvite = () => canShare ? handleShare() : handleCopyLink();
+
   const handleCreateRoom = async () => {
     setHasCopied(false);
     await onCreateRoom();
@@ -376,6 +378,20 @@ export function GroupScreen({
     : visibleResult ? 'See the pick and let your friends know if you’re going.'
       : canHostSpin ? 'Add places, invite friends, then spin when you’re ready.' : 'Review the places and share your preferences while the host gets ready.';
 
+  const myPreferenceCount = authUid ? Object.keys(preferences[authUid] ?? {}).length : 0;
+  const placesReady = roomListCount >= 2;
+  const progressSteps: { label: string; done: boolean }[] = canHostSpin
+    ? [{ label: 'Places', done: placesReady }, { label: 'Invite', done: participants.length >= 2 }, { label: 'Spin', done: Boolean(visibleResult) }]
+    : [{ label: 'Places', done: placesReady }, { label: 'Your picks', done: myPreferenceCount > 0 }, { label: 'Spin', done: Boolean(visibleResult) }];
+  const currentStepIndex = roomStage === 'spinning' ? 2 : progressSteps.findIndex(step => !step.done);
+  const progressHint = roomStage === 'spinning' ? 'Spinning now — everyone sees it live.'
+    : visibleResult ? 'Done! Spin again any time.'
+      : !placesReady ? canHostSpin
+        ? `Add ${2 - roomListCount} more ${2 - roomListCount === 1 ? 'place' : 'places'} to spin.`
+        : 'Waiting for the host to add places.'
+        : canHostSpin ? participants.length < 2 ? 'Share the link so friends can join, or spin on your own.' : 'Ready — start the spin for everyone.'
+          : myPreferenceCount > 0 ? 'Picks saved. Waiting for the host to spin.' : 'Optional: tell the host which places you prefer.';
+
   const pinned = (
     <div className="flex flex-col gap-2">
       {canHostSpin ? (
@@ -415,7 +431,7 @@ export function GroupScreen({
     <ScreenFrame title="Group spin" subtitle="Your room, from places to the final pick" pinned={pinned}>
       <ConfirmationDialog request={confirmation} onAnswer={answerConfirmation} onRestoreFocus={restoreConfirmationFocus} />
       {statusBanner}
-      <p role="status" className="text-sm font-semibold">{connected ? 'Connected to room' : 'Offline · reconnecting…'}</p>
+      <p role="status" className={connected ? 'sr-only' : 'text-sm font-semibold'}>{connected ? 'Connected to room' : 'Offline · reconnecting…'}</p>
       {connected && !isHost && hostPresence === 'absent' && (
         <p role="status" className={cn(CARD_CLASS, 'bg-arcade-yellow text-sm font-semibold')}>
           Host disconnected—waiting for them to return.
@@ -425,18 +441,44 @@ export function GroupScreen({
 
       <section aria-label="Room code" className={cn(CARD_CLASS, 'border-4 shadow-pop')}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p className="text-sm font-semibold text-eatspin-gray-1">Invite friends · {participants.length}/{GROUP_ROOM_MAX_PARTICIPANTS} here</p>
-            <p data-testid="room-code" className="text-[30px] font-bold tracking-[0.12em] [overflow-wrap:anywhere]">{roomId}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <ArcadeButton variant="cyan" className="min-h-11 px-3 text-sm" onClick={() => void handleCopyLink()}>
+          <p className="text-sm font-semibold">
+            Room <span data-testid="room-code" className="text-lg font-bold tracking-[0.12em] [overflow-wrap:anywhere]">{roomId}</span>
+            <span className="text-eatspin-gray-1"> · {participants.length}/{GROUP_ROOM_MAX_PARTICIPANTS} here</span>
+          </p>
+          <div className="flex gap-2">
+            {canShare && <ArcadeIconButton aria-label={hasCopied ? 'Room link copied' : 'Copy room link'} onClick={() => void handleCopyLink()}>
               {hasCopied ? <Check size={18} aria-hidden="true" /> : <Copy size={18} aria-hidden="true" />}
-              <span aria-live="polite">{hasCopied ? 'Copied' : 'Copy link'}</span>
+            </ArcadeIconButton>}
+            <ArcadeButton variant="cyan" className="min-h-11 px-3 text-sm" onClick={() => void handleInvite()}>
+              {canShare ? <Share2 size={18} aria-hidden="true" /> : hasCopied ? <Check size={18} aria-hidden="true" /> : <Copy size={18} aria-hidden="true" />}
+              <span aria-live="polite">{canShare ? 'Share invite' : hasCopied ? 'Copied' : 'Copy invite link'}</span>
             </ArcadeButton>
-            {canShare && <ArcadeButton className="min-h-11 px-3 text-sm" onClick={() => void handleShare()}><Share2 size={18} aria-hidden="true" />Share</ArcadeButton>}
           </div>
         </div>
+        <ul aria-label="People in the room" className="mt-3 flex flex-wrap gap-x-3 gap-y-2">
+          {participants.map(participant => {
+            const away = now - participant.lastSeenAt > GROUP_ROOM_PARTICIPANT_STALE_MS;
+            const role = roleOf(participant.uid);
+            const status = role === 'host' ? 'Host' : role === 'cohost' ? 'Co-host' : away ? 'Away' : 'Here';
+            return <li key={participant.uid} className="flex w-16 flex-col items-center gap-0.5 text-center">
+              <span className={cn('relative', away && 'opacity-60')}>
+                <InitialTile name={participant.name} shape="round" />
+                <span aria-hidden="true" className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-white', away ? 'bg-eatspin-gray-3' : 'bg-eatspin-success')} />
+              </span>
+              <span className="w-full truncate text-[13px] font-bold">{participant.name}{participant.uid === authUid && <span className="sr-only"> (you)</span>}</span>
+              <span className={cn('text-[11px] font-semibold', role === 'participant' ? away ? 'text-eatspin-gray-1' : 'text-eatspin-success' : 'rounded-full bg-brand-ink px-1.5 text-white')}>
+                {status}{role !== 'participant' && away ? ' · away' : ''}
+              </span>
+            </li>;
+          })}
+          {participants.length < GROUP_ROOM_MAX_PARTICIPANTS && <li className="flex w-16 flex-col items-center gap-0.5 text-center">
+            <button type="button" aria-label="Invite more people" onClick={() => void handleInvite()}
+              className={cn('-m-1 inline-flex size-11 items-center justify-center rounded-full text-brand-ink', FOCUS_RING)}>
+              <span className="inline-flex size-9 items-center justify-center rounded-full border-[3px] border-dashed border-brand-ink bg-white"><UserPlus size={16} aria-hidden="true" /></span>
+            </button>
+            <span className="text-[13px] font-semibold text-eatspin-gray-1">Invite</span>
+          </li>}
+        </ul>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t-2 border-brand-ink/15 pt-2 text-sm">
           <p className="break-words">You: <strong>{resolvedDisplayName}</strong>{isHost ? ' · Host' : isCohost ? ' · Co-host' : ''}</p>
           {onSaveDisplayName && <ArcadeButton id={editNameButtonId} className="min-h-11 px-3 text-sm" onClick={() => {
@@ -471,8 +513,26 @@ export function GroupScreen({
 
       <section aria-label="Room stage" className="font-heading text-brand-ink">
         <h2 className="text-2xl font-bold">{stageTitle}</h2>
-        <p className="mt-1 text-sm font-medium">{stageDescription}</p>
+        {roomStage !== 'preparing' && <p className="mt-1 text-sm font-medium">{stageDescription}</p>}
         <p role="status" className="sr-only">{visibleResult ? `The group picked ${visibleResult.winnerName}. Let your friends know if you’re going.` : roomStage === 'spinning' ? 'The shared spin is playing.' : ''}</p>
+      </section>
+
+      <section aria-label="Room progress" className="font-heading text-brand-ink">
+        <ol className="grid grid-cols-3 gap-1.5">
+          {progressSteps.map((step, index) => {
+            const current = index === currentStepIndex;
+            return <li key={step.label} aria-current={current ? 'step' : undefined} className={cn(
+              'flex min-h-10 items-center justify-center gap-1 rounded-xl border-[3px] border-brand-ink px-1.5 py-1 text-center text-[13px] font-bold leading-tight',
+              step.done ? 'bg-arcade-lime' : 'bg-white',
+              current && 'shadow-[0_3px_0_#1E1B4B]',
+              !step.done && !current && 'text-eatspin-gray-1',
+            )}>
+              <span>{index + 1} {step.label}</span>
+              {step.done && <><Check size={14} strokeWidth={3} aria-hidden="true" /><span className="sr-only">(done)</span></>}
+            </li>;
+          })}
+        </ol>
+        <p className="mt-1.5 text-sm font-semibold">{progressHint}</p>
       </section>
 
       {visibleResult && (
@@ -499,6 +559,21 @@ export function GroupScreen({
         </section>
       )}
 
+      {roomWheel && <details open={roomStage !== 'finished'} className={cn(CARD_CLASS, 'relative overflow-hidden border-4 shadow-pop')}>
+        <summary className={cn('flex min-h-11 cursor-pointer items-center font-bold', FOCUS_RING)}>Shared wheel</summary>
+        <div className="mt-2">{roomWheel}</div>
+        <p className="mt-2 text-center text-sm font-semibold">{canHostSpin ? 'Everyone sees this wheel spin live.' : 'The host spins. You’ll see it live.'}</p>
+      </details>}
+
+      <section aria-label="Reactions" className={cn(CARD_CLASS, 'relative overflow-hidden py-2.5')}>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-bold">React</p>
+          {GROUP_REACTION_CHOICES.map(emoji => <button key={emoji} type="button" aria-label={`React with ${emoji}`} disabled={!connected}
+            className={cn('inline-flex size-11 items-center justify-center rounded-full border-[3px] border-brand-ink bg-white text-xl disabled:opacity-60', FOCUS_RING)} onClick={() => { void onSendReaction(emoji); }}>{emoji}</button>)}
+        </div>
+        {reactions.length > 0 && <ul aria-label="Recent reactions" className="mt-2 flex flex-wrap gap-1.5">{reactions.slice(-4).map(reaction => <li key={reaction.id} className="rounded-full border-2 border-brand-ink bg-arcade-yellow/60 px-2 py-0.5 text-xs font-semibold">{reaction.emoji} {reaction.name}</li>)}</ul>}
+        {reactionBurst.length > 0 && <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center gap-2 overflow-hidden pb-2">{reactionBurst.map(reaction => <span key={`burst-${reaction.id}`} className="reaction-float text-xl">{reaction.emoji}</span>)}</div>}
+      </section>
 
       <details open={roomStage === 'preparing'} className={CARD_CLASS}>
         <summary className={cn('flex min-h-11 cursor-pointer items-center font-bold', FOCUS_RING)}>Room places · {roomListCount}</summary>
@@ -534,24 +609,8 @@ export function GroupScreen({
         </details>
       )}
 
-      {roomWheel && <details open={roomStage !== 'finished'} className={cn(CARD_CLASS, 'relative overflow-hidden')}>
-        <summary className={cn('flex min-h-11 cursor-pointer items-center font-bold', FOCUS_RING)}>Shared wheel</summary>
-        <div className="mt-2">{roomWheel}</div>
-      </details>}
 
 
-      <details className={CARD_CLASS}>
-        <summary className={cn('flex min-h-11 cursor-pointer items-center font-bold', FOCUS_RING)}>People · {participants.length}</summary>
-        <SectionLabel id="in-the-room-heading">In the room · {participants.length}/{GROUP_ROOM_MAX_PARTICIPANTS}</SectionLabel>
-        {participants.length === 0 ? <p className="mt-2 text-sm">No active participants yet.</p> : <ul aria-labelledby="in-the-room-heading" className="mt-2 space-y-2">
-          {participants.map(participant => <li key={participant.uid} className="flex items-center gap-2">
-            <InitialTile name={participant.name} shape="round" />
-            <span className="min-w-0 flex-1 break-words font-semibold">{participant.name}{participant.uid === authUid ? ' (you)' : ''}</span>
-            {roleOf(participant.uid) === 'host' && <Badge tone="yellow">Host</Badge>}
-            {roleOf(participant.uid) === 'cohost' && <Badge tone="violet">Co-host</Badge>}
-          </li>)}
-        </ul>}
-      </details>
 
       <details className={CARD_CLASS}>
         <summary className={cn('flex min-h-11 cursor-pointer items-center font-bold', FOCUS_RING)}>Room settings</summary>
@@ -572,34 +631,6 @@ export function GroupScreen({
         <ArcadeButton onClick={() => void handleLeaveRoom()} className="mt-3 w-full font-semibold"><LogOut size={18} aria-hidden="true" />Leave room</ArcadeButton>
       </details>
 
-      <details className={cn(CARD_CLASS, 'relative overflow-hidden')}>
-        <summary className={cn('flex min-h-11 cursor-pointer items-center font-bold', FOCUS_RING)}>Reactions</summary>
-        <p className="text-sm">Tap to react in real time</p>
-        <div className="mt-2 flex flex-wrap gap-2">{GROUP_REACTION_CHOICES.map(emoji => <button key={emoji} type="button" aria-label={`React with ${emoji}`} disabled={!connected}
-          className={cn('inline-flex size-11 items-center justify-center rounded-full border-[3px] border-brand-ink bg-white text-xl disabled:opacity-60', FOCUS_RING)} onClick={() => { void onSendReaction(emoji); }}>{emoji}</button>)}</div>
-        {reactions.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{reactions.slice(-8).map(reaction => <span key={reaction.id} className="rounded-full border-2 border-brand-ink bg-arcade-yellow/60 px-2 py-0.5 text-xs font-semibold">{reaction.emoji} {reaction.name}</span>)}</div>}
-        {reactionBurst.length > 0 && <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center gap-2 overflow-hidden pb-2">{reactionBurst.map(reaction => <span key={`burst-${reaction.id}`} className="reaction-float text-xl">{reaction.emoji}</span>)}</div>}
-      </details>
     </ScreenFrame>
-  );
-}
-
-const BADGE_TONES = {
-  yellow: 'bg-arcade-yellow',
-  violet: 'bg-arcade-violet',
-  lime: 'bg-arcade-lime',
-  white: 'bg-white',
-} as const;
-
-function Badge({ tone, children }: { tone: keyof typeof BADGE_TONES; children: ReactNode }) {
-  return (
-    <span
-      className={cn(
-        'rounded-[10px] border-[3px] border-brand-ink px-2 py-0.5 font-heading text-xs font-bold uppercase tracking-wide text-brand-ink',
-        BADGE_TONES[tone],
-      )}
-    >
-      {children}
-    </span>
   );
 }

@@ -46,6 +46,11 @@ describe('room list transactions', () => {
     const first = roomListDelta(base, ['A', 'B'], ['A', 'B', 'C'], 'host', 'op1', 2);
     expect(roomListDelta(first, ['A', 'B'], ['A', 'B', 'C'], 'host', 'op1', 2)).toEqual(first);
   });
+  it('stores a Google place ID only on newly added matching names', () => {
+    const next = roomListDelta(base, ['A', 'B'], ['A', 'B', 'Cafe'], 'host', 'near', 2, { cafe: 'ChIJ_1', a: 'ChIJ_a' });
+    expect(next['near-2']).toEqual({ name: 'Cafe', order: 4, createdAt: 2, createdBy: 'host', placeId: 'ChIJ_1' });
+    expect(next.a).toEqual(base.a);
+  });
   it('preserves stable existing IDs and enforces the room size cap', () => {
     expect(roomListDelta(base, ['A', 'B'], ['B'], 'host', 'remove', 2).b).toEqual(base.b);
     expect(() => roomListDelta(null, [], Array.from({ length: 61 }, (_, i) => `Place ${i}`), 'host', 'large', 2)).toThrow('60');

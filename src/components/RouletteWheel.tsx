@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback, useImperativeHandle, type Ref } from 'react';
 import type { Restaurant } from '@/types';
-import { Loader2, MapPin, Heart, Volume2, VolumeX } from 'lucide-react';
+import { Loader2, Lock, MapPin, Heart, Volume2, VolumeX } from 'lucide-react';
 import gsap from 'gsap';
 import { playSpinTick, playSpinWin, playSpinStart, stopSpinAudio, setSpinSoundEnabled, unlockSpinAudio, triggerSpinHaptic } from '@/lib/spinAudio';
 import { ResultScreen, type ResultVisit } from '@/components/ResultScreen';
@@ -24,6 +24,8 @@ interface RouletteWheelProps {
   ref?: Ref<RouletteWheelHandle>;
   /** Hide the built-in spin button when the host screen renders its own and calls `ref.spin()`. */
   hideSpinButton?: boolean;
+  /** Shows a lock in the hub instead of "SPIN" for viewers who cannot start the spin. */
+  hubLocked?: boolean;
   distanceOrigin?: string;
   /** A room can render its own inline result and attendance instead of the modal. */
   resultPresentation?: 'dialog' | 'parent';
@@ -134,6 +136,7 @@ const loadSoundPreference = (): boolean => {
 export function RouletteWheel({
   ref,
   hideSpinButton = false,
+  hubLocked = false,
   distanceOrigin,
   resultPresentation = 'dialog',
   onResultRevealed,
@@ -823,7 +826,9 @@ export function RouletteWheel({
 
             {/* Center Circle */}
             <div data-wheel-hub="" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center z-20 border-4 border-brand-ink shadow-pop">
-              <span className="wheel-hub-label text-base sm:text-lg font-heading text-eatspin-orange font-bold">SPIN</span>
+              {hubLocked
+                ? <Lock data-wheel-hub-lock="" size={26} strokeWidth={2.75} aria-hidden="true" className="wheel-hub-label text-brand-ink" />
+                : <span className="wheel-hub-label text-base sm:text-lg font-heading text-eatspin-orange font-bold">SPIN</span>}
               <span className="wheel-hub-mark" aria-hidden="true"><BrandMark className="size-10 sm:size-12" /></span>
             </div>
             

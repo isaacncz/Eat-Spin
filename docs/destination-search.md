@@ -25,3 +25,13 @@ Use the existing `VITE_GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_PLACES_REGION` (defaul
 Publish the updated `docs/firebase-rtdb-rules.json` usage rule before releasing this client to a Firebase-configured environment: it adds `autocomplete` and `details` counter kinds. Without those writes, lookup reports the permission failure and does not silently bypass shared budgeting. The existing local-storage fallback remains available when Firebase is unconfigured.
 
 Each new kind uses the existing configured monthly cap/threshold as a conservative request guard, not a dollar estimator or promise of free usage. Every autocomplete request reserves a slot even if a completed session may later receive discounted billing. Failed/aborted requests may consume reservations. Keep Google Cloud quotas as the hard backstop. Existing restaurant caching policy is outside this feature's scope.
+
+## Group nearby fill
+
+Hosts and co-hosts can fill a Group room from a Google Maps nearby search ("Find places nearby" in the room editor). The center is the host's device location or a searched area; members never call Google and read the shared room list. One Nearby Search runs on the host's device and counts against the shared `nearby` budget; the panel is disabled while that budget is blocked.
+
+Ticked places are written through the normal room-list transaction. Names are shortened to the 24-character room limit with an ellipsis, and each item also stores its Google `placeId` (rules allow `^[A-Za-z0-9_-]{1,256}$`). Members' result links use `query_place_id` so a shortened name still opens the right place.
+
+Policy note: room items are Google-derived names stored in Firebase for the room's lifetime (2 hours); expired rooms are removed when next opened. This is a product decision accepted with known policy risk, not a confirmed exception to the Places caching terms above. "Save a personal copy" keeps the shortened names locally, as it does for other room lists.
+
+Publish the updated `docs/firebase-rtdb-rules.json` (room-list `placeId` validation) with the client. Older clients ignore `placeId`.

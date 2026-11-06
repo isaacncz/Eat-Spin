@@ -25,6 +25,10 @@ try {
   assert.deepEqual(Object.values((await get(ref(host, room + '/list'))).val()).map(item => item.name).sort(), ['A', 'B', 'C', 'D']);
   await assertFails(set(ref(member, room + '/list/evil'), { name: 'Evil', order: 0, createdAt: now, createdBy: 'member' }));
   await assertFails(set(ref(host, room + '/list/bad'), { name: 'x'.repeat(25), order: 0, createdAt: now, createdBy: 'host' }));
+  await assertSucceeds(runTransaction(ref(cohost, room + '/list'), raw => roomListDelta(raw, [], ['Nearby Café'], 'cohost', 'near', now, { 'nearby café': 'ChIJ_abc-123' })));
+  assert.equal(Object.values((await get(ref(host, room + '/list'))).val()).find(item => item.name === 'Nearby Café')?.placeId, 'ChIJ_abc-123');
+  await assertFails(set(ref(host, room + '/list/badplace'), { name: 'Bad', order: 0, createdAt: now, createdBy: 'host', placeId: 'bad id/../x' }));
+  await assertFails(set(ref(member, room + '/list/memberplace'), { name: 'Member', order: 0, createdAt: now, createdBy: 'member', placeId: 'ChIJ_member' }));
   await assertSucceeds(remove(ref(member, room + '/participants/member')));
   await assertFails(update(ref(member, room + '/participants/member'), { name: 'User', lastSeenAt: now, ready: true }));
   await assertSucceeds(set(ref(member, room + '/participants/member'), presence));

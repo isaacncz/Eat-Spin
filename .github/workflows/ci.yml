@@ -80,7 +80,8 @@ jobs:
   # specs cover pre-join screens; live multi-client Firebase coverage is separate.
   smoke:
     name: Playwright smoke
-    runs-on: ubuntu-latest
+    # Playwright 1.59 cannot install Chromium on ubuntu-latest (26.04); pin until it supports it.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
@@ -122,7 +123,8 @@ jobs:
 
   sharing-rules:
     name: Shared list and group Firebase rules
-    runs-on: ubuntu-latest
+    # Playwright 1.59 cannot install Chromium on ubuntu-latest (26.04); pin until it supports it.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7

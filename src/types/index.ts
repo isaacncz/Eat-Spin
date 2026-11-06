@@ -29,6 +29,8 @@ export interface Restaurant {
   distance?: number;
   userRatingCount?: number;
   googlePlaceId?: string;
+  /** Provider-reported containing place IDs; used for strict mall membership. */
+  containingPlaceIds?: string[];
   source?: 'google-live' | 'google-cache' | 'local-fallback';
   hasKnownPriceRange?: boolean;
   /** Official Google Maps URL for this place. */

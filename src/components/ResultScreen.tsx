@@ -24,6 +24,7 @@ export interface ResultVisit {
 export interface ResultScreenProps {
   open: boolean;
   distanceOrigin?: string;
+  mallLabel?: string;
   /** Called with false for the back button and Esc. */
   onOpenChange: (open: boolean) => void;
   restaurant: Restaurant;
@@ -100,6 +101,7 @@ export function ResultScreen({
   restaurant,
   isManual,
   distanceOrigin,
+  mallLabel,
   rarity,
   visit,
   claim,
@@ -224,7 +226,7 @@ export function ResultScreen({
 
                 {!isManual && (
                   <div className="mt-2.5 flex flex-wrap gap-2">
-                    {restaurant.distance !== undefined && <span className={CHIP}>{distanceOrigin ? `${restaurant.distance.toFixed(1)} km from ${distanceOrigin}` : estimateTravelTime(restaurant.distance)}</span>}
+                    {restaurant.distance !== undefined && <span className={CHIP}>{mallLabel ? `Inside ${mallLabel}` : distanceOrigin ? `${restaurant.distance.toFixed(1)} km from ${distanceOrigin}` : estimateTravelTime(restaurant.distance)}</span>}
                     {hours && <span className={cn(CHIP, HOURS_SURFACE[hours.status])}>{hours.label}</span>}
                     {restaurant.priceRange && <span className={CHIP}>{restaurant.priceRange}</span>}
                     {restaurant.rating > 0 && (

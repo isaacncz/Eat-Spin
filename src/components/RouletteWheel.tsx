@@ -25,6 +25,7 @@ interface RouletteWheelProps {
   /** Hide the built-in spin button when the host screen renders its own and calls `ref.spin()`. */
   hideSpinButton?: boolean;
   distanceOrigin?: string;
+  mallLabel?: string;
   /** A room can render its own inline result and attendance instead of the modal. */
   resultPresentation?: 'dialog' | 'parent';
   /** Reveal notification, including direct restoration of an older external event. */
@@ -135,6 +136,7 @@ export function RouletteWheel({
   ref,
   hideSpinButton = false,
   distanceOrigin,
+  mallLabel,
   resultPresentation = 'dialog',
   onResultRevealed,
   wheelMaxSize = '32.5rem',
@@ -685,8 +687,8 @@ export function RouletteWheel({
       // Text box is narrower than the segment arc; leave a little side padding.
       const compactName = compactRestaurantName(restaurant.name, 28);
       const { lines, fontSize } = fitWheelLabel(compactName, constrainedWidth - 6, labelBaseFontSize);
-      // One unit on the wheel: the radius is chosen in km, so distances are km too.
-      const distanceLabel = canShowDistance && restaurant.distance !== undefined
+      // Inside-only membership is already shown above the wheel; avoid misleading 0.0 km labels.
+      const distanceLabel = !mallLabel && canShowDistance && restaurant.distance !== undefined
         ? `${restaurant.distance.toFixed(1)} km`
         : null;
 
@@ -938,7 +940,7 @@ export function RouletteWheel({
                       </span>
                     </span>
                     <span className="flex-shrink-0 text-xs font-semibold text-brand-orange tabular-nums">
-                      {distanceOrigin ? `${r.distance!.toFixed(1)} km from ${distanceOrigin}` : estimateTravelTime(r.distance!)}
+                      {mallLabel ? `Inside ${mallLabel}` : distanceOrigin ? `${r.distance!.toFixed(1)} km from ${distanceOrigin}` : estimateTravelTime(r.distance!)}
                     </span>
                   </li>
                 ))}
@@ -957,6 +959,7 @@ export function RouletteWheel({
           }}
           restaurant={spinResult}
           distanceOrigin={distanceOrigin}
+          mallLabel={mallLabel}
           isManual={isManualResult}
           rarity={resultRarity}
           visit={resultVisit}

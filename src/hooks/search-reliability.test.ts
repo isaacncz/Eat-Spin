@@ -88,3 +88,24 @@ it('keeps live nearby results when IndexedDB rejects the cache write', async () 
   expect(harness.states[3]).toBe('google-live');
   expect(harness.states[5]).toBe(false);
 });
+
+it('does not enable bundled fallback when mall verification fails', async () => {
+  vi.mocked(fetchNearbyGoogleRestaurants).mockRejectedValueOnce(new Error('provider unavailable'));
+  useNearbyRestaurants({ enabled: true, location: { lat: 3.07, lng: 101.6 }, radiusKm: 10, mallPlaceId: 'pyramid' });
+  await vi.advanceTimersByTimeAsync(500);
+  expect(harness.states[0]).toEqual([]);
+  expect(harness.states[2]).toBe('provider unavailable');
+  expect(harness.states[5]).toBe(false);
+});
+
+it('filters mall candidates before ranking and writes only scoped tenant records', async () => {
+  const results = [
+    { id: 'tenant', source: 'google-live', containingPlaceIds: ['pyramid'] },
+    { id: 'outside', source: 'google-live', containingPlaceIds: ['other'] },
+  ] as unknown as Awaited<ReturnType<typeof fetchNearbyGoogleRestaurants>>;
+  vi.mocked(fetchNearbyGoogleRestaurants).mockResolvedValueOnce(results);
+  useNearbyRestaurants({ enabled: true, location: { lat: 3.07, lng: 101.6 }, radiusKm: 10, mallPlaceId: 'pyramid' });
+  await vi.advanceTimersByTimeAsync(500);
+  expect(harness.states[0]).toEqual([results[0]]);
+  expect(saveNearbyRestaurantsSnapshot).toHaveBeenCalledWith(expect.objectContaining({ mallPlaceId: 'pyramid', restaurants: [results[0]], searchRadiusKm: 2 }));
+});

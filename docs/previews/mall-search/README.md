@@ -5,6 +5,10 @@ production UI or search behavior, make Places requests, or verify mall tenants.
 The wheel contents are illustrative, and the three columns show alternative
 states rather than a sequence of screens.
 
+The working implementation for [issue #131](https://github.com/isaacncz/Eat-Spin/issues/131)
+is now included alongside this prototype. See [destination search](../../destination-search.md)
+for the actual behavior, verification rules, persistence, and known coverage limits.
+
 ![Mall search concept](mall-search-preview.png)
 
 ## Preview
@@ -38,22 +42,16 @@ they do not select a destination, fetch restaurants, or perform a real spin.
 
 ## Implementation boundary
 
-The app currently stores a destination's place ID, coordinates, label, address,
-and fetch time. Restaurant searches use a geographic radius; there is no mall
-membership contract or filter. This prototype must not be mistaken for that
-implementation.
+This prototype predates the working feature. The app now identifies shopping malls
+using provider place types and includes restaurants only when a containing place
+ID matches the selected mall. Search identity, cancellation, caches, the wheel,
+reloads, and empty/error states respect the scope. Inside-only searches cannot use
+unrestricted nearby or bundled fallback results.
 
-A working implementation needs a reliable way to identify malls and confirm
-each restaurant's membership. Investigate provider-supported parent-place data
-and its availability, cost, and storage rules before relying on it. An official
-tenant directory matched to the correct branch may provide another source.
-Names, nearby coordinates, and a mall name in an address are supporting evidence,
-not sufficient proof on their own. Unknown membership must not enter an
-inside-only result pool.
-
-Search identity, request cancellation, caches, fallback data, reload behavior,
-filters, and empty/error states must all respect the selected scope and mall ID.
-Do not reuse unrestricted nearby results for an inside-only wheel.
+An official tenant directory may provide additional verified branch mappings in
+a future change. Names, coordinates, and a mall name in an address are supporting
+evidence, not sufficient proof on their own. Missing provider relationships are
+excluded, so the current feature does not promise a complete mall directory.
 
 ## Preview validation
 
@@ -63,8 +61,9 @@ Do not reuse unrestricted nearby results for an inside-only wheel.
 - The empty-state nearby action explicitly switches the scope.
 - No browser script errors during these checks.
 
-These checks validate the prototype only. Production implementation requires
-mocked provider coverage and browser regressions for actual search behavior.
+These checks validate the prototype only. The working implementation has separate
+mocked provider and browser coverage in `tests/mall-search.spec.ts` and
+`tests/destination-search.spec.ts`.
 
 ## Assets
 

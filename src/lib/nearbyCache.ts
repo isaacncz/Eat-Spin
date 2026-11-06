@@ -1,3 +1,4 @@
+import { filterMallRestaurants } from '@/lib/mallSearch';
 import type { Restaurant } from '@/types';
 import { calculateDistance } from '@/lib/restaurantUtils';
 
@@ -17,6 +18,7 @@ type RankStrategy = typeof RANK_STRATEGY;
 
 type NearbySnapshotRecord = {
   snapshotKey: string;
+  mallPlaceId?: string;
   areaGeohash: string;
   areaNeighborGeohashes: string[];
   centerLat: number;
@@ -42,6 +44,7 @@ type NearbyPlaceRecord = {
 };
 
 export interface NearbyCacheLookupOptions {
+  mallPlaceId?: string;
   location: { lat: number; lng: number };
   searchRadiusKm: number;
   openNowOnly: boolean;
@@ -53,6 +56,7 @@ export interface NearbyCacheLookupOptions {
 }
 
 export interface NearbyCacheWriteOptions {
+  mallPlaceId?: string;
   location: { lat: number; lng: number };
   restaurants: Restaurant[];
   searchRadiusKm: number;
@@ -239,7 +243,8 @@ const buildSnapshotKey = (
   region: string,
   openNowOnly: boolean,
   searchRadiusKm: number,
-  categoriesKey: string = '*'
+  categoriesKey: string = '*',
+  mallPlaceId?: string
 ): string => (
   [
     CACHE_SCHEMA_VERSION,
@@ -248,6 +253,7 @@ const buildSnapshotKey = (
     openNowOnly ? 'open' : 'all',
     searchRadiusKm.toFixed(2),
     `cats:${categoriesKey}`,
+    mallPlaceId ? `inside:${mallPlaceId}` : 'around',
   ].join(':')
 );
 
@@ -275,6 +281,7 @@ const isSnapshotMatch = (
   options: NearbyCacheLookupOptions,
   nowMs: number
 ): boolean => {
+  if (snapshot.mallPlaceId !== options.mallPlaceId) return false;
   if (snapshot.expiresAt <= nowMs) return false;
   if (snapshot.openNowOnly !== options.openNowOnly) return false;
   if (normalizeRegion(snapshot.region) !== normalizeRegion(options.region)) return false;
@@ -362,7 +369,7 @@ export const getCachedNearbyRestaurants = async (
     if (storedRestaurants.length === 0) return null;
 
     return {
-      restaurants: normalizeRestaurantsForLocation(storedRestaurants, options.location, 'google-cache'),
+      restaurants: normalizeRestaurantsForLocation(filterMallRestaurants(storedRestaurants, options.mallPlaceId), options.location, 'google-cache'),
       fetchedAtMs: matchedSnapshot.fetchedAt,
     };
   } finally {
@@ -386,17 +393,21 @@ export const saveNearbyRestaurantsSnapshot = async (options: NearbyCacheWriteOpt
     options.region,
     options.openNowOnly,
     options.searchRadiusKm,
-    options.categoriesKey
+    options.categoriesKey,
+    options.mallPlaceId
   );
-  const placeIds = options.restaurants.map(getStablePlaceId);
+  const eligibleRestaurants = filterMallRestaurants(options.restaurants, options.mallPlaceId);
+  const placeIds = eligibleRestaurants.map((restaurant) => options.mallPlaceId
+    ? `inside:${options.mallPlaceId}:${getStablePlaceId(restaurant)}` : getStablePlaceId(restaurant));
   const normalizedRestaurants = normalizeRestaurantsForLocation(
-    options.restaurants,
+    eligibleRestaurants,
     options.location,
     'google-cache'
   );
 
   const snapshotRecord: NearbySnapshotRecord = {
     snapshotKey,
+    mallPlaceId: options.mallPlaceId,
     areaGeohash,
     areaNeighborGeohashes: neighborGeohashes,
     centerLat: options.location.lat,

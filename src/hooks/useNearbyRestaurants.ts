@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { filterMallRestaurants, MALL_DISCOVERY_RADIUS_KM } from '@/lib/mallSearch';
 import type { FoodCategory, Restaurant, UserLocation } from '@/types';
 import { fetchNearbyGoogleRestaurants, rankNearbyRestaurants } from '@/lib/googlePlacesRestaurants';
 import { enrichRestaurantListCategories } from '@/lib/categoryClassifier';
@@ -10,6 +11,7 @@ import {
 } from '@/lib/nearbyCache';
 
 interface UseNearbyRestaurantsOptions {
+  mallPlaceId?: string;
   enabled: boolean;
   location: UserLocation | null;
   radiusKm: number;
@@ -46,6 +48,7 @@ const toMs = (days: number): number => Math.round(days * 24 * 60 * 60 * 1000);
 
 export function useNearbyRestaurants({
   enabled,
+  mallPlaceId,
   location,
   radiusKm,
   openNowOnly = true,
@@ -60,7 +63,7 @@ export function useNearbyRestaurants({
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [shouldUseLocalFallback, setShouldUseLocalFallback] = useState(false);
   const requestIdRef = useRef(0);
-  const queryKey = JSON.stringify([enabled, location?.lat, location?.lng, radiusKm, openNowOnly, region, language, selectedCategories]);
+  const queryKey = JSON.stringify([enabled, location?.lat, location?.lng, radiusKm, openNowOnly, region, language, selectedCategories, mallPlaceId]);
   const [resolvedKey, setResolvedKey] = useState<string | null>(null);
 
   // Stable string key for selectedCategories to use as a useEffect dependency.
@@ -117,7 +120,9 @@ export function useNearbyRestaurants({
 
     const normalizedRegion = region.trim().toUpperCase();
     const normalizedLanguage = language.trim().toLowerCase() || 'en';
-    const effectiveRadiusKm = radiusKm;
+    const effectiveRadiusKm = mallPlaceId ? MALL_DISCOVERY_RADIUS_KM : radiusKm;
+    const rankingRadiusKm = mallPlaceId ? Infinity : radiusKm;
+    const cachedDescription = mallPlaceId ? 'cached mall results' : 'cached nearby data';
 
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
@@ -135,6 +140,7 @@ export function useNearbyRestaurants({
       const cacheLookupOptions = {
         location,
         searchRadiusKm: effectiveRadiusKm,
+        mallPlaceId,
         openNowOnly,
         region: normalizedRegion,
         movementThresholdKm: cacheConfig.movementThresholdKm,
@@ -152,9 +158,9 @@ export function useNearbyRestaurants({
 
       if (cachedResult && cachedResult.restaurants.length >= cacheConfig.minResults) {
         const rankedCached = rankNearbyRestaurants(
-          cachedResult.restaurants,
+          filterMallRestaurants(cachedResult.restaurants, mallPlaceId),
           location,
-          effectiveRadiusKm,
+          rankingRadiusKm,
           cacheConfig.topResults,
           'google-cache'
         );
@@ -169,6 +175,7 @@ export function useNearbyRestaurants({
         const liveResult = await fetchNearbyGoogleRestaurants({
           location,
           radiusKm: effectiveRadiusKm,
+          mallPlaceId,
           region: normalizedRegion,
           language: normalizedLanguage,
           signal: abortController.signal,
@@ -178,9 +185,9 @@ export function useNearbyRestaurants({
         if (requestIdRef.current !== requestId || abortController.signal.aborted) return;
 
         const rankedLive = rankNearbyRestaurants(
-          liveResult,
+          filterMallRestaurants(liveResult, mallPlaceId),
           location,
-          effectiveRadiusKm,
+          rankingRadiusKm,
           cacheConfig.topResults,
           'google-live'
         );
@@ -189,15 +196,16 @@ export function useNearbyRestaurants({
         if (rankedLive.length > 0) {
           try {
             await saveNearbyRestaurantsSnapshot({
-            location,
-            restaurants: rankedLive,
-            searchRadiusKm: effectiveRadiusKm,
-            openNowOnly,
-            region: normalizedRegion,
-            movementThresholdKm: cacheConfig.movementThresholdKm,
-            ttlMs: cacheConfig.ttlMs,
-            fetchedAtMs,
-            categoriesKey,
+              location,
+              restaurants: rankedLive,
+              searchRadiusKm: effectiveRadiusKm,
+              mallPlaceId,
+              openNowOnly,
+              region: normalizedRegion,
+              movementThresholdKm: cacheConfig.movementThresholdKm,
+              ttlMs: cacheConfig.ttlMs,
+              fetchedAtMs,
+              categoriesKey,
             });
           } catch (cacheError) {
             console.warn('Nearby results could not be cached', cacheError);
@@ -208,15 +216,15 @@ export function useNearbyRestaurants({
 
         if (rankedLive.length === 0 && cachedResult && cachedResult.restaurants.length > 0) {
           const rankedCached = rankNearbyRestaurants(
-            cachedResult.restaurants,
+            filterMallRestaurants(cachedResult.restaurants, mallPlaceId),
             location,
-            effectiveRadiusKm,
+            rankingRadiusKm,
             cacheConfig.topResults,
             'google-cache'
           );
           setRestaurants(enrichRestaurantListCategories(rankedCached));
           setSource('google-cache');
-          setError('Live refresh returned no matches. Showing cached nearby data.');
+          setError(`Live refresh returned no matches. Showing ${cachedDescription}.`);
           setLastSyncedAt(cachedResult.fetchedAtMs);
           setIsLoading(false);
           return;
@@ -236,15 +244,15 @@ export function useNearbyRestaurants({
 
         if (cachedResult && cachedResult.restaurants.length > 0) {
           const rankedCached = rankNearbyRestaurants(
-            cachedResult.restaurants,
+            filterMallRestaurants(cachedResult.restaurants, mallPlaceId),
             location,
-            effectiveRadiusKm,
+            rankingRadiusKm,
             cacheConfig.topResults,
             'google-cache'
           );
           setRestaurants(enrichRestaurantListCategories(rankedCached));
           setSource('google-cache');
-          setError(`${errorMessage} Showing cached nearby data.`);
+          setError(`${errorMessage} Showing ${cachedDescription}.`);
           setLastSyncedAt(cachedResult.fetchedAtMs);
           setShouldUseLocalFallback(false);
         } else {
@@ -252,7 +260,7 @@ export function useNearbyRestaurants({
           setSource(null);
           setError(errorMessage);
           setLastSyncedAt(null);
-          setShouldUseLocalFallback(true);
+          setShouldUseLocalFallback(!mallPlaceId);
         }
       } finally {
         if (requestIdRef.current === requestId && !abortController.signal.aborted) {
@@ -269,7 +277,7 @@ export function useNearbyRestaurants({
       window.clearTimeout(debounceTimer);
       abortController.abort();
     };
-  }, [cacheConfig, categoriesKey, enabled, language, location, openNowOnly, radiusKm, region, selectedCategories, queryKey]);
+  }, [cacheConfig, categoriesKey, enabled, language, location, openNowOnly, radiusKm, region, selectedCategories, queryKey, mallPlaceId]);
 
   return {
     restaurants: resolvedKey === queryKey ? restaurants : [],

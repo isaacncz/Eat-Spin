@@ -3,10 +3,12 @@ import { calculateDistance } from '@/lib/restaurantUtils';
 import { computeQualityScore } from '@/lib/restaurantUtils';
 import { classifyPlace } from '@/lib/categoryClassifier';
 import { reservePlacesCall } from '@/lib/placesUsage';
+import { filterMallRestaurants } from '@/lib/mallSearch';
 
 const GOOGLE_NEARBY_ENDPOINT = 'https://places.googleapis.com/v1/places:searchNearby';
 export const GOOGLE_PLACE_FIELDS = [
   'places.id',
+  'places.containingPlaces',
   'places.displayName',
   'places.formattedAddress',
   'places.location',
@@ -135,6 +137,7 @@ type GooglePlaceReview = {
 
 export type GooglePlace = {
   id?: string;
+  containingPlaces?: { id?: string }[];
   displayName?: { text?: string };
   formattedAddress?: string;
   location?: { latitude?: number; longitude?: number };
@@ -179,6 +182,7 @@ type GoogleNearbyResponse = {
 };
 
 export interface FetchNearbyGoogleRestaurantsOptions {
+  mallPlaceId?: string;
   location: { lat: number; lng: number };
   radiusKm: number;
   region: string;
@@ -525,6 +529,8 @@ export const normalizeGooglePlace = (
   return {
     id: `gplace-${place.id}`,
     googlePlaceId: place.id,
+    containingPlaceIds: place.containingPlaces?.flatMap((parent) =>
+      typeof parent.id === 'string' && parent.id.trim() ? [parent.id] : []),
     source: 'google-live',
     name: place.displayName?.text?.trim() || 'Nearby Restaurant',
     category: categories,
@@ -616,9 +622,9 @@ export const fetchNearbyGoogleRestaurants = async (
   }
 
   const places = payload?.places ?? [];
-  const restaurants = places
+  const restaurants = filterMallRestaurants(places
     .map((place) => normalizeGooglePlace(place, options.location, apiKey))
-    .filter((restaurant): restaurant is Restaurant => Boolean(restaurant));
+    .filter((restaurant): restaurant is Restaurant => Boolean(restaurant)), options.mallPlaceId);
 
   // When the API was called with cuisine-specific types, force-tag each result
   // with the corresponding app categories and boost confidence to 'high'

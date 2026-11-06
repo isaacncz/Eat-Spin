@@ -26,6 +26,7 @@ export interface FiltersSheetProps {
   /** The button that opens the sheet. Focus returns to it when the sheet closes. */
   trigger: ReactNode;
 
+  insideMall?: boolean;
   radiusKm: SearchRadius;
   onRadiusChange: (radius: SearchRadius) => void;
   /** Name of the chosen destination; distances are measured from it. Null means the user's location. */
@@ -102,6 +103,7 @@ export const FiltersSheet = memo(function FiltersSheet({
   onOpenChange,
   trigger,
   radiusKm,
+  insideMall = false,
   onRadiusChange,
   destinationLabel,
   openNowOnly,
@@ -191,7 +193,7 @@ export const FiltersSheet = memo(function FiltersSheet({
           </button>
         </div>
         <DialogDescription className="sr-only">
-          Choose how far to look, whether places must be open now, price, food type and what a place serves. The number on the
+          {insideMall ? 'Choose availability, price, food type and what a place serves inside this mall.' : 'Choose how far to look, whether places must be open now, price, food type and what a place serves.'} The number on the
           button at the bottom is how many places are on the wheel.
         </DialogDescription>
 
@@ -205,8 +207,8 @@ export const FiltersSheet = memo(function FiltersSheet({
             </div>
           )}
 
-          <Section title="How far?" hint={destinationLabel ? `from ${destinationLabel}` : 'from you'}>
-            <div role="group" aria-label="How far" className="grid grid-cols-4 gap-2">
+          <Section title={insideMall ? 'Availability' : 'How far?'} hint={insideMall ? 'Inside this mall' : destinationLabel ? `from ${destinationLabel}` : 'from you'}>
+            {!insideMall && <div role="group" aria-label="How far" className="grid grid-cols-4 gap-2">
               {SEARCH_RADII.map((radius) => {
                 const pressed = radiusKm === radius;
                 return (
@@ -228,7 +230,7 @@ export const FiltersSheet = memo(function FiltersSheet({
                   </button>
                 );
               })}
-            </div>
+            </div>}
             <button
               type="button"
               role="checkbox"

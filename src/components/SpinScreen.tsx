@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { ChevronRight, Crown, Loader2, MapPin, Search, SlidersHorizontal } from 'lucide-react';
 
+import { MallSearchScope } from '@/components/MallSearchScope';
 import { DestinationPicker, type DestinationPickerProps } from '@/components/DestinationPicker';
 import { CravingSearch } from '@/components/CravingSearch';
 import { FiltersSheet, type FiltersSheetProps } from '@/components/FiltersSheet';
@@ -131,10 +132,15 @@ export function SpinScreen({
     };
   }, []);
 
+  const insideMall = Boolean(destinationSearch?.destination?.mallPlaceId && destinationSearch.scope === 'inside');
+  const scopeControl = destinationSearch?.destination?.mallPlaceId && destinationSearch.onScopeChange ? (
+    <MallSearchScope scope={destinationSearch.scope ?? 'inside'} disabled={destinationSearch.disabled} onChange={destinationSearch.onScopeChange} />
+  ) : null;
+
   const isEmpty = hasLocation && !isLoadingPlaces && placeCount === 0;
   const showWheel = hasLocation && placeCount > 0;
 
-  const summary = buildFilterSummary(filters.radiusKm, hasLocation ? placeCount : null, hasLocation && isLoadingPlaces);
+  const summary = buildFilterSummary(filters.radiusKm, hasLocation ? placeCount : null, hasLocation && isLoadingPlaces, insideMall ? 'Inside mall' : undefined);
   const activeFilterCount = countActiveFilters({
     categories: filters.selectedCategories,
     priceRanges: filters.selectedPriceRanges,
@@ -226,10 +232,12 @@ export function SpinScreen({
             ← Back to Spin
           </button>
           {destinationSearch && <div className="flex items-center gap-2">
-            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-ink" aria-label="Food search area">Within {filters.radiusKm} km of {destinationSearch.destination?.label ?? 'your current location'}</p>
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-ink" aria-label="Food search area">{insideMall ? `Inside ${destinationSearch.destination?.label}` : `Within ${filters.radiusKm} km of ${destinationSearch.destination?.label ?? 'your current location'}`}</p>
             <DestinationPicker {...destinationSearch} triggerLabel="Change area" />
           </div>}
+          {scopeControl}
           <CravingSearch
+            mallLabel={insideMall ? destinationSearch?.destination?.label : undefined}
             areaSearchAction={destinationSearch && search.query.trim() ? <DestinationPicker {...destinationSearch} triggerLabel={`Search “${search.query.trim()}” as an area`} initialQuery={search.query.trim()} /> : undefined}
             query={search.query}
             distanceOrigin={destinationSearch?.destination?.label}
@@ -244,8 +252,9 @@ export function SpinScreen({
         </div>
       ) : (
         <>
-          <div className="mt-3 flex flex-col gap-1 [@media(max-height:700px)]:mt-2 [@media(max-height:700px)]:flex-row [@media(max-height:700px)]:items-center">
+          <div className={cn("mt-3 flex flex-col gap-1 [@media(max-height:700px)]:mt-2", !scopeControl && "[@media(max-height:700px)]:flex-row [@media(max-height:700px)]:items-center")}>
           {destinationSearch && <DestinationPicker {...destinationSearch} />}
+          {scopeControl && <div className={cn("py-2", SCREEN_GUTTER)}>{scopeControl}</div>}
           <div
             role="group"
             aria-label="Quick picks"
@@ -282,6 +291,7 @@ export function SpinScreen({
               open={filtersOpen}
               onOpenChange={handleFiltersOpenChange}
               {...filters}
+              insideMall={insideMall}
               destinationLabel={destinationSearch?.destination?.label ?? null}
               emptyAction={emptyState?.action}
               onCategoryChange={(categories) => {
@@ -352,7 +362,7 @@ export function SpinScreen({
                 className="my-6 flex items-center justify-center gap-2 font-heading text-base font-semibold text-brand-ink"
               >
                 <Loader2 className="size-5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-                Finding restaurants nearby…
+                {insideMall ? 'Checking restaurants inside this mall…' : 'Finding restaurants nearby…'}
               </p>
             )}
 
@@ -367,15 +377,16 @@ export function SpinScreen({
                 {emptyState?.action && (
                   <button
                     type="button"
-                    onClick={() => handleFiltersOpenChange(true)}
+                    onClick={insideMall ? emptyState.action.onClick : () => handleFiltersOpenChange(true)}
                     className="mt-3 inline-flex min-h-11 items-center rounded-full border-[3px] border-brand-ink bg-white px-4 font-heading text-[15px] font-bold text-brand-ink outline-none focus-visible:ring-[3px] focus-visible:ring-brand-ink focus-visible:ring-offset-2"
                   >
-                    Open filters
+                    {insideMall ? emptyState.action.label : 'Open filters'}
                   </button>
                 )}
               </div>
             )}
 
+            {isEmpty && insideMall && destinationSearch && <div className="mb-4 flex justify-center"><DestinationPicker {...destinationSearch} triggerLabel="Choose another mall" /></div>}
             {showWheel && wheel}
           </div>
 

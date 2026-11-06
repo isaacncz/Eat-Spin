@@ -25,6 +25,7 @@ interface CravingSearchProps {
   query: string;
   areaSearchAction?: ReactNode;
   distanceOrigin?: string;
+  mallLabel?: string;
   onSearch: (text: string) => void;
   results: Restaurant[];
   isLoading: boolean;
@@ -61,6 +62,7 @@ export const CravingSearch = memo(function CravingSearch({
   error,
   recentSearches,
   distanceOrigin,
+  mallLabel,
   onLetsGo,
   onClear,
 }: CravingSearchProps) {
@@ -182,10 +184,10 @@ export const CravingSearch = memo(function CravingSearch({
         <div className="rounded-xl bg-gray-50 p-6 text-center">
           <p className="text-2xl">😕</p>
           <p className="mt-2 text-sm font-medium text-eatspin-gray-1">
-            No food matches for "{query}" in this area
+            {mallLabel ? `No confirmed food matches for “${query}” inside ${mallLabel}` : `No food matches for “${query}” in this area`}
           </p>
           <p className="mt-1 text-xs text-eatspin-gray-2">
-            Try a food or restaurant name, or choose another area.
+            {mallLabel ? 'Your search is still inside-only. Try another food, or choose Around this mall.' : 'Try a food or restaurant name, or choose another area.'}
           </p>
         </div>
       )}
@@ -237,7 +239,7 @@ export const CravingSearch = memo(function CravingSearch({
                   {r.distance !== undefined && (
                     <>
                       <span className="text-eatspin-gray-3">·</span>
-                      <span>{distanceOrigin ? `${r.distance.toFixed(1)} km from ${distanceOrigin}` : estimateWalkTime(r.distance)}</span>
+                      <span>{mallLabel ? `Inside ${mallLabel}` : distanceOrigin ? `${r.distance.toFixed(1)} km from ${distanceOrigin}` : estimateWalkTime(r.distance)}</span>
                     </>
                   )}
                 </div>

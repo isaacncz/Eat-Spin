@@ -39,7 +39,8 @@ test.skip(!process.env.VITE_GOOGLE_MAPS_API_KEY, 'Needs a dummy VITE_GOOGLE_MAPS
 test('host fills the room from their location and shares ticked places with place IDs', async ({ page }) => {
   await setup(page, { gps: true });
   await page.goto('/?room=ROOM42');
-  await page.getByText('Find places nearby', { exact: true }).click();
+  await page.getByRole('button', { name: /^Add places/ }).click();
+  await expect(page.getByRole('tab', { name: 'Nearby' })).toHaveAttribute('aria-selected', 'true');
   await page.getByRole('button', { name: 'Use my location', exact: true }).click();
   await page.getByRole('button', { name: 'Find places', exact: true }).click();
   await expect(page.getByText('3 of 3 places selected')).toBeVisible();
@@ -50,13 +51,15 @@ test('host fills the room from their location and shares ticked places with plac
   await page.getByRole('button', { name: 'Share nearby places', exact: true }).click();
   await expect.poll(async () => (await fixtureState(page)).roomListNames).toEqual(['Home Noodles', 'Home Extraordinarily Lo…']);
   expect((await fixtureState(page)).roomPlaceIds).toEqual({ 'home noodles': 'home-0', 'home extraordinarily lo…': 'home-1' });
+  await expect(page.getByRole('dialog', { name: 'Add places' })).toHaveCount(0);
   await expect(page.getByRole('list', { name: 'Places in this room' }).getByText('Home Noodles')).toBeVisible();
 });
 
 test('host without GPS searches an area instead; members cannot fill from nearby', async ({ page }) => {
   await setup(page, { gps: false });
   await page.goto('/?room=ROOM42');
-  await page.getByText('Find places nearby', { exact: true }).click();
+  await page.getByRole('button', { name: /^Add places/ }).click();
+  await expect(page.getByRole('tab', { name: 'Nearby' })).toHaveAttribute('aria-selected', 'true');
   await page.getByRole('button', { name: 'Search an area', exact: true }).click();
   await page.getByLabel('Search destination').fill('Mont Kiara');
   await page.getByRole('button', { name: /Mont Kiara Kuala Lumpur/i }).click();
@@ -69,5 +72,5 @@ test('host without GPS searches an area instead; members cannot fill from nearby
   await page.evaluate(() => localStorage.removeItem('eatspin:test-group-workspace'));
   await page.goto('/?room=ROOM42&fixtureRole=member');
   await expect(page.getByRole('heading', { name: 'Group spin', exact: true })).toBeVisible();
-  await expect(page.getByText('Find places nearby', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Add places/ })).toHaveCount(0);
 });

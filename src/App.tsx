@@ -1800,15 +1800,15 @@ function App() {
               onRetry={() => { void retryRoomList(); }} onAdd={addRoomPlace} onRemove={removeRoomPlace}
               onClear={() => { void clearRoomPlaces(); }} onUseSavedList={useSavedListInRoom}
               onSaveCopy={handleSaveRoomListToManualLists}
-              nearbyFill={<GroupNearbyFill
+              renderNearbyFill={done => <GroupNearbyFill
                 deviceLocation={location} locationLoading={locationLoading} locationError={locationError}
                 onRequestLocation={requestLocation}
                 disabled={!groupConnected || groupStage === 'spinning' || placesBudget.nearbyBlocked}
-                onUseNearby={useNearbyInRoom}
+                onUseNearby={async places => { const shared = await useNearbyInRoom(places); if (shared) done(); return shared; }}
               />}
             />}
             roomWheel={groupListLoaded && (groupWheelRestaurants.length > 0 || groupExternalSpin) && <RouletteWheel
-              key={`group-room-${groupRoomId}`}
+              key={`group-room-${groupRoomId}`} wheelMaxSize="18rem" hubLocked={!isGroupHost && !isGroupCohost}
               restaurants={groupExternalSpin && !groupWheelRestaurants.some(place => place.id === groupExternalSpin.restaurant.id)
                 ? [...groupWheelRestaurants, groupExternalSpin.restaurant] : groupWheelRestaurants}
               totalCount={groupWheelRestaurants.length} hideSpinButton resultPresentation="parent"

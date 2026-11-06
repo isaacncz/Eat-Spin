@@ -45,9 +45,10 @@ export function restaurantDelta(before: Restaurant[], after: Restaurant[]) {
   return { added: after.filter(item => !oldIds.has(item.id)), removed: before.filter(item => !newIds.has(item.id)).map(item => item.id), order: after.map(item => item.id) };
 }
 
-export interface RoomItem { name: string; order: number; createdAt: number; createdBy?: string }
+export interface RoomItem { name: string; order: number; createdAt: number; createdBy?: string; placeId?: string }
 export type RoomItems = Record<string, RoomItem | string>;
-export function roomListDelta(raw: RoomItems | null, before: string[], after: string[], uid: string, operationId: string, now: number): RoomItems {
+/** `placeIds` maps a lower-cased name to its Google place ID for newly added items. */
+export function roomListDelta(raw: RoomItems | null, before: string[], after: string[], uid: string, operationId: string, now: number, placeIds?: Record<string, string>): RoomItems {
   const next = { ...(raw ?? {}) };
   const keyOf = (name: string) => name.trim().toLowerCase();
   const oldNames = new Set(before.map(keyOf));
@@ -59,7 +60,8 @@ export function roomListDelta(raw: RoomItems | null, before: string[], after: st
   const existing = new Set(Object.values(next).map(item => keyOf(nameOf(item))));
   after.forEach((name, index) => {
     if (!oldNames.has(keyOf(name)) && !existing.has(keyOf(name))) {
-      next[`${operationId}-${index}`] = { name, order: now + index, createdAt: now, createdBy: uid };
+      const placeId = placeIds?.[keyOf(name)];
+      next[`${operationId}-${index}`] = { name, order: now + index, createdAt: now, createdBy: uid, ...(placeId ? { placeId } : {}) };
       existing.add(keyOf(name));
     }
   });

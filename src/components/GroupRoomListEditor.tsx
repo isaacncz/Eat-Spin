@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent, type ReactNode } from 'react';
 import { Copy, Plus, RotateCw, Trash2, X } from 'lucide-react';
 
 import type { ManualList, Restaurant } from '@/types';
@@ -21,6 +21,8 @@ export interface GroupRoomListEditorProps {
   /** The parent confirms replacement of an existing room list. */
   onUseSavedList: (listId: string) => Promise<boolean>;
   onSaveCopy: () => void;
+  /** Host/co-host panel that fills the room from a Google Maps nearby search. */
+  nearbyFill?: ReactNode;
 }
 
 const FIELD_CLASS = cn(
@@ -44,6 +46,7 @@ export function GroupRoomListEditor({
   onClear,
   onUseSavedList,
   onSaveCopy,
+  nearbyFill,
 }: GroupRoomListEditorProps) {
   const [input, setInput] = useState('');
   const [selectedListId, setSelectedListId] = useState(() => lists[0]?.id ?? '');
@@ -97,6 +100,15 @@ export function GroupRoomListEditor({
             </ArcadeButton>
           )}
         </div>
+      )}
+
+      {canEdit && nearbyFill && (
+        <details open={places.length === 0 && lists.length === 0} className="rounded-2xl border-[3px] border-brand-ink bg-arcade-cyan/30">
+          <summary className={cn('min-h-11 cursor-pointer rounded-xl px-3 py-3 text-sm font-semibold', FOCUS_RING)}>
+            Find places nearby
+          </summary>
+          {nearbyFill}
+        </details>
       )}
 
       {canEdit && lists.length > 0 && (

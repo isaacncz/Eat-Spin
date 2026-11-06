@@ -28,6 +28,11 @@ describe('getMapsUrl', () => {
     expect(getMapsUrl(restaurant())).toContain('destination_place_id=&query=');
   });
 
+  it('pins a name search to the place ID when coordinates are missing', () => {
+    const url = getMapsUrl(restaurant({ coordinates: { lat: 0, lng: 0 }, googlePlaceId: 'ChIJ_abc-1' }));
+    expect(url).toBe('https://www.google.com/maps/search/?api=1&query=Nasi%20Lemak%20%26%20Co&query_place_id=ChIJ_abc-1');
+  });
+
   it('falls back to a name search when coordinates are missing', () => {
     const url = getMapsUrl(restaurant({ coordinates: { lat: 0, lng: 0 } }));
     expect(url).toBe('https://www.google.com/maps/search/?api=1&query=Nasi%20Lemak%20%26%20Co');

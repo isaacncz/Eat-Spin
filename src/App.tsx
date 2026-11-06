@@ -14,6 +14,8 @@ import { useTextSearch } from '@/hooks/useTextSearch';
 import { useSpinTracker } from '@/hooks/useSpinTracker';
 import { useFirebaseGroupRoom, GROUP_ROOM_NAME_MAX_LENGTH } from '@/hooks/useFirebaseGroupRoom';
 import { GroupRoomListEditor } from '@/components/GroupRoomListEditor';
+import { GroupNearbyFill } from '@/components/GroupNearbyFill';
+import { roomPlaceIdMap, type RoomNearbyPlace } from '@/lib/groupNearbyPlaces';
 import { GroupResultActions } from '@/components/GroupResultActions';
 import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
 import { usePlacesBudget } from '@/hooks/usePlacesBudget';
@@ -333,6 +335,7 @@ function App() {
     clearRoomError: clearGroupRoomError,
     participants: groupParticipants,
     roomListNames: groupRoomListNames,
+    roomPlaceIds: groupRoomPlaceIds,
     listLoaded: groupListLoaded,
     currentSpin: groupCurrentSpin,
     reactions: groupReactions,
@@ -1287,10 +1290,14 @@ function App() {
   // Stable room/name IDs keep result actions consistent across replay and reload.
   const groupWheelRestaurants = useMemo(() => {
     const names = groupListSyncState === 'saved' ? groupRoomListNames : roomManualRestaurantNames;
-    return normalizeManualNames(names).map(name => ({
-      ...createManualRestaurant(name), id: `manual-room-${groupRoomId}-${encodeURIComponent(name.toLowerCase())}`,
-    }));
-  }, [groupListSyncState, groupRoomId, groupRoomListNames, roomManualRestaurantNames]);
+    return normalizeManualNames(names).map(name => {
+      const googlePlaceId = groupRoomPlaceIds[name.toLowerCase()];
+      return {
+        ...createManualRestaurant(name), id: `manual-room-${groupRoomId}-${encodeURIComponent(name.toLowerCase())}`,
+        ...(googlePlaceId ? { googlePlaceId } : {}),
+      };
+    });
+  }, [groupListSyncState, groupRoomId, groupRoomListNames, groupRoomPlaceIds, roomManualRestaurantNames]);
 
   const groupExternalSpin = useMemo(() => {
     if (!isGroupRoomActive || !groupCurrentSpin) return null;
@@ -1327,11 +1334,11 @@ function App() {
     reportQuestEvent({ type: 'spin' });
   }, [currentMealTime, groupEventKey, publishDiscoverSpin, recordDailySpin, reportQuestEvent]);
 
-  const changeRoomPlaces = useCallback((restaurants: Restaurant[]) => {
+  const changeRoomPlaces = useCallback((restaurants: Restaurant[], placeIds?: Record<string, string>) => {
     if (!isGroupRoomActive || !canEditGroupList || groupStage === 'spinning') return false;
     const before = roomManualRestaurantNames;
     setRoomManualRestaurants(restaurants);
-    void syncHostList(normalizeManualNames(restaurants.map(restaurant => restaurant.name)), before);
+    void syncHostList(normalizeManualNames(restaurants.map(restaurant => restaurant.name)), before, placeIds);
     return true;
   }, [canEditGroupList, groupStage, isGroupRoomActive, roomManualRestaurantNames, syncHostList]);
 
@@ -1384,6 +1391,13 @@ function App() {
     if (roomManualRestaurants.length && !await confirm({ title: 'Replace room places?', description: `Share the ${names.length} places from “${list.name}” with this room? This replaces the room places. Your personal copy stays unchanged.`, accept: 'Use this list in room', cancel: 'Keep room places' })) return false;
     return changeRoomPlaces(buildRestaurantsFromNames(names));
   }, [buildRestaurantsFromNames, canEditGroupList, changeRoomPlaces, confirm, groupConnected, groupStage, manualLists, roomManualRestaurants.length]);
+
+  const useNearbyInRoom = useCallback(async (places: RoomNearbyPlace[]) => {
+    if (!canEditGroupList || !groupConnected || groupStage === 'spinning' || !places.length) return false;
+    const names = normalizeManualNames(places.map(place => place.name));
+    if (roomManualRestaurants.length && !await confirm({ title: 'Replace room places?', description: `Share these ${names.length} nearby places with this room? This replaces the room places.`, accept: 'Share nearby places', cancel: 'Keep room places' })) return false;
+    return changeRoomPlaces(buildRestaurantsFromNames(names), roomPlaceIdMap(places));
+  }, [buildRestaurantsFromNames, canEditGroupList, changeRoomPlaces, confirm, groupConnected, groupStage, roomManualRestaurants.length]);
 
   useEffect(() => {
     if (!isGroupRoomActive || !groupCurrentSpin) return;
@@ -1786,6 +1800,12 @@ function App() {
               onRetry={() => { void retryRoomList(); }} onAdd={addRoomPlace} onRemove={removeRoomPlace}
               onClear={() => { void clearRoomPlaces(); }} onUseSavedList={useSavedListInRoom}
               onSaveCopy={handleSaveRoomListToManualLists}
+              nearbyFill={<GroupNearbyFill
+                deviceLocation={location} locationLoading={locationLoading} locationError={locationError}
+                onRequestLocation={requestLocation}
+                disabled={!groupConnected || groupStage === 'spinning' || placesBudget.nearbyBlocked}
+                onUseNearby={useNearbyInRoom}
+              />}
             />}
             roomWheel={groupListLoaded && (groupWheelRestaurants.length > 0 || groupExternalSpin) && <RouletteWheel
               key={`group-room-${groupRoomId}`}

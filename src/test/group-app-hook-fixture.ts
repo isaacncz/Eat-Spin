@@ -21,6 +21,7 @@ interface FixtureState {
   displayName: string;
   connected: boolean;
   syncCalls: string[][];
+  roomPlaceIds?: Record<string, string>;
 }
 
 export function useFirebaseGroupRoom() {
@@ -42,8 +43,9 @@ export function useFirebaseGroupRoom() {
   const patch = useCallback((changes: Partial<FixtureState>) => setState(previous => ({ ...previous, ...changes })), []);
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }, [state]);
 
-  const syncHostList = useCallback(async (names: string[]) => {
-    setState(previous => ({ ...previous, roomListNames: names, syncCalls: [...previous.syncCalls, names] }));
+  const syncHostList = useCallback(async (names: string[], _before?: string[], placeIds?: Record<string, string>) => {
+    setState(previous => ({ ...previous, roomListNames: names, syncCalls: [...previous.syncCalls, names],
+      roomPlaceIds: { ...previous.roomPlaceIds, ...placeIds } }));
   }, []);
   const requestHostSpin = useCallback(async (names: string[]) => {
     const now = Date.now();
@@ -89,7 +91,7 @@ export function useFirebaseGroupRoom() {
   }, [authUid, patch, state]);
 
   return {
-    ...state, authUid, hostUid: 'host', roomLink: location.origin + '/?room=' + state.roomId,
+    ...state, roomPlaceIds: state.roomPlaceIds ?? {}, authUid, hostUid: 'host', roomLink: location.origin + '/?room=' + state.roomId,
     isFirebaseConfigured: true, firebaseConfigError: null, authLoading: false, authError: null,
     resolvedDisplayName: state.displayName, setDisplayName: (displayName: string) => patch({ displayName }),
     saveDisplayName, isSavingDisplayName: false,

@@ -22,7 +22,7 @@
         "list": {
           ".write": "auth != null && (root.child('rooms/'+$roomId+'/meta/hostUid').val() === auth.uid || root.child('rooms/'+$roomId+'/cohosts/'+auth.uid).val() === true)",
           "$itemId": {
-            ".validate": "(newData.isString() && newData.val().length > 0 && newData.val().length <= 24) || (newData.hasChildren(['name','order','createdAt','createdBy']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 24 && newData.child('order').isNumber() && newData.child('createdAt').isNumber() && newData.child('createdBy').isString() && (data.exists() || newData.child('createdBy').val() === auth.uid))"
+            ".validate": "(newData.isString() && newData.val().length > 0 && newData.val().length <= 24) || (newData.hasChildren(['name','order','createdAt','createdBy']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 24 && newData.child('order').isNumber() && newData.child('createdAt').isNumber() && newData.child('createdBy').isString() && (!newData.hasChild('placeId') || (newData.child('placeId').isString() && newData.child('placeId').val().matches(/^[A-Za-z0-9_-]{1,256}$/))) && (data.exists() || newData.child('createdBy').val() === auth.uid))"
           }
         },
         "spin": {

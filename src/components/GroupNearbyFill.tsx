@@ -33,7 +33,9 @@ export function GroupNearbyFill({ deviceLocation, locationLoading, locationError
   const [isSharing, setIsSharing] = useState(false);
   const radiusId = useId();
   const resultsId = useId();
-  const location = center.kind === 'destination' ? center.destination.coordinates : deviceLocation;
+  // While a new fix is pending, the previous one is not used: the host may have moved since.
+  const deviceFixPending = center.kind === 'device' && locationLoading;
+  const location = center.kind === 'destination' ? center.destination.coordinates : deviceFixPending ? null : deviceLocation;
   const nearby = useNearbyRestaurants({ enabled: requested && Boolean(location), location, radiusKm, openNowOnly: true });
   const places = useMemo(() => buildRoomNearbyPlaces(nearby.restaurants), [nearby.restaurants]);
   const selected = places.filter(place => !deselected.has(place.name.toLowerCase()));
@@ -44,7 +46,8 @@ export function GroupNearbyFill({ deviceLocation, locationLoading, locationError
   useEffect(() => { if (!deviceLocation && center.kind === 'device') setRequested(false); }, [center.kind, deviceLocation]);
 
   const find = () => {
-    if (center.kind === 'device' && !deviceLocation) onRequestLocation();
+    // "Around you" means now: take a fresh fix instead of reusing one from earlier in the session.
+    if (center.kind === 'device') onRequestLocation();
     setDeselected(new Set());
     setRequested(true);
   };
@@ -62,8 +65,7 @@ export function GroupNearbyFill({ deviceLocation, locationLoading, locationError
     try { if (await onUseNearby(selected)) reset(); } finally { setIsSharing(false); }
   };
 
-  const waitingForDevice = requested && center.kind === 'device' && !deviceLocation;
-  const busy = nearby.isLoading || (waitingForDevice && locationLoading);
+  const busy = nearby.isLoading || (requested && deviceFixPending);
 
   return (
     <div className="space-y-2 px-3 pb-3">
@@ -73,7 +75,7 @@ export function GroupNearbyFill({ deviceLocation, locationLoading, locationError
         <ArcadeButton
           disabled={disabled}
           aria-pressed={center.kind === 'device'}
-          onClick={() => { setCenter({ kind: 'device' }); reset(); if (!deviceLocation) onRequestLocation(); }}
+          onClick={() => { setCenter({ kind: 'device' }); reset(); onRequestLocation(); }}
           className="min-h-11 flex-1 px-3 text-sm"
         >
           <LocateFixed size={16} aria-hidden="true" />
@@ -86,7 +88,7 @@ export function GroupNearbyFill({ deviceLocation, locationLoading, locationError
             hasDeviceLocation={Boolean(deviceLocation)}
             disabled={disabled}
             onSelect={destination => { setCenter({ kind: 'destination', destination }); reset(); }}
-            onCurrentLocation={() => { setCenter({ kind: 'device' }); reset(); if (!deviceLocation) onRequestLocation(); }}
+            onCurrentLocation={() => { setCenter({ kind: 'device' }); reset(); onRequestLocation(); }}
           />
         </div>
       </div>
@@ -104,7 +106,9 @@ export function GroupNearbyFill({ deviceLocation, locationLoading, locationError
         <Search size={16} aria-hidden="true" />
         {busy ? 'Finding places…' : 'Find places'}
       </ArcadeButton>
-      {waitingForDevice && locationError && <p role="alert" className="text-sm font-semibold">{locationError} Try searching an area instead.</p>}
+      {requested && center.kind === 'device' && locationError && (
+        <p role="alert" className="text-sm font-semibold">{locationError} {deviceLocation ? 'Using your last known location.' : 'Try searching an area instead.'}</p>
+      )}
       {requested && nearby.error && <p role="alert" className="break-words text-sm font-semibold">{nearby.error}</p>}
       {requested && !busy && location && !nearby.error && places.length === 0 && (
         <p role="status" className="text-sm">No open places found. Try a wider distance or another area.</p>

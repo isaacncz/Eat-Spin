@@ -1,11 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
   type CarouselApi,
 } from '@/components/ui/carousel';
+import { Maximize2 } from 'lucide-react';
+import { PhotoLightbox } from '@/components/PhotoLightbox';
 import { cn } from '@/lib/utils';
+
+const openPhotoButton =
+  'block w-full cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-orange';
+
+/** Decorative corner icon: the photo itself is the tap target that opens the viewer. */
+function ExpandHint() {
+  return (
+    <span
+      aria-hidden="true"
+      data-share-ignore=""
+      className="pointer-events-none absolute bottom-2 right-2 rounded-md bg-black/50 p-1 text-white"
+    >
+      <Maximize2 size={12} />
+    </span>
+  );
+}
 
 interface PhotoCarouselProps {
   photos: string[];
@@ -20,7 +38,8 @@ interface PhotoCarouselProps {
 
 /**
  * Swipeable photo carousel for restaurant result cards.
- * Shows dot indicators when multiple photos are available.
+ * Shows dot indicators when multiple photos are available. Tapping a photo opens the
+ * full-screen viewer, which requests nothing until then.
  */
 export function PhotoCarousel(props: PhotoCarouselProps) {
   return <PhotoCarouselView key={props.photos.join('\n')} {...props} />;
@@ -29,6 +48,9 @@ function PhotoCarouselView({ photos, alt, className, interactiveDots = true }: P
   const [currentIndex, setCurrentIndex] = useState(0);
   const [requested, setRequested] = useState<Set<number>>(() => new Set([0]));
   const [api, setApi] = useState<CarouselApi>();
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const slideButtons = useRef<(HTMLButtonElement | null)[]>([]);
+  const openedIndexRef = useRef(0);
 
   useEffect(() => {
     if (!api) return;
@@ -44,17 +66,46 @@ function PhotoCarouselView({ photos, alt, className, interactiveDots = true }: P
 
   if (photos.length === 0) return null;
 
+  // Open on the photo that is on screen. A slide's button can hold keyboard focus after the
+  // carousel moved on (arrow keys), so the clicked slide is not always the visible one.
+  const openViewer = () => {
+    openedIndexRef.current = currentIndex;
+    setViewerIndex(currentIndex);
+  };
+  // Radix cannot return focus (the viewer has no trigger). Return it to the opened photo's own
+  // button, without scrolling: focusing a slide inside the clipped track would shift the carousel.
+  const returnFocus = () => slideButtons.current[openedIndexRef.current]?.focus({ preventScroll: true });
+  const viewer = viewerIndex === null ? null : (
+    <PhotoLightbox
+      photos={photos}
+      startIndex={viewerIndex}
+      alt={alt}
+      onClose={() => setViewerIndex(null)}
+      onReturnFocus={returnFocus}
+    />
+  );
+
   // Single photo — no carousel needed
   if (photos.length === 1) {
     return (
-      <div className={cn('overflow-hidden rounded-xl border-2 border-brand-ink', className)}>
-        <img
-          src={photos[0]}
-          alt={alt}
-          className="h-48 w-full object-cover"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-        />
+      <div className={cn('relative overflow-hidden rounded-xl border-2 border-brand-ink', className)}>
+        <button
+          type="button"
+          ref={(element) => { slideButtons.current[0] = element; }}
+          aria-label={`View ${alt} larger`}
+          onClick={openViewer}
+          className={openPhotoButton}
+        >
+          <img
+            src={photos[0]}
+            alt={alt}
+            className="h-48 w-full object-cover"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+          />
+        </button>
+        <ExpandHint />
+        {viewer}
       </div>
     );
   }
@@ -69,17 +120,29 @@ function PhotoCarouselView({ photos, alt, className, interactiveDots = true }: P
         <CarouselContent className="ml-0">
           {photos.map((photo, i) => (
             <CarouselItem key={i} className="pl-0">
-              {requested.has(i) ? <img
-                src={photo}
-                alt={`${alt} — photo ${i + 1}`}
-                className="h-48 w-full object-cover"
-                loading={i === 0 ? 'eager' : 'lazy'}
-                referrerPolicy="no-referrer"
-              /> : <div className="h-48 w-full bg-brand-linen" aria-label={`${alt} — photo ${i + 1}, not loaded`} />}
+              {requested.has(i) ? (
+                <button
+                  type="button"
+                  ref={(element) => { slideButtons.current[i] = element; }}
+                  aria-label={`View photo ${i + 1} of ${photos.length} larger`}
+                  onClick={openViewer}
+                  className={openPhotoButton}
+                >
+                  <img
+                    src={photo}
+                    alt={`${alt} — photo ${i + 1}`}
+                    className="h-48 w-full object-cover"
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    referrerPolicy="no-referrer"
+                  />
+                </button>
+              ) : <div className="h-48 w-full bg-brand-linen" aria-label={`${alt} — photo ${i + 1}, not loaded`} />}
             </CarouselItem>
           ))}
         </CarouselContent>
       </Carousel>
+      <ExpandHint />
+      {viewer}
 
       {/* Dot indicators */}
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">

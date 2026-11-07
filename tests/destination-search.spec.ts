@@ -5,11 +5,17 @@ async function setup(page: Page, gps = false) {
   await page.addInitScript((allowGps) => {
     localStorage.setItem('eatspin:first-run-onboarding-seen', '1');
     Object.defineProperty(navigator, 'geolocation', { value: {
-      watchPosition: (ok: (position: { coords: { latitude: number; longitude: number } }) => void, fail: (err: { message: string }) => void) => {
-        if (allowGps) {
-          ok({ coords: { latitude: 1.35, longitude: 103.82 } });
-          window.addEventListener('test-gps-moved', () => ok({ coords: { latitude: 1.4, longitude: 103.9 } }));
-        } else fail({ message: 'Permission denied' });
+      // The app takes one fix per request. watchPosition stays mocked so a regression to
+      // continuous tracking would still see the 'test-gps-moved' updates below.
+      getCurrentPosition: (ok: (position: { coords: { latitude: number; longitude: number } }) => void, fail: (err: { message: string }) => void) => {
+        // A test can move the device (__gps) and make the fix slow (__gpsDelayMs).
+        const w = window as unknown as { __gps?: { latitude: number; longitude: number }; __gpsDelayMs?: number };
+        setTimeout(() => {
+          if (allowGps) ok({ coords: w.__gps ?? { latitude: 1.35, longitude: 103.82 } }); else fail({ message: 'Permission denied' });
+        }, w.__gpsDelayMs ?? 0);
+      },
+      watchPosition: (ok: (position: { coords: { latitude: number; longitude: number } }) => void) => {
+        if (allowGps) window.addEventListener('test-gps-moved', () => ok({ coords: { latitude: 1.4, longitude: 103.9 } }));
         return 1;
       }, clearWatch: () => {},
     } });
@@ -88,6 +94,33 @@ test('manual destination remains fixed when GPS moves; food search shares radius
   expect(body.locationRestriction.rectangle.high.longitude).toBeCloseTo(101.695, 2);
   await expect(page.getByText('Kiara Noodles', { exact: true })).toBeVisible();
   await expect(page.getByText(/km from Mont Kiara/).first()).toBeVisible();
+});
+
+test('use my current location searches at the new fix, never at the previous one', async ({ page }) => {
+  await setup(page, true);
+  await page.getByRole('button', { name: /share my location/i }).click();
+  await expect(page.getByRole('button', { name: /^spin!$/i })).toBeEnabled({ timeout: 15_000 });
+  // Search another area first, so going back to the device is a change of search center.
+  await page.getByRole('button', { name: /search around/i }).click();
+  await page.getByLabel('Search destination').fill('Mont');
+  await page.getByRole('button', { name: /Mont Kiara Kuala Lumpur/i }).click();
+  await expect(page.getByRole('button', { name: /search around Mont Kiara/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^spin!$/i })).toBeEnabled({ timeout: 15_000 });
+
+  // Drive ~12 km from the first fix; the new fix takes longer than the search debounce (450 ms).
+  await page.evaluate(() => {
+    const w = window as unknown as { __gps: { latitude: number; longitude: number }; __gpsDelayMs: number };
+    w.__gps = { latitude: 1.45, longitude: 103.9 };
+    w.__gpsDelayMs = 1_200;
+  });
+  const centers: number[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('places:searchNearby')) centers.push(request.postDataJSON().locationRestriction.circle.center.latitude);
+  });
+  await page.getByRole('button', { name: /search around/i }).click();
+  await page.getByRole('button', { name: 'Use my current location' }).click();
+  await expect.poll(() => centers.some((lat) => Math.abs(lat - 1.45) < 0.001), { timeout: 15_000 }).toBe(true);
+  expect(centers.filter((lat) => Math.abs(lat - 1.35) < 0.001)).toEqual([]);
 });
 
 test('changing radius cancels old food search and ignores a late response', async ({ page }) => {

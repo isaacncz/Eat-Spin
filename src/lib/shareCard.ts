@@ -44,6 +44,8 @@ export const shareCard = async ({
     pixelRatio: 2,
     cacheBust: true,
     backgroundColor: '#ffffff',
+    // Controls that only make sense on screen (e.g. the photo expand icon) opt out of the image.
+    filter: (node) => !node.hasAttribute?.('data-share-ignore'),
   });
 
   if (!imageBlob) {

@@ -1,3 +1,4 @@
+import { isDiningVenueKind } from '@/lib/placeEligibility';
 import type { Restaurant } from '@/types';
 
 export type SearchScope = 'inside' | 'around';
@@ -5,7 +6,7 @@ export interface MallIdentity { placeId: string; label: string; address: string 
 
 /** Candidate discovery area, never evidence of mall membership. */
 export const MALL_DISCOVERY_RADIUS_KM = 2;
-export const MALL_MEMBERSHIP_VERSION = 2;
+export const MALL_MEMBERSHIP_VERSION = 3;
 
 const normalizeAddress = (value: string) => value.normalize('NFKC').toLowerCase()
   .replace(/\bjln\b/g, 'jalan').replace(/\brd\b/g, 'road')
@@ -41,7 +42,7 @@ export function matchesMallAddress(address: string, mall: MallIdentity): boolean
 export function filterMallRestaurants(restaurants: Restaurant[], mallPlaceId?: string, mall?: MallIdentity): Restaurant[] {
   if (!mallPlaceId) return restaurants;
   return restaurants.filter((restaurant) => {
-    if (restaurant.source === 'local-fallback') return false;
+    if (restaurant.source === 'local-fallback' || !isDiningVenueKind(restaurant.venueKind)) return false;
     if (restaurant.containingPlaceIds?.includes(mallPlaceId)) return true;
     if (restaurant.containingPlaceIds?.length) return false;
     return mall?.placeId === mallPlaceId && matchesMallAddress(restaurant.address ?? '', mall);

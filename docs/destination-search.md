@@ -10,7 +10,9 @@ Device GPS remains separate for location-based favourites and Discover. Destinat
 
 ## Mall membership (#131)
 
-Destination Details includes `types` to detect `shopping_mall`, retaining the Essentials field tier for picker selections. The selected mall defaults to inside-only. Both discovery and food search use the same membership resolver:
+Destination Details includes `types` to detect `shopping_mall`, retaining the Essentials field tier for picker selections. The selected mall defaults to inside-only. Before membership or cuisine matching, Google places must have a positive food-service classification from `primaryType`, or from specific `types` when the primary type is missing. An explicit non-food primary identity overrides incidental food tags. Restaurant/cuisine subtypes, cafés, bakeries, dessert places, food courts, takeaway and drink venues remain supported. Retail, services and generic `food`/`point_of_interest` records are excluded; food-like names, summaries and mall addresses cannot qualify them. The derived `venueKind` stays separate from cuisine categories and is rechecked for mall cache reads. Legacy mall snapshots without this classification are invalidated. No new API fields or classification requests are added. The [Google place-type taxonomy](https://developers.google.com/maps/documentation/places/web-service/place-types) was checked on 2026-11-07.
+
+Both discovery and food search use the same membership resolver:
 
 - An exact `containingPlaces` ID match admits a restaurant.
 - If there are no containing-place IDs, the formatted address must identify the selected mall building and include a tenant unit/floor or the mall's road and postcode. Matching normalizes case, punctuation, and common road abbreviations. Mall-name mentions alone, shared roads/postcodes and coordinates are insufficient.

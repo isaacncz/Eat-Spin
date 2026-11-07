@@ -1,6 +1,7 @@
 import type { CategoryConfidence, DailyHours, FoodCategory, PlaceReview, Restaurant } from '@/types';
 import { calculateDistance } from '@/lib/restaurantUtils';
 import { computeQualityScore } from '@/lib/restaurantUtils';
+import { classifyDiningPlace, isDiningVenueKind } from '@/lib/placeEligibility';
 import { classifyPlace } from '@/lib/categoryClassifier';
 import { reservePlacesCall } from '@/lib/placesUsage';
 import { filterMallRestaurants, type MallIdentity } from '@/lib/mallSearch';
@@ -453,6 +454,9 @@ export const normalizeGooglePlace = (
     return null;
   }
 
+  const venueKind = classifyDiningPlace(place);
+  if (!isDiningVenueKind(venueKind)) return null;
+
   const coordinates = {
     lat: place.location.latitude,
     lng: place.location.longitude,
@@ -530,6 +534,7 @@ export const normalizeGooglePlace = (
   return {
     id: `gplace-${place.id}`,
     googlePlaceId: place.id,
+    venueKind,
     containingPlaceIds: place.containingPlaces?.flatMap((parent) =>
       typeof parent.id === 'string' && parent.id.trim() ? [parent.id] : []),
     source: 'google-live',

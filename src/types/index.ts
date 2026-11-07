@@ -10,6 +10,9 @@ export interface PlaceReview {
   publishTime?: string;
 }
 
+/** Provider-type classification, separate from cuisine categories and mall membership. */
+export type DiningVenueKind = 'restaurant' | 'cafe' | 'bakery' | 'dessert' | 'food-court' | 'takeaway' | 'drinks';
+
 export interface Restaurant {
   id: string;
   name: string;
@@ -29,6 +32,7 @@ export interface Restaurant {
   distance?: number;
   userRatingCount?: number;
   googlePlaceId?: string;
+  venueKind?: DiningVenueKind;
   /** Provider-reported containing place IDs; used for strict mall membership. */
   containingPlaceIds?: string[];
   source?: 'google-live' | 'google-cache' | 'local-fallback';

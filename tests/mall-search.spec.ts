@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 
 const mallId = 'sunway-pyramid';
 
-async function setup(page: Page, options: { unknown?: boolean; fail?: boolean; tenants?: number; withdrawFirst?: boolean; addressTenants?: boolean; paginated?: boolean } = {}) {
+async function setup(page: Page, options: { unknown?: boolean; fail?: boolean; tenants?: number; withdrawFirst?: boolean; addressTenants?: boolean; paginated?: boolean; mixedVenues?: boolean } = {}) {
   await page.clock.setFixedTime(new Date('2026-11-06T04:00:00Z'));
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript(() => {
@@ -37,7 +37,15 @@ async function setup(page: Page, options: { unknown?: boolean; fail?: boolean; t
       const offset = request.pageToken ? Number(request.pageToken) : 0;
       return route.fulfill({ json: { places: tenants.slice(offset, offset + 6), ...(offset + 6 < tenants.length ? { nextPageToken: String(offset + 6) } : {}) } });
     }
+    const mixedVenues = options.mixedVenues ? [
+      { ...makePlace('fashion', 'Sushi Fashion Shop', [mallId]), types: ['clothing_store', 'food'], primaryType: 'clothing_store' },
+      { ...makePlace('bank', 'Coffee Bank', [mallId]), types: ['bank', 'restaurant'], primaryType: 'bank' },
+      { ...makePlace('untyped', 'Noodles Shop', [mallId]), types: ['food', 'point_of_interest'], primaryType: undefined },
+      { ...makePlace('cafe', 'Tenant Cafe', [mallId]), types: ['cafe', 'food', 'store'], primaryType: 'cafe' },
+    ] : [];
+    mixedVenues.forEach((place) => { place.formattedAddress = 'LG1.110, Sunway Pyramid'; });
     return route.fulfill({ json: { places: [
+      ...mixedVenues,
       makePlace('outside', 'Outside branch', ['different-mall']),
       makePlace('unknown', 'Unverified restaurant'), ...tenants,
     ] } });
@@ -259,4 +267,30 @@ test('address-only tenants survive paging, food search and reload while legacy m
   options.withdrawFirst = true;
   await page.reload();
   await expect(page.getByRole('button', { name: /^Filters · Inside mall · 11 places/ })).toBeVisible();
+});
+
+
+test('mall tenants must be food venues in the wheel, cached results and food search', async ({ page }) => {
+  await setup(page, { tenants: 12, mixedVenues: true });
+  await selectMall(page);
+  await expect(page.getByRole('button', { name: /^Filters · Inside mall · 13 places/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Review this round' }).click();
+  const round = page.getByRole('region', { name: 'Review this round' });
+  for (const name of ['Sushi Fashion Shop', 'Coffee Bank', 'Noodles Shop']) {
+    await expect(round.getByText(name, { exact: true })).toHaveCount(0);
+  }
+  await page.reload();
+  await expect(page.getByRole('button', { name: /^Filters · Inside mall · 13 places/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Search instead' }).click();
+  await page.getByLabel('Search for food').fill('coffee');
+  await expect(page.getByText('Tenant Cafe', { exact: true })).toBeVisible();
+  for (const name of ['Sushi Fashion Shop', 'Coffee Bank', 'Noodles Shop']) {
+    await expect(page.getByText(name, { exact: true })).toHaveCount(0);
+  }
+  await page.getByRole('button', { name: 'Around this mall', exact: true }).click();
+  await page.getByLabel('Search for food').fill('coffee');
+  await expect(page.getByText('Tenant Cafe', { exact: true })).toBeVisible();
+  for (const name of ['Sushi Fashion Shop', 'Coffee Bank', 'Noodles Shop']) {
+    await expect(page.getByText(name, { exact: true })).toHaveCount(0);
+  }
 });

@@ -356,6 +356,12 @@ export function SpinScreen({
               </div>
             )}
 
+            {hasLocation && locationError && !destinationSearch?.destination && destinationSearch?.hasDeviceLocation && (
+              <p role="alert" className="mb-2 text-center text-sm font-semibold text-eatspin-error">
+                {locationError}. Still using your last known location.
+              </p>
+            )}
+
             {hasLocation && isLoadingPlaces && placeCount === 0 && (
               <p
                 role="status"

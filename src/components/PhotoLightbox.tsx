@@ -10,6 +10,8 @@ interface PhotoLightboxProps {
   startIndex: number;
   alt: string;
   onClose: () => void;
+  /** Called when the viewer has closed, to put focus back on the photo that opened it. */
+  onReturnFocus: () => void;
 }
 
 const SWIPE_DISTANCE_PX = 50;
@@ -21,11 +23,9 @@ const navButton =
  * Exactly one image element exists at a time, for the photo on screen; neighbours are never
  * prefetched, so another photo is requested only after an explicit button, key or swipe.
  */
-export function PhotoLightbox({ photos, startIndex, alt, onClose }: PhotoLightboxProps) {
+export function PhotoLightbox({ photos, startIndex, alt, onClose, onReturnFocus }: PhotoLightboxProps) {
   const [index, setIndex] = useState(() => Math.min(Math.max(startIndex, 0), photos.length - 1));
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
-  // The viewer has no Dialog trigger, so Radix cannot return focus on its own: remember the opener.
-  const [opener] = useState(() => (document.activeElement instanceof HTMLElement ? document.activeElement : null));
   const count = photos.length;
   const canNavigate = count > 1;
 
@@ -36,8 +36,12 @@ export function PhotoLightbox({ photos, startIndex, alt, onClose }: PhotoLightbo
     if (event.key === 'ArrowLeft') { event.preventDefault(); go(-1); }
     if (event.key === 'ArrowRight') { event.preventDefault(); go(1); }
   };
-  const onPointerDown = (event: PointerEvent) => { swipeStart.current = { x: event.clientX, y: event.clientY }; };
+  // Only the first finger can start a swipe, so a second finger (pinch) never counts as one.
+  const onPointerDown = (event: PointerEvent) => {
+    if (event.isPrimary) swipeStart.current = { x: event.clientX, y: event.clientY };
+  };
   const onPointerUp = (event: PointerEvent) => {
+    if (!event.isPrimary) return;
     const start = swipeStart.current;
     swipeStart.current = null;
     if (!start || !canNavigate) return;
@@ -52,7 +56,7 @@ export function PhotoLightbox({ photos, startIndex, alt, onClose }: PhotoLightbo
         showCloseButton={false}
         overlayClassName="bg-brand-ink"
         onKeyDown={onKeyDown}
-        onCloseAutoFocus={(event) => { event.preventDefault(); opener?.focus(); }}
+        onCloseAutoFocus={(event) => { event.preventDefault(); onReturnFocus(); }}
         className="left-0 top-0 flex h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-brand-ink p-0 text-white shadow-none sm:max-w-none"
       >
         <DialogTitle className="sr-only">{alt}</DialogTitle>
@@ -73,7 +77,7 @@ export function PhotoLightbox({ photos, startIndex, alt, onClose }: PhotoLightbo
         </DialogClose>
 
         <div
-          className="relative min-h-0 flex-1 touch-pan-y"
+          className="relative min-h-0 flex-1 [touch-action:pan-y_pinch-zoom]"
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
           onPointerCancel={() => { swipeStart.current = null; }}
@@ -81,10 +85,10 @@ export function PhotoLightbox({ photos, startIndex, alt, onClose }: PhotoLightbo
           <LightboxImage key={photos[index]} src={photos[index]} alt={`${alt} — photo ${index + 1}`} />
           {canNavigate && (
             <>
-              <button type="button" aria-label="Previous photo" onClick={() => go(-1)} className={cn(navButton, 'left-3')}>
+              <button type="button" aria-label="Previous photo" onClick={() => go(-1)} className={cn(navButton, 'left-[max(0.75rem,env(safe-area-inset-left))]')}>
                 <ChevronLeft size={22} aria-hidden="true" />
               </button>
-              <button type="button" aria-label="Next photo" onClick={() => go(1)} className={cn(navButton, 'right-3')}>
+              <button type="button" aria-label="Next photo" onClick={() => go(1)} className={cn(navButton, 'right-[max(0.75rem,env(safe-area-inset-right))]')}>
                 <ChevronRight size={22} aria-hidden="true" />
               </button>
             </>

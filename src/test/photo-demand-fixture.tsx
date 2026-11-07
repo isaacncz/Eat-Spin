@@ -2,11 +2,11 @@ import { createRoot } from 'react-dom/client';
 import { PhotoCarousel } from '@/components/PhotoCarousel';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 const PHOTOS = ['/test-photos/one.svg', '/test-photos/two.svg', '/test-photos/three.svg'];
-export function mountPhotos() {
+export function mountPhotos(photos: string[] = PHOTOS) {
   const container = document.createElement('div');
   container.setAttribute('data-testid', 'photo-demand-fixture');
   document.body.prepend(container);
-  createRoot(container).render(<PhotoCarousel alt="Synthetic restaurant" photos={PHOTOS} />);
+  createRoot(container).render(<PhotoCarousel alt="Synthetic restaurant" photos={photos} />);
 }
 /** The carousel inside another modal dialog, like the result screen. */
 export function mountPhotosInDialog() {

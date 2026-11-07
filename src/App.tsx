@@ -282,7 +282,8 @@ function App() {
 
   // Custom hooks
   const { location, error: locationError, isLoading: locationLoading, requestLocation } = useLocation();
-  const searchCenter = destinationSearch.needsMallSelection ? null : destinationSearch.destination?.coordinates ?? location;
+  // While a new fix is pending, do not search at the previous one: it can be far from the device now.
+  const searchCenter = destinationSearch.needsMallSelection ? null : destinationSearch.destination?.coordinates ?? (locationLoading ? null : location);
   const searchIdentity = `${searchCenter?.lat},${searchCenter?.lng}|${fetchRadiusKm}|${destinationSearch.openNowOnly}|${mallPlaceId ?? 'around'}`;
   // A center change remounts the wheel and cancels its animation; release the parent spin lock too.
   useEffect(() => () => setIsSpinning(false), [searchIdentity]);

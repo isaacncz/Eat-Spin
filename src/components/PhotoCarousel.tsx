@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Carousel,
   CarouselContent,
@@ -17,6 +17,7 @@ function ExpandHint() {
   return (
     <span
       aria-hidden="true"
+      data-share-ignore=""
       className="pointer-events-none absolute bottom-2 right-2 rounded-md bg-black/50 p-1 text-white"
     >
       <Maximize2 size={12} />
@@ -48,6 +49,8 @@ function PhotoCarouselView({ photos, alt, className, interactiveDots = true }: P
   const [requested, setRequested] = useState<Set<number>>(() => new Set([0]));
   const [api, setApi] = useState<CarouselApi>();
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const slideButtons = useRef<(HTMLButtonElement | null)[]>([]);
+  const openedIndexRef = useRef(0);
 
   useEffect(() => {
     if (!api) return;
@@ -63,8 +66,23 @@ function PhotoCarouselView({ photos, alt, className, interactiveDots = true }: P
 
   if (photos.length === 0) return null;
 
+  // Open on the photo that is on screen. A slide's button can hold keyboard focus after the
+  // carousel moved on (arrow keys), so the clicked slide is not always the visible one.
+  const openViewer = () => {
+    openedIndexRef.current = currentIndex;
+    setViewerIndex(currentIndex);
+  };
+  // Radix cannot return focus (the viewer has no trigger). Return it to the opened photo's own
+  // button, without scrolling: focusing a slide inside the clipped track would shift the carousel.
+  const returnFocus = () => slideButtons.current[openedIndexRef.current]?.focus({ preventScroll: true });
   const viewer = viewerIndex === null ? null : (
-    <PhotoLightbox photos={photos} startIndex={viewerIndex} alt={alt} onClose={() => setViewerIndex(null)} />
+    <PhotoLightbox
+      photos={photos}
+      startIndex={viewerIndex}
+      alt={alt}
+      onClose={() => setViewerIndex(null)}
+      onReturnFocus={returnFocus}
+    />
   );
 
   // Single photo — no carousel needed
@@ -73,8 +91,9 @@ function PhotoCarouselView({ photos, alt, className, interactiveDots = true }: P
       <div className={cn('relative overflow-hidden rounded-xl border-2 border-brand-ink', className)}>
         <button
           type="button"
+          ref={(element) => { slideButtons.current[0] = element; }}
           aria-label={`View ${alt} larger`}
-          onClick={() => setViewerIndex(0)}
+          onClick={openViewer}
           className={openPhotoButton}
         >
           <img
@@ -104,8 +123,9 @@ function PhotoCarouselView({ photos, alt, className, interactiveDots = true }: P
               {requested.has(i) ? (
                 <button
                   type="button"
+                  ref={(element) => { slideButtons.current[i] = element; }}
                   aria-label={`View photo ${i + 1} of ${photos.length} larger`}
-                  onClick={() => setViewerIndex(i)}
+                  onClick={openViewer}
                   className={openPhotoButton}
                 >
                   <img

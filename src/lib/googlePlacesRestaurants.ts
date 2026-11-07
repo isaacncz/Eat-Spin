@@ -3,7 +3,7 @@ import { calculateDistance } from '@/lib/restaurantUtils';
 import { computeQualityScore } from '@/lib/restaurantUtils';
 import { classifyPlace } from '@/lib/categoryClassifier';
 import { reservePlacesCall } from '@/lib/placesUsage';
-import { filterMallRestaurants } from '@/lib/mallSearch';
+import { filterMallRestaurants, type MallIdentity } from '@/lib/mallSearch';
 
 const GOOGLE_NEARBY_ENDPOINT = 'https://places.googleapis.com/v1/places:searchNearby';
 export const GOOGLE_PLACE_FIELDS = [
@@ -183,6 +183,7 @@ type GoogleNearbyResponse = {
 
 export interface FetchNearbyGoogleRestaurantsOptions {
   mallPlaceId?: string;
+  mallIdentity?: MallIdentity;
   location: { lat: number; lng: number };
   radiusKm: number;
   region: string;
@@ -580,6 +581,11 @@ const toFriendlyApiError = (response: Response, payload: GoogleNearbyResponse | 
 export const fetchNearbyGoogleRestaurants = async (
   options: FetchNearbyGoogleRestaurantsOptions
 ): Promise<Restaurant[]> => {
+  if (options.mallPlaceId && options.mallIdentity?.placeId === options.mallPlaceId) {
+    // Load lazily: Text Search shares this module's normalization and field mask.
+    const { searchPlacesByText } = await import('@/lib/googlePlacesTextSearch');
+    return searchPlacesByText({ ...options, textQuery: options.selectedCategories?.length ? `${options.selectedCategories.join(' ')} restaurants` : 'restaurants', openNowOnly: false });
+  }
   const apiKey = getGoogleApiKey();
   const maxResultCount = Math.max(1, Math.min(options.maxResults ?? DEFAULT_MAX_RESULTS, 20));
   const radiusMeters = Math.max(1, Math.min(Math.round(options.radiusKm * 1000), 50_000));

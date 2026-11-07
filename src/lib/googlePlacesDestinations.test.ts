@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('@/lib/placesUsage', () => ({ reservePlacesCall: vi.fn().mockResolvedValue(undefined) }));
 import { reservePlacesCall } from '@/lib/placesUsage';
-import { autocompleteDestinations, resolveDestination } from './googlePlacesDestinations';
+import { autocompleteDestinations, resolveDestination, refreshMallDestination } from './googlePlacesDestinations';
 import { searchPlacesByText } from './googlePlacesTextSearch';
 import { fetchNearbyGoogleRestaurants } from './googlePlacesRestaurants';
 
@@ -57,4 +57,61 @@ it('enforces exact radius even for rectangle corner results and never sends both
   const fallback = JSON.parse(fetchMock.mock.calls[1][1].body);
   expect(fallback.locationRestriction).toBeUndefined();
   expect(fallback.locationBias.circle.radius).toBe(3000);
+});
+
+const mallIdentity = { placeId: 'pyramid', label: 'Sunway Pyramid', address: '3, Jalan PJS 11/15, 47500 Petaling Jaya' };
+const mallOptions = { location: { lat: 3.07, lng: 101.6 }, radiusKm: 2, region: 'MY', language: 'en', mallPlaceId: 'pyramid', mallIdentity };
+const tenantPlace = (id: string, address = 'LG1.110, Sunway Pyramid', parent?: string) => ({
+  id, displayName: { text: id }, formattedAddress: address, types: ['restaurant'],
+  location: { latitude: 3.07, longitude: 101.6 }, ...(parent ? { containingPlaces: [{ id: parent }] } : {}),
+});
+
+it('discovers mall tenants through scoped text pages, deduplicates and rejects outside addresses before returning', async () => {
+  fetchMock.mockResolvedValueOnce(Response.json({ places: [tenantPlace('first'), tenantPlace('hotel', 'Unit 1, Sunway Pyramid Hotel')], nextPageToken: 'second' }));
+  fetchMock.mockResolvedValueOnce(Response.json({ places: [tenantPlace('first'), tenantPlace('second'), tenantPlace('conflict', undefined, 'other')], nextPageToken: 'third' }));
+  fetchMock.mockResolvedValueOnce(Response.json({ places: [tenantPlace('third')], nextPageToken: 'fourth' }));
+  const restaurants = await fetchNearbyGoogleRestaurants(mallOptions);
+  expect(restaurants.map((r) => r.name)).toEqual(['first', 'second', 'third']);
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+  expect(reservePlacesCall).toHaveBeenCalledTimes(3);
+  expect(reservePlacesCall).toHaveBeenCalledWith('text');
+  const requests = fetchMock.mock.calls.map((call) => JSON.parse(call[1].body));
+  expect(requests[0]).toMatchObject({ textQuery: 'restaurants in Sunway Pyramid, 3, Jalan PJS 11/15, 47500 Petaling Jaya', pageSize: 20, openNow: false, rankPreference: 'RELEVANCE' });
+  expect(requests[1]).toEqual({ ...requests[0], pageToken: 'second' });
+  expect(requests[2]).toEqual({ ...requests[0], pageToken: 'third' });
+  expect(fetchMock.mock.calls.every((call) => call[0].endsWith('places:searchText'))).toBe(true);
+  expect(fetchMock.mock.calls[0][1].headers['X-Goog-FieldMask']).toContain('nextPageToken');
+});
+
+it('does not treat a mismatched mall identity as address evidence or start scoped discovery', async () => {
+  fetchMock.mockResolvedValueOnce(Response.json({ places: [tenantPlace('first')] }));
+  expect(await fetchNearbyGoogleRestaurants({ ...mallOptions, mallPlaceId: 'other' })).toEqual([]);
+  expect(fetchMock.mock.calls[0][0]).toContain('places:searchNearby');
+});
+
+it('stops paging when cancelled or budget reservation fails and never returns unscoped results', async () => {
+  const controller = new AbortController();
+  fetchMock.mockImplementationOnce(async () => { controller.abort(); return Response.json({ places: [tenantPlace('first')], nextPageToken: 'second' }); });
+  await expect(searchPlacesByText({ ...mallOptions, textQuery: 'noodles', signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' });
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  vi.clearAllMocks();
+  vi.mocked(reservePlacesCall).mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('budget exhausted'));
+  fetchMock.mockResolvedValueOnce(Response.json({ places: [tenantPlace('first')], nextPageToken: 'second' }));
+  await expect(searchPlacesByText({ ...mallOptions, textQuery: 'noodles' })).rejects.toThrow('budget exhausted');
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it('breaks repeated pagination tokens and retains normal single-request around search', async () => {
+  fetchMock.mockResolvedValueOnce(Response.json({ places: [tenantPlace('first')], nextPageToken: 'repeat' }));
+  fetchMock.mockResolvedValueOnce(Response.json({ places: [tenantPlace('second')], nextPageToken: 'repeat' }));
+  expect(await searchPlacesByText({ ...mallOptions, textQuery: 'coffee' })).toHaveLength(2);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+it('rehydrates a saved mall without a session token or extending its original coordinate age', async () => {
+  fetchMock.mockResolvedValueOnce(Response.json({ displayName: { text: 'Sunway Pyramid' }, formattedAddress: mallIdentity.address, types: ['shopping_mall'] }));
+  const saved = { placeId: 'pyramid', mallPlaceId: 'pyramid', label: 'Saved destination', address: '', coordinates: mallOptions.location, fetchedAt: 123, scope: 'around' as const };
+  expect(await refreshMallDestination(saved, new AbortController().signal)).toEqual({ ...saved, label: 'Sunway Pyramid', address: mallIdentity.address });
+  expect(fetchMock.mock.calls[0][0]).not.toContain('sessionToken');
+  expect(fetchMock.mock.calls[0][1].headers['X-Goog-FieldMask']).toBe('displayName,formattedAddress,types');
 });

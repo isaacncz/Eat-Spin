@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Restaurant } from '@/types';
+import type { MallIdentity } from '@/lib/mallSearch';
 import { searchPlacesByText } from '@/lib/googlePlacesTextSearch';
 
 const DEBOUNCE_MS = 400;
@@ -8,6 +9,7 @@ const RECENT_KEY = 'eatspin:recent-searches';
 
 export interface UseTextSearchOptions {
   mallPlaceId?: string;
+  mallIdentity?: MallIdentity;
   location: { lat: number; lng: number } | null;
   radiusKm?: number;
   openNowOnly?: boolean;
@@ -39,14 +41,14 @@ function saveRecent(searches: string[]) {
   } catch { /* quota exceeded — ignore */ }
 }
 
-export function useTextSearch({ location, radiusKm, openNowOnly = true, mallPlaceId }: UseTextSearchOptions): UseTextSearchReturn {
+export function useTextSearch({ location, radiusKm, openNowOnly = true, mallPlaceId, mallIdentity }: UseTextSearchOptions): UseTextSearchReturn {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recentSearches, setRecentSearches] = useState<string[]>(loadRecent);
 
-  const searchKey = `${location?.lat},${location?.lng}|${radiusKm}|${openNowOnly}|${mallPlaceId ?? 'around'}`;
+  const searchKey = `${location?.lat},${location?.lng}|${radiusKm}|${openNowOnly}|${mallPlaceId ?? 'around'}|${JSON.stringify(mallIdentity)}`;
   const [resolvedKey, setResolvedKey] = useState(searchKey);
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -78,6 +80,7 @@ export function useTextSearch({ location, radiusKm, openNowOnly = true, mallPlac
           location,
           radiusKm,
           mallPlaceId,
+          mallIdentity,
           openNowOnly,
           signal: controller.signal,
         });
@@ -103,7 +106,7 @@ export function useTextSearch({ location, radiusKm, openNowOnly = true, mallPlac
         if (!controller.signal.aborted) setIsLoading(false);
       }
     },
-    [location, radiusKm, openNowOnly, mallPlaceId, searchKey],
+    [location, radiusKm, openNowOnly, mallPlaceId, mallIdentity, searchKey],
   );
 
   const search = useCallback(

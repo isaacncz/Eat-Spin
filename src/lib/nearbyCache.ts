@@ -1,4 +1,4 @@
-import { filterMallRestaurants } from '@/lib/mallSearch';
+import { filterMallRestaurants, MALL_MEMBERSHIP_VERSION, type MallIdentity } from '@/lib/mallSearch';
 import type { Restaurant } from '@/types';
 import { calculateDistance } from '@/lib/restaurantUtils';
 
@@ -19,6 +19,7 @@ type RankStrategy = typeof RANK_STRATEGY;
 type NearbySnapshotRecord = {
   snapshotKey: string;
   mallPlaceId?: string;
+  membershipVersion?: number;
   areaGeohash: string;
   areaNeighborGeohashes: string[];
   centerLat: number;
@@ -45,6 +46,7 @@ type NearbyPlaceRecord = {
 
 export interface NearbyCacheLookupOptions {
   mallPlaceId?: string;
+  mallIdentity?: MallIdentity;
   location: { lat: number; lng: number };
   searchRadiusKm: number;
   openNowOnly: boolean;
@@ -57,6 +59,7 @@ export interface NearbyCacheLookupOptions {
 
 export interface NearbyCacheWriteOptions {
   mallPlaceId?: string;
+  mallIdentity?: MallIdentity;
   location: { lat: number; lng: number };
   restaurants: Restaurant[];
   searchRadiusKm: number;
@@ -282,6 +285,7 @@ const isSnapshotMatch = (
   nowMs: number
 ): boolean => {
   if (snapshot.mallPlaceId !== options.mallPlaceId) return false;
+  if (options.mallPlaceId && snapshot.membershipVersion !== MALL_MEMBERSHIP_VERSION) return false;
   if (snapshot.expiresAt <= nowMs) return false;
   if (snapshot.openNowOnly !== options.openNowOnly) return false;
   if (normalizeRegion(snapshot.region) !== normalizeRegion(options.region)) return false;
@@ -369,7 +373,7 @@ export const getCachedNearbyRestaurants = async (
     if (storedRestaurants.length === 0) return null;
 
     return {
-      restaurants: normalizeRestaurantsForLocation(filterMallRestaurants(storedRestaurants, options.mallPlaceId), options.location, 'google-cache'),
+      restaurants: normalizeRestaurantsForLocation(filterMallRestaurants(storedRestaurants, options.mallPlaceId, options.mallIdentity), options.location, 'google-cache'),
       fetchedAtMs: matchedSnapshot.fetchedAt,
     };
   } finally {
@@ -396,7 +400,7 @@ export const saveNearbyRestaurantsSnapshot = async (options: NearbyCacheWriteOpt
     options.categoriesKey,
     options.mallPlaceId
   );
-  const eligibleRestaurants = filterMallRestaurants(options.restaurants, options.mallPlaceId);
+  const eligibleRestaurants = filterMallRestaurants(options.restaurants, options.mallPlaceId, options.mallIdentity);
   const placeIds = eligibleRestaurants.map((restaurant) => options.mallPlaceId
     ? `inside:${options.mallPlaceId}:${getStablePlaceId(restaurant)}` : getStablePlaceId(restaurant));
   const normalizedRestaurants = normalizeRestaurantsForLocation(
@@ -408,6 +412,7 @@ export const saveNearbyRestaurantsSnapshot = async (options: NearbyCacheWriteOpt
   const snapshotRecord: NearbySnapshotRecord = {
     snapshotKey,
     mallPlaceId: options.mallPlaceId,
+    ...(options.mallPlaceId ? { membershipVersion: MALL_MEMBERSHIP_VERSION } : {}),
     areaGeohash,
     areaNeighborGeohashes: neighborGeohashes,
     centerLat: options.location.lat,

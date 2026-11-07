@@ -43,15 +43,15 @@ they do not select a destination, fetch restaurants, or perform a real spin.
 ## Implementation boundary
 
 This prototype predates the working feature. The app now identifies shopping malls
-using provider place types and includes restaurants only when a containing place
-ID matches the selected mall. Search identity, cancellation, caches, the wheel,
+using provider place types and matches restaurants through a containing place
+ID or a sufficiently specific tenant address naming the selected mall building. Search identity, cancellation, caches, the wheel,
 reloads, and empty/error states respect the scope. Inside-only searches cannot use
 unrestricted nearby or bundled fallback results.
 
 An official tenant directory may provide additional verified branch mappings in
 a future change. Names, coordinates, and a mall name in an address are supporting
-evidence, not sufficient proof on their own. Missing provider relationships are
-excluded, so the current feature does not promise a complete mall directory.
+evidence, not sufficient proof on their own. Missing provider relationships can use tenant unit/floor or base-address evidence;
+ambiguous addresses remain excluded. The feature does not promise a complete mall directory.
 
 ## Preview validation
 

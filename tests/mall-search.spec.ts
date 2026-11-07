@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 
 const mallId = 'sunway-pyramid';
 
-async function setup(page: Page, options: { unknown?: boolean; fail?: boolean; tenants?: number; withdrawFirst?: boolean } = {}) {
+async function setup(page: Page, options: { unknown?: boolean; fail?: boolean; tenants?: number; withdrawFirst?: boolean; addressTenants?: boolean; paginated?: boolean; mixedVenues?: boolean } = {}) {
   await page.clock.setFixedTime(new Date('2026-11-06T04:00:00Z'));
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript(() => {
@@ -19,7 +19,7 @@ async function setup(page: Page, options: { unknown?: boolean; fail?: boolean; t
       placeId: mallId, structuredFormat: { mainText: { text: 'Sunway Pyramid' }, secondaryText: { text: 'Malaysia' } },
     } }] } });
     if (url.includes(`/places/${mallId}`)) return route.fulfill({ json: {
-      location: { latitude: 3.073, longitude: 101.607 }, types: ['shopping_mall'], formattedAddress: 'Malaysia',
+      location: { latitude: 3.073, longitude: 101.607 }, displayName: { text: 'Sunway Pyramid' }, types: ['shopping_mall'], formattedAddress: '3, Jalan PJS 11/15, 47500 Petaling Jaya',
     } });
     if (options.fail) return route.fulfill({ status: 503, json: { error: { message: 'Test provider unavailable' } } });
     const makePlace = (id: string, name: string, parents?: string[]) => ({
@@ -30,8 +30,22 @@ async function setup(page: Page, options: { unknown?: boolean; fail?: boolean; t
       regularOpeningHours: { periods: Array.from({ length: 7 }, (_, day) => ({ open: { day, hour: 0, minute: 0 }, close: { day, hour: 23, minute: 59 } })) },
     });
     const tenants = Array.from({ length: options.tenants ?? 2 }, (_, i) =>
-      makePlace(`tenant-${i}`, `Tenant ${i === 0 ? 'Noodles' : i === 1 ? 'Sushi' : i}`, options.unknown ? undefined : options.withdrawFirst && i === 0 ? ['different-mall'] : [mallId]));
+      makePlace(`tenant-${i}`, `Tenant ${i === 0 ? 'Noodles' : i === 1 ? 'Sushi' : i}`, options.unknown ? undefined : options.withdrawFirst && i === 0 ? ['different-mall'] : options.addressTenants ? undefined : [mallId]));
+    if (options.addressTenants) tenants.forEach((tenant) => { tenant.formattedAddress = 'LG1.110, Sunway Pyramid, 3, Jln PJS 11/15, 47500 Petaling Jaya'; });
+    if (options.paginated && url.includes('places:searchText')) {
+      const request = route.request().postDataJSON();
+      const offset = request.pageToken ? Number(request.pageToken) : 0;
+      return route.fulfill({ json: { places: tenants.slice(offset, offset + 6), ...(offset + 6 < tenants.length ? { nextPageToken: String(offset + 6) } : {}) } });
+    }
+    const mixedVenues = options.mixedVenues ? [
+      { ...makePlace('fashion', 'Sushi Fashion Shop', [mallId]), types: ['clothing_store', 'food'], primaryType: 'clothing_store' },
+      { ...makePlace('bank', 'Coffee Bank', [mallId]), types: ['bank', 'restaurant'], primaryType: 'bank' },
+      { ...makePlace('untyped', 'Noodles Shop', [mallId]), types: ['food', 'point_of_interest'], primaryType: undefined },
+      { ...makePlace('cafe', 'Tenant Cafe', [mallId]), types: ['cafe', 'food', 'store'], primaryType: 'cafe' },
+    ] : [];
+    mixedVenues.forEach((place) => { place.formattedAddress = 'LG1.110, Sunway Pyramid'; });
     return route.fulfill({ json: { places: [
+      ...mixedVenues,
       makePlace('outside', 'Outside branch', ['different-mall']),
       makePlace('unknown', 'Unverified restaurant'), ...tenants,
     ] } });
@@ -217,4 +231,66 @@ test('refreshed membership removes a restaurant that no longer matches the mall'
   const round = page.getByRole('region', { name: 'Review this round' });
   await expect(round.getByText('Tenant Sushi', { exact: true })).toBeVisible();
   await expect(round.getByText('Tenant Noodles', { exact: true })).toHaveCount(0);
+});
+
+
+test('address-only tenants survive paging, food search and reload while legacy mall snapshots are refreshed', async ({ page }) => {
+  const options = { tenants: 12, addressTenants: true, paginated: true, withdrawFirst: false };
+  const requests: { textQuery: string; pageToken?: string }[] = [];
+  page.on('request', (request) => { if (request.url().includes('places:searchText')) requests.push(request.postDataJSON()); });
+  await setup(page, options);
+  await selectMall(page);
+  await expect(page.getByRole('button', { name: /^Filters · Inside mall · 12 places/ })).toBeVisible();
+  expect(requests.some((request) => request.textQuery.includes('Sunway Pyramid') && request.pageToken === '6')).toBe(true);
+  await page.getByRole('button', { name: 'Search instead' }).click();
+  await page.getByLabel('Search for food').fill('noodles');
+  await expect(page.getByText('Tenant Noodles', { exact: true })).toBeVisible();
+  expect(requests.some((request) => request.textQuery.startsWith('noodles in Sunway Pyramid'))).toBe(true);
+  await page.reload();
+  await expect(page.getByRole('button', { name: /^Filters · Inside mall · 12 places/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Sunway Pyramid/ }).first()).toBeVisible();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('eatspin:search-destination:v1')!));
+  expect(saved.destination.address).toBeUndefined();
+  expect(saved.destination.label).toBeUndefined();
+  // Old snapshots predate expanded discovery. They must not suppress a new search.
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const open = indexedDB.open('eatspin-nearby-cache');
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result; const tx = db.transaction('snapshots', 'readwrite');
+      const store = tx.objectStore('snapshots'); const cursor = store.openCursor();
+      cursor.onsuccess = () => { const current = cursor.result; if (!current) return;
+        const record = current.value; delete record.membershipVersion; current.update(record); current.continue(); };
+      tx.oncomplete = () => { db.close(); resolve(); }; tx.onerror = () => reject(tx.error);
+    };
+  }));
+  options.withdrawFirst = true;
+  await page.reload();
+  await expect(page.getByRole('button', { name: /^Filters · Inside mall · 11 places/ })).toBeVisible();
+});
+
+
+test('mall tenants must be food venues in the wheel, cached results and food search', async ({ page }) => {
+  await setup(page, { tenants: 12, mixedVenues: true });
+  await selectMall(page);
+  await expect(page.getByRole('button', { name: /^Filters · Inside mall · 13 places/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Review this round' }).click();
+  const round = page.getByRole('region', { name: 'Review this round' });
+  for (const name of ['Sushi Fashion Shop', 'Coffee Bank', 'Noodles Shop']) {
+    await expect(round.getByText(name, { exact: true })).toHaveCount(0);
+  }
+  await page.reload();
+  await expect(page.getByRole('button', { name: /^Filters · Inside mall · 13 places/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Search instead' }).click();
+  await page.getByLabel('Search for food').fill('coffee');
+  await expect(page.getByText('Tenant Cafe', { exact: true })).toBeVisible();
+  for (const name of ['Sushi Fashion Shop', 'Coffee Bank', 'Noodles Shop']) {
+    await expect(page.getByText(name, { exact: true })).toHaveCount(0);
+  }
+  await page.getByRole('button', { name: 'Around this mall', exact: true }).click();
+  await page.getByLabel('Search for food').fill('coffee');
+  await expect(page.getByText('Tenant Cafe', { exact: true })).toBeVisible();
+  for (const name of ['Sushi Fashion Shop', 'Coffee Bank', 'Noodles Shop']) {
+    await expect(page.getByText(name, { exact: true })).toHaveCount(0);
+  }
 });

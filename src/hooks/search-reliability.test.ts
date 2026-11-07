@@ -100,8 +100,8 @@ it('does not enable bundled fallback when mall verification fails', async () => 
 
 it('filters mall candidates before ranking and writes only scoped tenant records', async () => {
   const results = [
-    { id: 'tenant', source: 'google-live', containingPlaceIds: ['pyramid'] },
-    { id: 'outside', source: 'google-live', containingPlaceIds: ['other'] },
+    { id: 'tenant', source: 'google-live', venueKind: 'restaurant', containingPlaceIds: ['pyramid'] },
+    { id: 'outside', source: 'google-live', venueKind: 'restaurant', containingPlaceIds: ['other'] },
   ] as unknown as Awaited<ReturnType<typeof fetchNearbyGoogleRestaurants>>;
   vi.mocked(fetchNearbyGoogleRestaurants).mockResolvedValueOnce(results);
   useNearbyRestaurants({ enabled: true, location: { lat: 3.07, lng: 101.6 }, radiusKm: 10, mallPlaceId: 'pyramid' });

@@ -247,6 +247,9 @@ function App() {
   const destinationSearch = useSearchDestination();
   const fetchRadiusKm = destinationSearch.radiusKm;
   const mallPlaceId = destinationSearch.scope === 'inside' ? destinationSearch.destination?.mallPlaceId : undefined;
+  const mallIdentity = useMemo(() => mallPlaceId && destinationSearch.destination?.address
+    ? { placeId: mallPlaceId, label: destinationSearch.destination.label, address: destinationSearch.destination.address }
+    : undefined, [mallPlaceId, destinationSearch.destination?.label, destinationSearch.destination?.address]);
   const autoLoadedMealTimeRef = useRef<ManualListMealTime>(null);
   const hasUserSelectedManualListRef = useRef(hasSavedManualSelection());
 
@@ -300,21 +303,23 @@ function App() {
   const { pending: feedbackPending, dismiss: dismissFeedback } = useFeedbackPrompt();
   const {
     restaurants: nearbyRestaurants,
-    isLoading: nearbyRestaurantsLoading,
+    isLoading: nearbyRestaurantsFetching,
     error: nearbyRestaurantsError,
     source: nearbyRestaurantsSource,
     shouldUseLocalFallback,
     lastSyncedAt: nearbyLastSyncedAt,
   } = useNearbyRestaurants({
-    enabled: activeTab === 'auto' && Boolean(searchCenter),
+    enabled: activeTab === 'auto' && Boolean(searchCenter) && !destinationSearch.mallIdentityLoading,
     location: searchCenter,
     mallPlaceId,
+    mallIdentity,
     radiusKm: fetchRadiusKm,
     openNowOnly: destinationSearch.openNowOnly,
     selectedCategories,
   });
 
-  const textSearch = useTextSearch({ location: searchCenter, mallPlaceId, radiusKm: fetchRadiusKm, openNowOnly: destinationSearch.openNowOnly });
+  const nearbyRestaurantsLoading = destinationSearch.mallIdentityLoading || nearbyRestaurantsFetching;
+  const textSearch = useTextSearch({ location: destinationSearch.mallIdentityLoading ? null : searchCenter, mallPlaceId, mallIdentity, radiusKm: fetchRadiusKm, openNowOnly: destinationSearch.openNowOnly });
 
   const {
     authUid: groupAuthUid,
@@ -408,13 +413,13 @@ function App() {
   );
   const autoSourceRestaurants = useMemo(() => {
     if (!searchCenter) return [];
-    if (nearbyRestaurants.length > 0) return filterMallRestaurants(nearbyRestaurants, mallPlaceId);
+    if (nearbyRestaurants.length > 0) return filterMallRestaurants(nearbyRestaurants, mallPlaceId, mallIdentity);
     if (shouldUseLocalFallback && !mallPlaceId) return localFallbackAutoRestaurants;
     return [];
-  }, [searchCenter, nearbyRestaurants, shouldUseLocalFallback, localFallbackAutoRestaurants, mallPlaceId]);
+  }, [searchCenter, nearbyRestaurants, shouldUseLocalFallback, localFallbackAutoRestaurants, mallPlaceId, mallIdentity]);
   const autoDataSourceLabel = useMemo(() => {
     if (!searchCenter) return null;
-    if (mallPlaceId) return nearbyRestaurantsLoading ? 'Checking restaurants inside this mall…' : 'Only restaurants with a confirmed mall relationship are included.';
+    if (mallPlaceId) return nearbyRestaurantsLoading ? 'Checking restaurants inside this mall…' : 'Includes restaurants matched to this mall. Coverage may be incomplete.';
     if (nearbyRestaurantsLoading) return 'Loading nearby restaurants...';
     if (nearbyRestaurantsSource === 'google-cache') {
       if (!nearbyLastSyncedAt) return 'Using cached nearby results (refresh after moving >100m).';

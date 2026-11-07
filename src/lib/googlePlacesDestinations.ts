@@ -42,3 +42,20 @@ export async function resolveDestination(suggestion: DestinationSuggestion, sess
     ...(Array.isArray(data.types) && data.types.includes('shopping_mall')
       ? { mallPlaceId: suggestion.placeId, scope: 'inside' as const } : {}) };
 }
+
+/** Rehydrate a saved mall in memory. Names and addresses are never added to saved selections.
+ * This non-session Details request includes displayName (Pro); every call is budget guarded.
+ */
+export async function refreshMallDestination(saved: SearchDestination, signal: AbortSignal): Promise<SearchDestination> {
+  const key = getGoogleApiKey();
+  signal.throwIfAborted();
+  await reservePlacesCall('details');
+  signal.throwIfAborted();
+  const query = new URLSearchParams({ languageCode: placesLanguage(), regionCode: placesRegion() });
+  const data = await payload(await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(saved.placeId)}?${query}`, {
+    signal, headers: { 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'displayName,formattedAddress,types' },
+  }));
+  if (!data?.types?.includes('shopping_mall')) throw new Error('This destination is no longer identified as a shopping mall. Choose it again.');
+  // Preserve the original coordinate age and scope; this call does not refresh coordinates.
+  return { ...saved, label: data.displayName?.text || saved.label, address: data.formattedAddress || '' };
+}

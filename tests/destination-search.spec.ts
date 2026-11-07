@@ -5,11 +5,13 @@ async function setup(page: Page, gps = false) {
   await page.addInitScript((allowGps) => {
     localStorage.setItem('eatspin:first-run-onboarding-seen', '1');
     Object.defineProperty(navigator, 'geolocation', { value: {
-      watchPosition: (ok: (position: { coords: { latitude: number; longitude: number } }) => void, fail: (err: { message: string }) => void) => {
-        if (allowGps) {
-          ok({ coords: { latitude: 1.35, longitude: 103.82 } });
-          window.addEventListener('test-gps-moved', () => ok({ coords: { latitude: 1.4, longitude: 103.9 } }));
-        } else fail({ message: 'Permission denied' });
+      // The app takes one fix per request. watchPosition stays mocked so a regression to
+      // continuous tracking would still see the 'test-gps-moved' updates below.
+      getCurrentPosition: (ok: (position: { coords: { latitude: number; longitude: number } }) => void, fail: (err: { message: string }) => void) => {
+        if (allowGps) ok({ coords: { latitude: 1.35, longitude: 103.82 } }); else fail({ message: 'Permission denied' });
+      },
+      watchPosition: (ok: (position: { coords: { latitude: number; longitude: number } }) => void) => {
+        if (allowGps) window.addEventListener('test-gps-moved', () => ok({ coords: { latitude: 1.4, longitude: 103.9 } }));
         return 1;
       }, clearWatch: () => {},
     } });

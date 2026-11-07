@@ -253,15 +253,11 @@ export function ResultScreen({
                     className="mt-4"
                   />
                 ) : !isManual && restaurant.image ? (
-                  <div className="mt-4 overflow-hidden rounded-xl border-2 border-brand-ink">
-                    <img
-                      src={restaurant.image}
-                      alt={`Photo of ${restaurant.name}`}
-                      className="h-48 w-full object-cover"
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
+                  <PhotoCarousel
+                    photos={[restaurant.image]}
+                    alt={`Photo of ${restaurant.name}`}
+                    className="mt-4"
+                  />
                 ) : null}
 
                 {!isManual && (

@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { UserLocation } from '@/types';
 
+/** A new fix closer than this to the current anchor keeps the anchor, so nothing reloads. */
 export const LOCATION_MOVEMENT_THRESHOLD_KM = 0.1;
 
 const toRadians = (degrees: number): number => (degrees * Math.PI) / 180;
 
-const calculateDistanceKm = (pointA: UserLocation, pointB: UserLocation): number => {
+export const calculateDistanceKm = (pointA: UserLocation, pointB: UserLocation): number => {
   const earthRadiusKm = 6371;
   const dLat = toRadians(pointB.lat - pointA.lat);
   const dLng = toRadians(pointB.lng - pointA.lng);
@@ -24,45 +25,25 @@ interface UseLocationResult {
   location: UserLocation | null;
   error: string | null;
   isLoading: boolean;
+  /** Takes one fresh GPS fix and uses it as the search anchor. Call again to re-anchor. */
   requestLocation: () => void;
 }
 
+/**
+ * Device location as a fixed anchor. One fix per request: the app never follows the device,
+ * so driving does not rebuild the wheel or trigger repeated Places searches (#138).
+ */
 export function useLocation(): UseLocationResult {
   const [location, setLocation] = useState<UserLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const watchIdRef = useRef<number | null>(null);
-  const lastEmittedLocationRef = useRef<UserLocation | null>(null);
+  const anchorRef = useRef<UserLocation | null>(null);
+  const pendingRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  const handlePositionUpdate = useCallback((position: GeolocationPosition) => {
-    const nextLocation: UserLocation = {
-      lat: position.coords.latitude,
-      lng: position.coords.longitude,
-    };
-
-    const previousLocation = lastEmittedLocationRef.current;
-
-    if (!previousLocation) {
-      lastEmittedLocationRef.current = nextLocation;
-      setLocation(nextLocation);
-      setIsLoading(false);
-      return;
-    }
-
-    const distanceKm = calculateDistanceKm(previousLocation, nextLocation);
-    if (distanceKm >= LOCATION_MOVEMENT_THRESHOLD_KM) {
-      lastEmittedLocationRef.current = nextLocation;
-      setLocation(nextLocation);
-    }
-
-    setIsLoading(false);
-  }, []);
-
-  const clearLocationWatcher = useCallback(() => {
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-    }
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
   }, []);
 
   const requestLocation = useCallback(() => {
@@ -70,17 +51,27 @@ export function useLocation(): UseLocationResult {
       setError('Geolocation is not supported by your browser');
       return;
     }
+    if (pendingRef.current) return;
 
+    pendingRef.current = true;
     setIsLoading(true);
     setError(null);
 
-    if (watchIdRef.current !== null) {
-      return;
-    }
-
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      handlePositionUpdate,
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        pendingRef.current = false;
+        if (!mountedRef.current) return;
+        const next: UserLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+        const anchor = anchorRef.current;
+        if (!anchor || calculateDistanceKm(anchor, next) >= LOCATION_MOVEMENT_THRESHOLD_KM) {
+          anchorRef.current = next;
+          setLocation(next);
+        }
+        setIsLoading(false);
+      },
       (err) => {
+        pendingRef.current = false;
+        if (!mountedRef.current) return;
         setError(`Unable to retrieve your location: ${err.message}`);
         setIsLoading(false);
       },
@@ -88,15 +79,9 @@ export function useLocation(): UseLocationResult {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 0,
-      }
+      },
     );
-  }, [handlePositionUpdate]);
-
-  useEffect(() => {
-    return () => {
-      clearLocationWatcher();
-    };
-  }, [clearLocationWatcher]);
+  }, []);
 
   return { location, error, isLoading, requestLocation };
 }

@@ -8,8 +8,7 @@ async function setup(page: Page, options: { unknown?: boolean; fail?: boolean; t
   await page.addInitScript(() => {
     localStorage.setItem('eatspin:first-run-onboarding-seen', '1');
     Object.defineProperty(navigator, 'geolocation', { value: {
-      watchPosition: (_ok: unknown, fail: (error: { message: string }) => void) => { fail({ message: 'Permission denied' }); return 1; },
-      clearWatch: () => {},
+      getCurrentPosition: (_ok: unknown, fail: (error: { message: string }) => void) => { fail({ message: 'Permission denied' }); },
     } });
   });
   await page.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, (route) => route.abort());

@@ -9,10 +9,9 @@ async function setup(page: Page, { gps }: { gps: boolean }) {
   await page.addInitScript((allowGps) => {
     localStorage.setItem('eatspin:first-run-onboarding-seen', '1');
     Object.defineProperty(navigator, 'geolocation', { value: {
-      watchPosition: (ok: (p: { coords: { latitude: number; longitude: number } }) => void, fail: (e: { message: string }) => void) => {
+      getCurrentPosition: (ok: (p: { coords: { latitude: number; longitude: number } }) => void, fail: (e: { message: string }) => void) => {
         if (allowGps) ok({ coords: { latitude: 1.35, longitude: 103.82 } }); else fail({ message: 'Permission denied' });
-        return 1;
-      }, clearWatch: () => {},
+      },
     } });
   }, gps);
   await page.route('**/src/hooks/useFirebaseGroupRoom.ts*', route => route.fulfill({

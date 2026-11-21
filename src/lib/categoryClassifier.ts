@@ -19,6 +19,7 @@
  */
 
 import type { CategoryConfidence, FoodCategory, Restaurant } from '@/types';
+import { EVIDENCE_RANK, mergeCategoryEvidence } from '@/lib/categoryEvidence';
 
 // ---------------------------------------------------------------------------
 // Cuisine categories set — used for confidence scoring during enrichment
@@ -53,7 +54,8 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
   dessert: {
     namePatterns: [
       /dessert/i,
-      /cake/i,
+      /\b(?<!(?:carrot|fish|radish|turnip|rice)[\s-])cakes?\b/i,
+      /\bcake[\s-]?(?:shop|house|studio)\b/i,
       /pastry/i,
       /ice[\s-]?cream/i,
       /gelato/i,
@@ -61,12 +63,12 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /churro/i,
       /cendol/i,
       /ais[\s-]?kacang/i,
-      /\babc\b/i,
-      /sweet/i,
+      /\bsweets\b/i,
       /donut/i,
       /doughnut/i,
       /crepe/i,
-      /tart/i,
+      /\btarts?\b/i,
+      /egg[\s-]?tart/i,
       /macaron/i,
       /brownie/i,
       /cheesecake/i,
@@ -77,7 +79,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /apam balik/i,
       /bubur\s?(cha[\s-]?cha|pulut)/i,
       /pengat/i,
-      /sagu/i,
+      /\bsagu\b/i,
       /bingsu/i,
       /pat(?:bingsu|bing[\s-]?su)/i,
       /kakigōri|kakigori/i,
@@ -90,6 +92,9 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       'ice_cream_shop',
       'dessert_restaurant',
       'dessert_shop',
+      'cake_shop',
+      'pastry_shop',
+      'donut_shop',
     ],
   },
 
@@ -134,13 +139,13 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
   bakery: {
     namePatterns: [
       /bakery/i,
-      /\bbake/i,
+      /\bbake(?:ry|ries|house|shop|s)?\b/i,
       /bread/i,
       /boulangerie/i,
       /patisserie/i,
-      /roti\b/i,
+      /\broti[\s-]?(?:boy|mum|bun|shop|house)\b/i,
     ],
-    googleTypes: ['bakery'],
+    googleTypes: ['bakery', 'pastry_shop', 'cake_shop', 'bagel_shop'],
   },
 
   cafe: {
@@ -152,10 +157,9 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /kopitiam/i,
       /barista/i,
       /espresso/i,
-      /latte/i,
-      /brunch/i,
+      /\blatte\b/i,
     ],
-    googleTypes: ['cafe', 'coffee_shop'],
+    googleTypes: ['cafe', 'coffee_shop', 'coffee_stand', 'coffee_roastery'],
   },
 
   malay: {
@@ -238,7 +242,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /hainanese/i,
       /kopitiam/i,
     ],
-    googleTypes: ['chinese_restaurant'],
+    googleTypes: ['chinese_restaurant', 'dim_sum_restaurant', 'cantonese_restaurant', 'taiwanese_restaurant'],
   },
 
   japanese: {
@@ -257,10 +261,10 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /omakase/i,
       /takoyaki/i,
       /onigiri/i,
-      /matcha\b/i,
       /teriyaki/i,
     ],
-    googleTypes: ['japanese_restaurant', 'sushi_restaurant', 'ramen_restaurant'],
+    googleTypes: ['japanese_restaurant', 'sushi_restaurant', 'ramen_restaurant', 'japanese_izakaya_restaurant',
+                  'japanese_curry_restaurant', 'tonkatsu_restaurant', 'yakiniku_restaurant', 'yakitori_restaurant'],
   },
 
   korean: {
@@ -278,7 +282,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /jjigae/i,
       /chimaek/i,
     ],
-    googleTypes: ['korean_restaurant'],
+    googleTypes: ['korean_restaurant', 'korean_barbecue_restaurant'],
   },
 
   thai: {
@@ -307,7 +311,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /sandwich/i,
       /fish[\s-]?(?:and|&|n)[\s-]?chips/i,
     ],
-    googleTypes: ['american_restaurant', 'italian_restaurant', 'french_restaurant',
+    googleTypes: ['american_restaurant', 'western_restaurant', 'italian_restaurant', 'french_restaurant',
                   'pizza_restaurant', 'hamburger_restaurant', 'sandwich_shop',
                   'mediterranean_restaurant', 'mexican_restaurant', 'spanish_restaurant'],
   },
@@ -336,9 +340,10 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /fried[\s-]?chicken/i,
       /\bkfc\b/i,
       /rotisserie/i,
-      /wings?\b/i,
+      /chicken[\s-]?wings?\b/i,
+      /\bwings?[\s-]?(?:stop|bar|house)\b/i,
     ],
-    googleTypes: ['chicken_restaurant', 'fast_food_restaurant'],
+    googleTypes: ['chicken_restaurant', 'chicken_wings_restaurant'],
   },
 
   beef: {
@@ -348,7 +353,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /\blembu\b/i,
       /wagyu/i,
     ],
-    googleTypes: ['steak_house', 'barbecue_restaurant'],
+    googleTypes: ['steak_house'],
   },
 
   vegetarian: {
@@ -397,7 +402,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /mee[\s-]?sua/i,
       /ban[\s-]?mian/i,
     ],
-    googleTypes: ['noodle_restaurant'],
+    googleTypes: ['noodle_shop', 'chinese_noodle_restaurant'],
   },
 
   rice: {
@@ -435,7 +440,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /sup[\s-]?kambing/i,
       /pho\b/i,
     ],
-    googleTypes: [],
+    googleTypes: ['soup_restaurant'],
   },
 
   breakfast: {
@@ -463,7 +468,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /\btealive\b/i,
       /\bgong[\s-]?cha\b/i,
       /\btiger[\s-]?sugar\b/i,
-      /\bkoi\b/i,
+      /\bkoi[\s-]?(?:th[eé]|cafe)(?![a-z])/i,
       /\bli[\s-]?ho\b/i,
       /\beach[\s-]?a[\s-]?cup\b/i,
       /\bcoco[\s-]?tea\b/i,
@@ -493,7 +498,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /\bjollibee\b/i,
       /\bpopeyes\b/i,
       /\ba&w\b/i,
-      /\bcarl/i,
+      /\bcarl'?s[\s-]?jr\b/i,
     ],
     googleTypes: ['fast_food_restaurant'],
   },
@@ -507,7 +512,7 @@ export const CATEGORY_SIGNALS: Partial<Record<FoodCategory, CategorySignals>> = 
       /\bsuki\b/i,
       /\bmala[\s-]?tang\b/i,
     ],
-    googleTypes: [],
+    googleTypes: ['hot_pot_restaurant'],
   },
 
   bbq: {
@@ -548,31 +553,41 @@ export interface ClassifiablePlace {
  * the caller is expected to merge this with any type-mapper results.
  */
 export const classifyPlace = (place: ClassifiablePlace): FoodCategory[] => {
-  const name = (place.displayName ?? '').toLowerCase();
-  const types = place.types ?? [];
-  const summary = (place.editorialSummary ?? '').toLowerCase();
-  const searchableText = `${name} ${summary}`;
+  const signals = classifyPlaceSignals(place);
+  return [...new Set([...signals.byType, ...signals.byName, ...signals.bySummary])];
+};
 
-  const matched: FoodCategory[] = [];
+export interface PlaceSignalCategories {
+  /** Categories whose Google types include one of the place's types. */
+  byType: FoodCategory[];
+  /** Categories whose name patterns match the display name. */
+  byName: FoodCategory[];
+  /** Categories matched only by the editorial summary (not by the name). */
+  bySummary: FoodCategory[];
+}
 
-  for (const [category, signals] of Object.entries(CATEGORY_SIGNALS) as [FoodCategory, CategorySignals][]) {
-    if (!signals) continue;
+/** Categories implied by one Google place type, from the signal map. */
+export const categoriesForGoogleType = (type: string): FoodCategory[] => (
+  (Object.entries(CATEGORY_SIGNALS) as [FoodCategory, CategorySignals][])
+    .filter(([, signals]) => signals.googleTypes.includes(type))
+    .map(([category]) => category)
+);
 
-    // Check Google types first (cheap)
-    const typeMatch = signals.googleTypes.some((gt) => types.includes(gt));
-    if (typeMatch) {
-      matched.push(category);
-      continue;
-    }
+/** Text-pattern categories for a name or description. */
+export const categoriesForText = (text: string | undefined): FoodCategory[] => {
+  const value = (text ?? '').toLowerCase();
+  if (!value.trim()) return [];
+  return (Object.entries(CATEGORY_SIGNALS) as [FoodCategory, CategorySignals][])
+    .filter(([, signals]) => signals.namePatterns.some((pattern) => pattern.test(value)))
+    .map(([category]) => category);
+};
 
-    // Check name / summary patterns
-    const nameMatch = signals.namePatterns.some((pattern) => pattern.test(searchableText));
-    if (nameMatch) {
-      matched.push(category);
-    }
-  }
-
-  return matched;
+/** Same signals as `classifyPlace`, kept apart so callers can weigh them differently. */
+export const classifyPlaceSignals = (place: ClassifiablePlace): PlaceSignalCategories => {
+  const byType = [...new Set((place.types ?? []).flatMap(categoriesForGoogleType))];
+  const byName = categoriesForText(place.displayName);
+  const bySummary = categoriesForText(place.editorialSummary).filter((category) => !byName.includes(category));
+  return { byType, byName, bySummary };
 };
 
 /**
@@ -634,8 +649,11 @@ export const enrichRestaurantCategories = (restaurant: Restaurant): Restaurant =
     enriched.every((c, i) => c === restaurant.category[i])
   );
   const confidenceChanged = confidence !== restaurant.categoryConfidence;
+  const evidenceChanged = Boolean(restaurant.categoryEvidence)
+    && heuristic.some((category) => !restaurant.categoryEvidence?.[category]
+      || EVIDENCE_RANK[restaurant.categoryEvidence[category]!] < EVIDENCE_RANK.medium);
 
-  if (!categoriesChanged && !confidenceChanged) {
+  if (!categoriesChanged && !confidenceChanged && !evidenceChanged) {
     return restaurant;
   }
 
@@ -643,6 +661,9 @@ export const enrichRestaurantCategories = (restaurant: Restaurant): Restaurant =
     ...restaurant,
     category: categoriesChanged ? enriched : restaurant.category,
     categoryConfidence: confidence,
+    ...(restaurant.categoryEvidence
+      ? { categoryEvidence: mergeCategoryEvidence(restaurant.categoryEvidence, heuristic, 'medium') }
+      : {}),
   };
 };
 

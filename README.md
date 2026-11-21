@@ -60,6 +60,8 @@ Enable **Places API (New)** in a billing-enabled Google Cloud project. Configure
 
 Nearby cache matching includes the search center, radius, categories and availability selection. Matching cached results can avoid another Nearby request. Candidate ranking uses a quality score that combines rating and review volume, followed by distance; it is not a guarantee of restaurant quality.
 
+Category filters and food searches rank how strongly each place matches: Google's primary type first, then the place name, then weaker hints (secondary types, the description, serves-* flags). Weak matches appear only when fewer than five confident ones remain. Nearby Search requests selected categories with `includedPrimaryTypes`; a clear place-type search such as "coffee" sends Text Search `includedType` with `strictTypeFiltering`. Either may make one wider request when results are sparse, and both requests count against the budget guard. Dish searches such as "chicken rice" stay plain text searches.
+
 The budget guard tracks `nearby`, `text`, `autocomplete` and `details` requests, shared through Firebase when configured and otherwise local to the browser. It is a request counter, not a dollar budget, billing estimate or guarantee of free usage. Photo media requests are separate. Use Google Cloud quotas and billing monitoring as appropriate.
 
 See [destination search](docs/destination-search.md) for persistence/session details and [photo usage](docs/photo-usage.md) for loading behavior. Check current Google documentation before changing API fields, storage policy or billing assumptions.

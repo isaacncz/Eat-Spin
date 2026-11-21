@@ -73,3 +73,34 @@ test('a city typed in food search can become the destination without returning t
   await food.fill('coffee');
   await expect(page.getByText('Penang Coffee', { exact: true })).toBeVisible();
 });
+
+test('a coffee search asks for cafés strictly and labels the ranked results', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.addInitScript(() => {
+    localStorage.setItem('eatspin:first-run-onboarding-seen', '1');
+    localStorage.setItem('eatspin:search-destination:v1', JSON.stringify({ version: 1, radiusKm: 3,
+      destination: { placeId: 'kiara', coordinates: { lat: 3.17, lng: 101.65 }, fetchedAt: Date.now() } }));
+  });
+  const venue = (id: string, name: string, primaryType: string, types: string[]) => ({
+    id, displayName: { text: name }, primaryType, types, location: { latitude: 3.171, longitude: 101.65 }, rating: 4.4, userRatingCount: 120,
+  });
+  const textRequests: Record<string, unknown>[] = [];
+  await page.route('**/places.googleapis.com/**', (route) => {
+    if (!route.request().url().includes('places:searchText')) return route.fulfill({ json: { places: [] } });
+    const body = route.request().postDataJSON();
+    textRequests.push(body);
+    if (body.textQuery !== 'coffee') return route.fulfill({ json: { places: [] } });
+    return route.fulfill({ json: { places: body.includedType
+      ? [venue('cafe', 'Kiara Roasters', 'cafe', ['cafe', 'food']), venue('dragon', 'Golden Dragon Restaurant', 'chinese_restaurant', ['chinese_restaurant', 'cafe'])]
+      : [venue('diner', 'Hill Diner', 'restaurant', ['restaurant']), venue('cafe', 'Kiara Roasters', 'cafe', ['cafe'])] } });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: /search instead/i }).click();
+  await page.getByRole('textbox', { name: 'Search for food' }).fill('coffee');
+  await expect(page.getByTestId('search-match-label')).toHaveText('Cafés first, then close matches');
+  await expect(page.getByRole('heading', { level: 3 })).toHaveText(['Kiara Roasters', 'Golden Dragon Restaurant', 'Hill Diner']);
+  expect(textRequests[0]).toMatchObject({ textQuery: 'coffee', includedType: 'cafe', strictTypeFiltering: true });
+  expect(textRequests[1]).not.toHaveProperty('includedType');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: test.info().outputPath('coffee-ranked.png') });
+});

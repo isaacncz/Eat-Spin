@@ -1678,6 +1678,8 @@ function App() {
               results: textSearch.results,
               isLoading: textSearch.isLoading,
               error: textSearch.error,
+              matchLabel: textSearch.intent?.label,
+              broadened: textSearch.broadened,
               recentSearches: textSearch.recentSearches,
               onLetsGo: handleLetsGo,
               onClear: textSearch.clearResults,

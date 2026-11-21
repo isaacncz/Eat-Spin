@@ -1,3 +1,5 @@
+export type CategoryEvidence = 'strong' | 'medium' | 'weak';
+
 export type CategoryConfidence = 'high' | 'medium' | 'low';
 
 /** A single Google Places review (up to 5 per place). */
@@ -80,6 +82,14 @@ export interface Restaurant {
    * - `low`: weak/no signal — generic restaurant or heuristic-only guess
    */
   categoryConfidence?: CategoryConfidence;
+  /**
+   * How strongly each category is supported for this place.
+   * - `strong`: Google's primary type
+   * - `medium`: the place name
+   * - `weak`: a secondary Google type, the description, a serves-* flag or the search query only
+   * Absent on older cached, bundled and saved places; filters then fall back to `category`.
+   */
+  categoryEvidence?: Partial<Record<FoodCategory, CategoryEvidence>>;
 }
 
 // Type for JSON restaurant data (without ID fields)

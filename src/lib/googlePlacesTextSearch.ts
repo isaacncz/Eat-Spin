@@ -31,6 +31,13 @@ export interface TextSearchOptions {
   signal?: AbortSignal;
   openNowOnly?: boolean;
   restrictToRectangle?: boolean;
+  /**
+   * One Table A type. With `strictTypeFiltering`, Google returns only places of
+   * that type; without it the type only biases results.
+   * https://developers.google.com/maps/documentation/places/web-service/text-search
+   */
+  includedType?: string;
+  strictTypeFiltering?: boolean;
 }
 
 /**
@@ -53,6 +60,10 @@ export async function searchPlacesByText(
     ...(scoped ? { pageSize: 20 } : { maxResultCount }),
     rankPreference: scoped ? 'RELEVANCE' : 'DISTANCE',
     openNow: options.openNowOnly ?? true,
+    ...(options.includedType ? {
+      includedType: options.includedType,
+      ...(options.strictTypeFiltering ? { strictTypeFiltering: true } : {}),
+    } : {}),
     languageCode: options.language ?? placesLanguage(),
     regionCode: options.region ?? placesRegion(),
     ...(rectangle ? { locationRestriction: { rectangle } } : { locationBias: {

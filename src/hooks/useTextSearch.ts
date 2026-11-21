@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Restaurant } from '@/types';
 import type { MallIdentity } from '@/lib/mallSearch';
-import { searchPlacesByText } from '@/lib/googlePlacesTextSearch';
+import { searchCravingPlaces } from '@/lib/cravingSearch';
+import type { SearchIntent } from '@/lib/searchIntent';
 
 const DEBOUNCE_MS = 400;
 const MAX_RECENT = 10;
@@ -21,6 +22,10 @@ export interface UseTextSearchReturn {
   results: Restaurant[];
   isLoading: boolean;
   error: string | null;
+  /** Place-type intent of the shown results, e.g. cafés for "coffee". */
+  intent: SearchIntent | null;
+  /** True when weaker matches were added after the confident ones. */
+  broadened: boolean;
   recentSearches: string[];
   search: (text: string) => void;
   clearResults: () => void;
@@ -46,6 +51,7 @@ export function useTextSearch({ location, radiusKm, openNowOnly = true, mallPlac
   const [results, setResults] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [match, setMatch] = useState<{ intent: SearchIntent | null; broadened: boolean }>({ intent: null, broadened: false });
   const [recentSearches, setRecentSearches] = useState<string[]>(loadRecent);
 
   const searchKey = `${location?.lat},${location?.lng}|${radiusKm}|${openNowOnly}|${mallPlaceId ?? 'around'}|${JSON.stringify(mallIdentity)}`;
@@ -75,7 +81,7 @@ export function useTextSearch({ location, radiusKm, openNowOnly = true, mallPlac
       setError(null);
 
       try {
-        const restaurants = await searchPlacesByText({
+        const { restaurants, intent, broadened } = await searchCravingPlaces({
           textQuery: trimmed,
           location,
           radiusKm,
@@ -87,6 +93,7 @@ export function useTextSearch({ location, radiusKm, openNowOnly = true, mallPlac
 
         if (!controller.signal.aborted) {
           setResults(restaurants);
+          setMatch({ intent, broadened });
           setResolvedKey(searchKey);
 
           // Save to recent
@@ -101,6 +108,7 @@ export function useTextSearch({ location, radiusKm, openNowOnly = true, mallPlac
         if (!controller.signal.aborted) {
           setError(err instanceof Error ? err.message : 'Search failed');
           setResults([]);
+          setMatch({ intent: null, broadened: false });
         }
       } finally {
         if (!controller.signal.aborted) setIsLoading(false);
@@ -118,6 +126,7 @@ export function useTextSearch({ location, radiusKm, openNowOnly = true, mallPlac
       setIsLoading(false);
       if (!text.trim()) {
         setResults([]);
+        setMatch({ intent: null, broadened: false });
         setError(null);
         return;
       }
@@ -132,6 +141,7 @@ export function useTextSearch({ location, radiusKm, openNowOnly = true, mallPlac
     setIsLoading(false);
     setQuery('');
     setResults([]);
+    setMatch({ intent: null, broadened: false });
     setError(null);
     abortRef.current?.abort();
   }, []);
@@ -144,5 +154,6 @@ export function useTextSearch({ location, radiusKm, openNowOnly = true, mallPlac
     };
   }, [location, radiusKm, openNowOnly, mallPlaceId, clearResults]);
 
-  return { query, setQuery, results: resolvedKey === searchKey ? results : [], isLoading, error: resolvedKey === searchKey ? error : null, recentSearches, search, clearResults };
+  const current = resolvedKey === searchKey;
+  return { query, setQuery, results: current ? results : [], isLoading, error: current ? error : null, intent: current ? match.intent : null, broadened: current && match.broadened, recentSearches, search, clearResults };
 }

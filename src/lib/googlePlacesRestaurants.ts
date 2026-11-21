@@ -2,7 +2,8 @@ import type { CategoryConfidence, DailyHours, FoodCategory, PlaceReview, Restaur
 import { calculateDistance } from '@/lib/restaurantUtils';
 import { computeQualityScore } from '@/lib/restaurantUtils';
 import { classifyDiningPlace, isDiningVenueKind } from '@/lib/placeEligibility';
-import { classifyPlace } from '@/lib/categoryClassifier';
+import { categoriesForGoogleType, classifyPlace, classifyPlaceSignals } from '@/lib/categoryClassifier';
+import { buildCategoryEvidence, mergeCategoryEvidence, MIN_CONFIDENT_MATCHES, servesCategories } from '@/lib/categoryEvidence';
 import { reservePlacesCall } from '@/lib/placesUsage';
 import { filterMallRestaurants, type MallIdentity } from '@/lib/mallSearch';
 
@@ -292,6 +293,26 @@ const googleTypeToCategory = new Map<string, FoodCategory>([
   ['mexican_restaurant', 'western'],
   ['spanish_restaurant', 'western'],
   ['fast_food_restaurant', 'fast-food'],
+  ['hot_pot_restaurant', 'hotpot'],
+  ['dim_sum_restaurant', 'chinese'],
+  ['cantonese_restaurant', 'chinese'],
+  ['taiwanese_restaurant', 'chinese'],
+  ['japanese_izakaya_restaurant', 'japanese'],
+  ['japanese_curry_restaurant', 'japanese'],
+  ['tonkatsu_restaurant', 'japanese'],
+  ['yakiniku_restaurant', 'japanese'],
+  ['yakitori_restaurant', 'japanese'],
+  ['korean_barbecue_restaurant', 'korean'],
+  ['western_restaurant', 'western'],
+  ['coffee_stand', 'cafe'],
+  ['coffee_roastery', 'cafe'],
+  ['cake_shop', 'dessert'],
+  ['pastry_shop', 'bakery'],
+  ['donut_shop', 'dessert'],
+  ['chicken_wings_restaurant', 'chicken'],
+  ['noodle_shop', 'noodles'],
+  ['chinese_noodle_restaurant', 'noodles'],
+  ['soup_restaurant', 'soup'],
 ]);
 
 // ---------------------------------------------------------------------------
@@ -307,21 +328,22 @@ const googleTypeToCategory = new Map<string, FoodCategory>([
  * classifier in categoryClassifier.ts handles sub-filtering.
  */
 const CATEGORY_TO_GOOGLE_TYPES: Partial<Record<FoodCategory, string[]>> = {
-  chinese:      ['chinese_restaurant'],
+  chinese:      ['chinese_restaurant', 'dim_sum_restaurant', 'cantonese_restaurant', 'taiwanese_restaurant'],
   indian:       ['indian_restaurant'],
-  japanese:     ['japanese_restaurant', 'sushi_restaurant', 'ramen_restaurant'],
-  korean:       ['korean_restaurant'],
+  japanese:     ['japanese_restaurant', 'sushi_restaurant', 'ramen_restaurant', 'japanese_izakaya_restaurant',
+                 'japanese_curry_restaurant', 'tonkatsu_restaurant', 'yakiniku_restaurant', 'yakitori_restaurant'],
+  korean:       ['korean_restaurant', 'korean_barbecue_restaurant'],
   thai:         ['thai_restaurant'],
   malay:        ['malaysian_restaurant'],
-  western:      ['american_restaurant', 'italian_restaurant', 'french_restaurant',
+  western:      ['american_restaurant', 'western_restaurant', 'italian_restaurant', 'french_restaurant',
                  'hamburger_restaurant', 'steak_house',
                  'sandwich_shop', 'mediterranean_restaurant', 'mexican_restaurant',
                  'spanish_restaurant'],
-  cafe:         ['cafe', 'coffee_shop'],
-  bakery:       ['bakery'],
-  dessert:      ['dessert_restaurant', 'ice_cream_shop', 'bakery'],
+  cafe:         ['cafe', 'coffee_shop', 'coffee_stand', 'coffee_roastery'],
+  bakery:       ['bakery', 'pastry_shop', 'cake_shop'],
+  dessert:      ['dessert_restaurant', 'dessert_shop', 'ice_cream_shop', 'cake_shop', 'donut_shop', 'bakery'],
   seafood:      ['seafood_restaurant'],
-  chicken:      ['chicken_restaurant'],
+  chicken:      ['chicken_restaurant', 'chicken_wings_restaurant'],
   beef:         ['steak_house'],
   vegetarian:   ['vegetarian_restaurant', 'vegan_restaurant'],
   breakfast:    ['breakfast_restaurant'],
@@ -329,41 +351,37 @@ const CATEGORY_TO_GOOGLE_TYPES: Partial<Record<FoodCategory, string[]>> = {
   pizza:        ['pizza_restaurant'],
   'fast-food':  ['fast_food_restaurant'],
   bbq:          ['barbecue_restaurant'],
-  hotpot:       ['chinese_restaurant'],
-  'bubble-tea': ['cafe'],
+  hotpot:       ['hot_pot_restaurant', 'chinese_restaurant'],
+  'bubble-tea': ['cafe', 'tea_house'],
 };
 
 /**
- * Build the `includedTypes` array for a Google Nearby Search request.
- *
- * - No categories selected → `['restaurant']` (inherits all cuisine subtypes,
- *   excludes cafe / bakery / ice cream)
- * - Categories selected → union of all Google types from the mapping,
- *   deduplicated. Falls back to `['restaurant']` if none of the selected
- *   categories have a Google type (dish-type-only selection).
+ * Google types requested for the selected categories, or null when none of
+ * them has a Google type (no selection, or dish-only categories such as rice).
  */
-const buildIncludedTypes = (selectedCategories?: FoodCategory[]): string[] => {
-  if (!selectedCategories || selectedCategories.length === 0) {
-    return ['restaurant'];
-  }
+export const googleTypesForCategories = (selectedCategories?: readonly FoodCategory[]): string[] | null => {
+  const types = new Set((selectedCategories ?? []).flatMap((category) => CATEGORY_TO_GOOGLE_TYPES[category] ?? []));
+  return types.size > 0 ? [...types] : null;
+};
 
-  const typesSet = new Set<string>();
-  for (const category of selectedCategories) {
-    const googleTypes = CATEGORY_TO_GOOGLE_TYPES[category];
-    if (googleTypes) {
-      for (const type of googleTypes) {
-        typesSet.add(type);
-      }
-    }
-  }
-
-  // Dish-type-only categories (soup, rice, etc.) have no Google types.
-  // Fall back to generic restaurant and let the heuristic post-filter handle it.
-  if (typesSet.size === 0) {
-    return ['restaurant'];
-  }
-
-  return [...typesSet];
+/**
+ * Type restriction for a Nearby Search request.
+ *
+ * - No typed category → `includedTypes: ['restaurant']` (all cuisine subtypes;
+ *   excludes cafe / bakery / ice cream). The classifier sub-filters dish categories.
+ * - Typed categories → `includedPrimaryTypes`, so a place must *be* that kind
+ *   (its primary type), not merely list it among secondary types.
+ * - `matchAnyType` → `includedTypes` with the same list; the sparse-area fallback.
+ *
+ * Nearby Search (New): https://developers.google.com/maps/documentation/places/web-service/nearby-search
+ */
+export const buildNearbyTypeRestriction = (
+  selectedCategories?: readonly FoodCategory[],
+  matchAnyType = false,
+): { includedTypes: string[] } | { includedPrimaryTypes: string[] } => {
+  const types = googleTypesForCategories(selectedCategories);
+  if (!types) return { includedTypes: ['restaurant'] };
+  return matchAnyType ? { includedTypes: types } : { includedPrimaryTypes: types };
 };
 
 const mapGoogleTypesToCategories = (types: string[] | undefined): FoodCategory[] => {
@@ -497,6 +515,29 @@ export const normalizeGooglePlace = (
 
   // No fallback to 'western' — empty categories + low confidence is honest
   const categories = allCategories;
+
+  // Per-category strength: primary type > name > secondary type / summary / serves flag.
+  const signals = classifyPlaceSignals({
+    displayName: place.displayName?.text,
+    types: place.types?.filter((type) => type !== place.primaryType),
+    editorialSummary: place.editorialSummary?.text,
+  });
+  const primaryCategories = place.primaryType
+    ? [...new Set([...(primaryTypeCategory ? [primaryTypeCategory] : []), ...categoriesForGoogleType(place.primaryType)])]
+    : [];
+  const secondaryCategories = (place.types ?? [])
+    .filter((type) => type !== place.primaryType)
+    .flatMap((type) => {
+      const mapped = googleTypeToCategory.get(type);
+      return mapped ? [mapped] : [];
+    });
+  const categoryEvidence = buildCategoryEvidence({
+    primaryType: primaryCategories,
+    name: signals.byName,
+    secondaryType: [...signals.byType, ...secondaryCategories],
+    summary: signals.bySummary,
+    serves: servesCategories(place),
+  });
   const categoryConfidence = computeCategoryConfidence(
     primaryTypeCategory,
     typeMapperCategories,
@@ -541,6 +582,7 @@ export const normalizeGooglePlace = (
     name: place.displayName?.text?.trim() || 'Nearby Restaurant',
     category: categories,
     categoryConfidence,
+    categoryEvidence,
     address: place.formattedAddress?.trim() || 'Nearby area',
     coordinates,
     hours: mapOpeningHours(place.regularOpeningHours?.periods),
@@ -594,66 +636,78 @@ export const fetchNearbyGoogleRestaurants = async (
   const apiKey = getGoogleApiKey();
   const maxResultCount = Math.max(1, Math.min(options.maxResults ?? DEFAULT_MAX_RESULTS, 20));
   const radiusMeters = Math.max(1, Math.min(Math.round(options.radiusKm * 1000), 50_000));
-  const includedTypes = buildIncludedTypes(options.selectedCategories);
+  const requestNearby = async (matchAnyType: boolean): Promise<Restaurant[]> => {
+    // Count this billable call against the monthly budget (throws PlacesBudgetError when exhausted).
+    await reservePlacesCall('nearby');
+    options.signal?.throwIfAborted();
 
-  // Count this billable call against the monthly budget (throws PlacesBudgetError when exhausted).
-  await reservePlacesCall('nearby');
-
-  const response = await fetch(GOOGLE_NEARBY_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': apiKey,
-      'X-Goog-FieldMask': GOOGLE_PLACE_FIELDS,
-    },
-    body: JSON.stringify({
-      includedTypes,
-      excludedTypes: EXCLUDED_TYPES,
-      maxResultCount,
-      rankPreference: 'POPULARITY',
-      // Nearby Search (New) has no openNow request filter; opening status is filtered locally.
-      languageCode: options.language,
-      regionCode: options.region,
-      locationRestriction: {
-        circle: {
-          center: {
-            latitude: options.location.lat,
-            longitude: options.location.lng,
-          },
-          radius: radiusMeters,
-        },
+    const response = await fetch(GOOGLE_NEARBY_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': GOOGLE_PLACE_FIELDS,
       },
-    }),
-    signal: options.signal,
-  });
+      body: JSON.stringify({
+        ...buildNearbyTypeRestriction(options.selectedCategories, matchAnyType),
+        excludedTypes: EXCLUDED_TYPES,
+        maxResultCount,
+        rankPreference: 'POPULARITY',
+        // Nearby Search (New) has no openNow request filter; opening status is filtered locally.
+        languageCode: options.language,
+        regionCode: options.region,
+        locationRestriction: {
+          circle: {
+            center: {
+              latitude: options.location.lat,
+              longitude: options.location.lng,
+            },
+            radius: radiusMeters,
+          },
+        },
+      }),
+      signal: options.signal,
+    });
 
-  const payload = (await response.json().catch(() => null)) as GoogleNearbyResponse | null;
-  if (!response.ok) {
-    throw new Error(toFriendlyApiError(response, payload));
+    const payload = (await response.json().catch(() => null)) as GoogleNearbyResponse | null;
+    if (!response.ok) {
+      throw new Error(toFriendlyApiError(response, payload));
+    }
+
+    return filterMallRestaurants((payload?.places ?? [])
+      .map((place) => normalizeGooglePlace(place, options.location, apiKey))
+      .filter((restaurant): restaurant is Restaurant => Boolean(restaurant)), options.mallPlaceId);
+  };
+
+  const typedCategories = googleTypesForCategories(options.selectedCategories) !== null;
+  let restaurants = await requestNearby(false);
+
+  // Sparse area: a primary-type match found too few places, so make one wider
+  // any-type request. Its extra places only rank as weak matches below.
+  if (typedCategories && restaurants.length < MIN_CONFIDENT_MATCHES) {
+    const seen = new Set(restaurants.map((restaurant) => restaurant.id));
+    try {
+      const wider = await requestNearby(true);
+      restaurants = [...restaurants, ...wider.filter((restaurant) => !seen.has(restaurant.id))];
+    } catch (error) {
+      // Keep the confident results when the optional wider request fails or the budget is spent.
+      if (options.signal?.aborted || restaurants.length === 0) throw error;
+    }
   }
 
-  const places = payload?.places ?? [];
-  const restaurants = filterMallRestaurants(places
-    .map((place) => normalizeGooglePlace(place, options.location, apiKey))
-    .filter((restaurant): restaurant is Restaurant => Boolean(restaurant)), options.mallPlaceId);
-
-  // When the API was called with cuisine-specific types, force-tag each result
-  // with the corresponding app categories and boost confidence to 'high'
-  // since Google already pre-filtered by cuisine type.
+  // Tag each result with the requested categories so the category filter keeps it.
+  // Google matched the type, so confidence is high; the evidence map stays honest
+  // (a requested category with no other signal is only weak).
   if (options.selectedCategories && options.selectedCategories.length > 0) {
+    const requested = options.selectedCategories;
     return restaurants.map((restaurant) => {
       const existing = new Set(restaurant.category);
-      const enriched = [...restaurant.category];
-      for (const cat of options.selectedCategories!) {
-        if (!existing.has(cat)) {
-          enriched.push(cat);
-          existing.add(cat);
-        }
-      }
+      const enriched = [...restaurant.category, ...requested.filter((category) => !existing.has(category))];
       return {
         ...restaurant,
         category: enriched.length !== restaurant.category.length ? enriched : restaurant.category,
         categoryConfidence: 'high' as CategoryConfidence,
+        categoryEvidence: mergeCategoryEvidence(restaurant.categoryEvidence ?? {}, requested, 'weak'),
       };
     });
   }

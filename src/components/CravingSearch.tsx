@@ -30,6 +30,10 @@ interface CravingSearchProps {
   results: Restaurant[];
   isLoading: boolean;
   error: string | null;
+  /** What the results were narrowed to, e.g. "Cafés" for "coffee". */
+  matchLabel?: string;
+  /** True when weaker matches follow the confident ones. */
+  broadened?: boolean;
   recentSearches: string[];
   onLetsGo: (restaurant: Restaurant) => void;
   onClear: () => void;
@@ -60,6 +64,8 @@ export const CravingSearch = memo(function CravingSearch({
   results,
   isLoading,
   error,
+  matchLabel,
+  broadened = false,
   recentSearches,
   distanceOrigin,
   mallLabel,
@@ -195,9 +201,19 @@ export const CravingSearch = memo(function CravingSearch({
       {/* ── Results grid ──────────────────────────────────────── */}
       {results.length > 0 && (
         <div className="space-y-3">
-          <p className="text-xs font-medium text-eatspin-gray-2">
-            {results.length} place{results.length !== 1 ? 's' : ''} found
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-medium text-eatspin-gray-2">
+              {results.length} place{results.length !== 1 ? 's' : ''} found
+            </p>
+            {matchLabel && (
+              <span
+                data-testid="search-match-label"
+                className="max-w-full truncate rounded-full border-2 border-brand-ink bg-white px-2.5 py-0.5 text-xs font-semibold text-brand-ink"
+              >
+                {broadened ? `${matchLabel} first, then close matches` : `${matchLabel} only`}
+              </span>
+            )}
+          </div>
           {results.map((r, i) => (
             <div
               key={r.id}

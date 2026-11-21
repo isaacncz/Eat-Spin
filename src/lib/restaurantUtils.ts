@@ -1,12 +1,15 @@
 // Restaurant utilities for dynamic ID generation, opening-hours checks, and radius filtering
 
 import type { Restaurant, FoodCategory, DailyHours, TimeWindow } from '@/types';
+import { MIN_CONFIDENT_MATCHES, categoryMatchRank, isConfidentMatch } from '@/lib/categoryEvidence';
 
 export type RangeMode = 'walk' | 'drive10' | 'drive20' | number;
 export type HalalFilter = 'all' | 'halal' | 'non-halal';
 
 export interface FilterResult {
   results: Restaurant[];
+  /** True when weak category matches were added because confident ones were too few. */
+  categoryBroadened?: boolean;
   expanded: boolean;
   expandedLabel?: string;
   closedNowExcludedCount: number;
@@ -395,18 +398,14 @@ export const enhancedFilterRestaurants = (
     });
   }
 
-  // 1. Category filter
+  // 1. Category filter: keep any match now; weak matches are dropped at the end
+  //    when enough confident ones (primary type or name) survive the other filters.
+  const matchRanks = new Map<string, number>();
   if (selectedCategories.length > 0) {
-    filtered = filtered.filter((restaurant) =>
-      restaurant.category.some((category) => selectedCategories.includes(category as FoodCategory))
-    );
-
-    // 1b. Confidence gate: when the user has selected specific cuisines,
-    //     exclude low-confidence restaurants (weak/no classification signal).
     filtered = filtered.filter((restaurant) => {
-      // Local fallback data is hand-curated — always trusted
-      if (restaurant.source === 'local-fallback') return true;
-      return restaurant.categoryConfidence !== 'low';
+      const rank = categoryMatchRank(restaurant, selectedCategories);
+      if (rank > 0) matchRanks.set(restaurant.id, rank);
+      return rank > 0;
     });
   }
 
@@ -520,8 +519,22 @@ export const enhancedFilterRestaurants = (
     results = [...results].sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
   }
 
+  // 6. Ranked category match: confident first; weak only when confident ones are too few.
+  let categoryBroadened = false;
+  if (selectedCategories.length > 0) {
+    const confident = results.filter((restaurant) => isConfidentMatch(matchRanks.get(restaurant.id) ?? 0));
+    const weak = results.filter((restaurant) => !isConfidentMatch(matchRanks.get(restaurant.id) ?? 0));
+    if (confident.length >= MIN_CONFIDENT_MATCHES || weak.length === 0) {
+      results = confident;
+    } else {
+      results = [...confident, ...weak];
+      categoryBroadened = true;
+    }
+  }
+
   const filterResult: FilterResult = {
     results,
+    categoryBroadened,
     expanded,
     expandedLabel,
     closedNowExcludedCount,

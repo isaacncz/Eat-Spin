@@ -77,6 +77,9 @@ export interface SpinScreenProps {
     results: Restaurant[];
     isLoading: boolean;
     error: string | null;
+    /** Results label from the search intent, e.g. "Cafés". */
+    matchLabel?: string;
+    broadened?: boolean;
     recentSearches: string[];
     onLetsGo: (restaurant: Restaurant) => void;
     onClear: () => void;
@@ -245,6 +248,8 @@ export function SpinScreen({
             results={search.results}
             isLoading={search.isLoading}
             error={search.error}
+            matchLabel={search.matchLabel}
+            broadened={search.broadened}
             recentSearches={search.recentSearches}
             onLetsGo={search.onLetsGo}
             onClear={search.onClear}
